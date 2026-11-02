@@ -43,7 +43,7 @@ const conn = cookie => io(U, { transports: ['websocket'], extraHeaders: cookie ?
       ok((await E(a, 'mod', { action: 'admin', who: G })).error, 'admin cannot appoint admins');
       let dotted = false; g.on('dotted', () => dotted = true);
       ok((await E(a, 'mod', { action: 'dot', who: G })).ok, 'admin dots user'); await w(200);
-      ok(dotted && msgs.some(m => m.sys && m.text == G + ' was dotted by ' + A + '.'), 'dotted user notified + room notice');
+      ok(dotted && msgs.some(m => m.sys && m.text == G + ' was dotted'), 'dotted user notified + room notice');
       ok((await E(a, 'mod', { action: 'mutemic', who: G })).ok, 'admin mutes mic'); g.emit('voice', true); g.emit('talk', true); await w(300);
       ok(!ros.find(r => r.name == G).talk && ros.find(r => r.name == G).mm, 'mic-muted user cannot talk');
       const l = await E(a, 'mod:list'); ok(l.muted.some(x => x.name == G.toLowerCase() && x.mic), 'muted list returned');

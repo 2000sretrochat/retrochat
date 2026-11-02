@@ -1,3 +1,4 @@
+const EM = require('./emails');
 // Accounts (HTTP) + Messenger (Socket.IO) for YappChat.
 const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db'), geo = require('./geo');
 const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{2,19}$/, STATUSES = ['available', 'busy', 'away', 'brb', 'invisible'];
@@ -44,16 +45,17 @@ function http(app, express, hooks = {}) { H = hooks;
   app.post('/api/signup', async (req, res) => {
     if (!db.status().ready) return maint(res);
     if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return res.status(403).json({ error: 'Sign-ups from your network are not allowed.' });
-    if (limited('su:' + req.ip, 5, 3600e3)) return res.status(429).json({ error: 'Too many sign-ups from your network. Try again later.' });
-    const { name, password, email, remember } = req.body || {};
+    if (limited('su:' + req.ip, +process.env.SIGNUP_LIMIT || 5, 3600e3)) return res.status(429).json({ error: 'Too many sign-ups from your network. Try again later.' });
+    const { name, password, remember } = req.body || {}; let { email } = req.body || {}; if (typeof email === 'string') email = email.trim();
     if (typeof name !== 'string' || !NAME_RE.test(name)) return res.status(400).json({ error: 'Screen names are 3-20 characters, start with a letter, and use letters, numbers, _ or .' });
     if (RESERVED.test(name)) return res.status(400).json({ error: 'That screen name is not available.' });
     if (typeof password !== 'string' || password.length < 8 || password.length > 100) return res.status(400).json({ error: 'Passwords must be 8-100 characters.' });
     if (email && (typeof email !== 'string' || email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return res.status(400).json({ error: 'That email address does not look right.' });
     if (H.guestInUse && H.guestInUse(name)) return res.status(409).json({ error: 'That screen name is already taken.' });
+    if (email && await EM.taken(email)) return res.status(409).json({ error: 'That email already has a screen name.' });
     const hash = await bcrypt.hash(password, 12);
     try {
-      const r = await db.q('insert into users(name,name_lc,pw,email) values($1,$2,$3,$4) returning id', [name, name.toLowerCase(), hash, email || null]);
+      const r = await db.q('insert into users(name,name_lc,pw,email,email_norm) values($1,$2,$3,$4,$5) returning id', [name, name.toLowerCase(), hash, email ? email.trim() : null, email ? EM.norm(email) : null]);
       await db.q("insert into groups(owner,name) values($1,'Friends') on conflict do nothing", [r[0].id]);
       await newSession(req, res, r[0].id, !!remember); H.seedMaster && await H.seedMaster(r[0].id, name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'signup'); res.json({ ok: true, name });
     } catch (e) { if (e.code === '23505') return res.status(409).json({ error: 'That screen name is already taken.' }); console.error(e); res.status(500).json({ error: 'Sign up failed.' }); }
