@@ -4,9 +4,10 @@ const app = express(), server = http.createServer(app), io = new Server(server, 
 const ROOMS = { 'Lobby':'General','Friends':'General','Chit Chat':'General','Late Night':'General' };
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033'];
-const users = new Map(); const VERSION = 'v4-yappchat'; // lower(name) -> socket.id
+const users = new Map(); const VERSION = 'v5-cam-smileys'; // lower(name) -> socket.id
 const history = Object.fromEntries(Object.keys(ROOMS).map(r => [r, []]));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+app.use((req,res,next)=>{res.setHeader('Permissions-Policy','camera=(self), microphone=(self), display-capture=(self)');next()});
 app.use(express.static(__dirname + '/public'));
 app.get('/healthz', (q, r) => r.send('ok')); app.get('/api/version', (q, r) => r.json({ version: VERSION }));
 app.get('/api/rooms', (q, r) => r.json(Object.entries(ROOMS).map(([name, cat]) => ({ name, cat, topic: TOPICS[name], count: members(name).length }))));
