@@ -112,7 +112,7 @@ html.dark .room{color:#8fc8ff!important}
  <div>Help<div class="dd"><div id="mHelp">How to Use Voice &amp; Webcam</div><div id="mAbout">About YappChat</div></div></div>
 </div>
 <div id="tools"><button class="tbtn" id="cam" title="Share My Webcam"><span>&#128247;</span>Webcam</button><button class="tbtn" id="vbtn" title="Show/hide voice controls"><span>&#127908;</span>Voice</button>
-<button class="tbtn" disabled title="Send File - coming soon"><span>&#128206;</span>Send File</button><button class="tbtn" id="cbtn" title="Rooms"><span>&#128172;</span>Chat</button><div id="viewers"></div></div>
+<div id="viewers"></div></div>
 <div id="camstrip"></div>
 <div id="main"><div id="lpane"><div id="topic"></div><div id="log"></div><div id="typing"></div></div>
 <div id="mpane"><div id="mem"></div><div id="mbtns"><button id="bIm" title="Send a private message"><u>I</u>M</button><button id="bIgn"><u>I</u>gnore User</button></div></div></div>
@@ -183,7 +183,6 @@ $('mKick').onclick=()=>{if(!owner||!acct||owner.toLowerCase()!=acct.toLowerCase(
 S.on('topic',t=>{$('topic').querySelector('i').textContent='( '+t+' )'});
 S.on('kicked',({room:r,by})=>{alert('You were kicked from '+r+' by '+by+'.')});
 $('mLeave').onclick=leave;$('wx').onclick=leave;$('mJoin').onclick=()=>{const r=prompt('Join which room?\n'+rooms.map(r=>r.name).join(', '),'');const f=r&&rooms.find(x=>x.name.toLowerCase()==r.trim().toLowerCase());if(f)joinR(f.name);else if(r)alert('No room named '+r)};
-$('cbtn').onclick=e=>{e.stopPropagation();document.querySelector('#menu>div').classList.add('open')};
 $('mCopy').onclick=()=>navigator.clipboard?.writeText(String(getSelection()));$('mSelAll').onclick=()=>{const r=document.createRange();r.selectNodeContents($('log'));getSelection().removeAllRanges();getSelection().addRange(r)};
 $('mClearIn').onclick=()=>$('msg').value='';$('mClear').onclick=()=>$('log').innerHTML='';
 function applyPrefs(){$('log').className=(prefs.ts?'':'nots ')+(prefs.jl?'':'nojl ')+'fs-'+prefs.fs;$('mTs').classList.toggle('chk',prefs.ts);$('mJl').classList.toggle('chk',prefs.jl);$('mTyp').classList.toggle('chk',prefs.typ);
