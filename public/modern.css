@@ -52,3 +52,8 @@ html.dark #log span[style*="#8b5cf6" i],html.dark .bb span[style*="#8b5cf6" i],h
 .adph-b{height:50px;margin:8px 10px 10px;flex:none}
 .rtileic{display:inline-flex;align-items:center;justify-content:center;font-size:18px;width:28px;height:28px;border-radius:8px;background:#e6f4fb;flex:none}
 .mst{color:#a86f00!important;font-weight:600}
+
+/* v13.1: ad under every compose box */
+.adph-c{height:50px;width:calc(100% - 20px);max-width:468px;margin:0 auto 8px;flex:none;box-sizing:border-box}
+@media (min-width:500px){.adph-c{height:60px}}
+.im .adph-c,.pmwin .adph-c{height:50px;max-width:320px}

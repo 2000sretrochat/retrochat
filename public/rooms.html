@@ -131,6 +131,7 @@ html.dark .meter{background:repeating-linear-gradient(90deg,#2a3f6b 0 7px,transp
 #vrow{flex-wrap:nowrap!important;gap:10px!important}#vright{flex-wrap:nowrap!important;flex:none}#vright input[type=range]{width:80px}#fsz{display:inline-flex!important;align-items:center;gap:4px;white-space:nowrap}
 #vrow .meter{min-width:0;flex:0 1 120px}#mpane{min-width:170px}#phead{white-space:nowrap}
 html.yd #pwaInstall{display:none!important}
+@media (max-width:860px){#vright input[type=range]{width:56px}#vrow .meter{display:none}#vrow{gap:8px!important}}
 .rnw{display:flex;align-items:center;gap:10px;min-width:0}.folb{flex:none;border:1.5px solid #0033A0;color:#0033A0;background:#fff;border-radius:999px;padding:2px 11px;font:600 12px var(--sys);cursor:pointer;white-space:nowrap}.folb:hover{background:#e6f4fb}.folb.on{background:#0033A0;color:#fff}
 .ytoast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#00205B;color:#fff;padding:8px 18px;border-radius:18px;font:600 13px var(--sys);z-index:200;box-shadow:0 4px 16px #0004;transition:opacity .45s}.ytoast.out{opacity:0}
 html,body{min-width:728px}
@@ -184,11 +185,11 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
 <div id=hq style="display:none;padding:4px 12px;font:12px var(--sys);background:#fff8e1;border-top:1px solid #f0d78c"></div><div id="vrow"><label><input type="checkbox" id="hf"> Hands Free</label><button id="avb" title="Voice &amp; camera settings (mic, push-to-talk key, camera quality)"><i data-i=gear data-s=20></i><span>Settings</span></button><button id="talk" title="Hold to talk (or hold Ctrl)"><i data-i=mic data-s=18></i>Talk</button>
 <div class="meter" title="Your mic level"><i id="m1"></i></div><div class="meter" id=m2w title="Room voice level"><i id="m2"></i></div><span id=micn title="Mics in use / mic limit" style="font:600 12px var(--sys);color:#555;margin:0 6px"></span><button id=hand class=hb style="display:none;margin:0 6px" title="Join the line for the mic">Raise Hand</button><span id=mtl style="font:600 12px var(--sys);color:#c00"></span><span id="vstat"></span>
 <div id="vright"><input type="checkbox" id="mute"><button class=ib id=bMute title="Mute all voices"><i data-i=micoff></i></button><i data-i=vol style="color:var(--muted);margin-left:4px"></i><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" title="Speaker volume"><button class=ib id=bGear title="Settings"><i data-i=gear></i></button><div id="fsz" title="Chat text size (scroll to adjust)"><b style="font-size:11px;color:var(--muted)">A</b><b style="font-size:15px;color:var(--muted)">a</b><input type="range" id="fsr" min="11" max="24" step="1"><span id="fsv" style="font-size:11px;color:var(--muted);min-width:28px"></span></div></div></div>
-<div class="adph adph-lb" id=adRoom>Advertisement - Google Ads</div>
 <div id="erow"><span id="smb" title="Smileys"></span><span id="tb" title="Text style">T</span><div id="smp"></div><span id="ra">Report Abuse</span></div>
 <div id="sty"><button id="bB"><b>B</b></button><button id="bI"><i>I</i></button><button id="bU"><u>U</u></button> Color: <span id="sws"></span>
  Font: <select id="font"><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Comic Sans MS</option><option>Times New Roman</option><option>Courier New</option></select></div>
 <div id="form" class=inbox><button class="ib fontb" id=bAa title="Font: bold, italic, color and typeface"><i data-i=font data-s=20></i><span>Font</span></button><button class=ib id=bSm title="Smileys"><i data-i=smile data-s=22></i></button><textarea id="msg" maxlength="300" autocomplete="off" placeholder="Type a message..."></textarea></div>
+<div class="adph adph-c" id=adRoom>Advertisement - Google Ads</div>
 </div>
 <!-- Ad slot: paste the AdSense <ins class="adsbygoogle"> unit inside this div -->
 <div id="ad-slot" style="display:none"></div><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div>
@@ -397,7 +398,7 @@ function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.t
 // private IM
 const pms={};
 function openPm(n){if(pms[n]){pms[n].querySelector('input').focus();return pms[n]}const w=document.createElement('div');w.className='pmwin';const k=Object.keys(pms).length;w.style.left=(320+k*30)+'px';w.style.top=(140+k*30)+'px';
- w.innerHTML=`<div class=tbar>&#128172; ${escT(n)} -- Instant Message<span class=sp></span><span class=x>X</span></div><div class=pl></div><form><input type=text maxlength=300><button>Send</button></form>`;
+ w.innerHTML=`<div class=tbar>&#128172; ${escT(n)} -- Instant Message<span class=sp></span><span class=x>X</span></div><div class=pl></div><form><input type=text maxlength=300><button>Send</button></form><div class="adph adph-c">Advertisement - Google Ads</div>`;
  document.body.appendChild(w);pms[n]=w;drag(w);w.querySelector('.x').onclick=()=>{w.remove();delete pms[n]};
  w.querySelector('form').onsubmit=e=>{e.preventDefault();const i=w.querySelector('input'),t=i.value.trim();if(!t)return;S.emit('pm',{to:n,text:t},r=>{if(r.error)pmLine(n,'<i style=color:#c00>'+escT(r.error)+'</i>');else pmLine(n,`<b style="color:var(--brand)">${escT(me)}:</b> ${smile(r.text)}`)});i.value=''};
  w.querySelector('input').focus();return w}
