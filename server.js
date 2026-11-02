@@ -6,11 +6,24 @@ app.set('trust proxy', 1);
 const io = new Server(server, { maxHttpBufferSize: 1e5, allowRequest: (req, cb) => { const o = req.headers.origin; try { cb(null, !o || new URL(o).host === req.headers.host); } catch { cb(null, false); } } });
 io.use(async (s, next) => { if (MASTER.ipBanned(geo.clientIp(s.handshake.headers, s.handshake.address))) return next(new Error('banned'));
   s.data.acct = await acc.userFromCookie(s.handshake.headers.cookie);
-  if (s.data.acct) { try { const u = (await db.q('select adult,is_master,m_incog,m_announce from users where id=$1', [s.data.acct.id]))[0]; s.data.adult = !!u?.adult; s.data.master = !!u?.is_master; if (s.data.master) { s.data.incPref = !!u.m_incog; s.data.announce = !!u.m_announce; } } catch { } } next(); });
+  if (s.data.acct) { try { const u = (await db.q('select adult,is_master,m_incog,m_announce from users where id=$1', [s.data.acct.id]))[0]; s.data.adult = !!u?.adult; s.data.master = !!u?.is_master; if (s.data.master) { s.data.incPref = !!u.m_incog; s.data.announce = !!u.m_announce; } } catch { } }
+  s.data.ip = geo.clientIp(s.handshake.headers, s.handshake.address); s.data.dev = devOf(s.handshake.headers.cookie);
+  if (!s.data.master) { const devs = new Set(); for (const x of io.sockets.sockets.values()) if (!x.data.master && x.data.ip === s.data.ip) devs.add(x.data.dev || x.id);
+    if (!devs.has(s.data.dev || s.id) && devs.size >= IP_LIMIT) return next(new Error('Too many users from this network (limit ' + IP_LIMIT + ').')); }
+  next(); });
+const IP_LIMIT = +process.env.IP_LIMIT || 5; acc.devConflict = (s, n) => devConflict(s, n);
+function devOf(c) { const m = /(?:^|;\s*)ydid=([A-Za-z0-9-]{8,64})/.exec(String(c || '')); return m ? m[1] : ''; }
+// another non-master on the same computer using a different screen name?
+function devConflict(s, name) { if (s.data.master || !s.data.dev) return null; const lc = String(name).toLowerCase();
+  for (const x of io.sockets.sockets.values()) { if (x === s || x.data.master || x.data.dev !== s.data.dev) continue; const n = x.data.name || (x.data.mess && x.data.acct && x.data.acct.name); if (n && n.toLowerCase() !== lc) return n; } return null; }
+const blockedBy = async (owner, who) => { try { return (await db.q('select 1 from blocks where owner=$1 and blocked=$2', [owner, who])).length > 0; } catch { return false; } };
+const mutualC = async (a, b) => { try { return (await db.q('select 1 from contacts where owner=$1 and contact=$2', [a, b])).length > 0; } catch { return false; } };
+const masterNames = () => new Set([...io.sockets.sockets.values()].filter(x => x.data.master && x.data.acct).map(x => x.data.acct.name.toLowerCase()));
+async function masterLc() { try { return new Set((await db.q('select name_lc from users where is_master')).map(r => r.name_lc)); } catch { return masterNames(); } }
 const ROOMS = { 'Lobby':'General','Friends':'General','Chit Chat':'General','Late Night':'General' };
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033'];
-const users = new Map(); const VERSION = 'v11.4-master-incog-dots-email'; // lower(name) -> socket.id
+const users = new Map(); const VERSION = 'v11.5-ignore-block-privacy-sessions'; // lower(name) -> socket.id
 const history = Object.fromEntries(Object.keys(ROOMS).map(r => [r, []]));
 // ---- user-created rooms (public, in memory; removed after ~10 min empty) ----
 const UROOMS = new Map(); // name -> { owner, ownerLc, emptySince }
@@ -64,7 +77,8 @@ const roomVisible = lc => { const id = users.get(lc), x = id && io.sockets.socke
 const PCLEAN = (t, n) => String(t ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.name || ''), lc = n.toLowerCase(); res.set('Cache-Control', 'no-store');
   if (db.status().ready) { try { const r = (await db.q('select name,avatar,display_name,age,location,bio,interests,created from users where name_lc=$1', [lc]))[0];
-    if (r) return res.json({ name: r.name, avatar: r.avatar, displayName: r.display_name, age: r.age, location: r.location, bio: r.bio, interests: r.interests, memberSince: r.created, online: acc.isOnline(r.name) || roomVisible(lc) }); } catch { } }
+    if (r) { const v = await acc.userFromCookie(req.headers.cookie); let hide = false; if (v && v.name.toLowerCase() !== lc) { const [vu] = await db.q('select is_master from users where id=$1', [v.id]); const [tu] = await db.q('select id from users where name_lc=$1', [lc]); hide = !vu?.is_master && await blockedBy(tu.id, v.id); }
+    return res.json({ name: r.name, avatar: r.avatar, displayName: r.display_name, age: r.age, location: r.location, bio: r.bio, interests: r.interests, memberSince: r.created, online: !hide && (acc.isOnline(r.name) || roomVisible(lc)) }); } } catch { } }
   const id = users.get(lc), x = id && io.sockets.sockets.get(id); if (x && x.data.guest) return res.json({ name: x.data.name, guest: true, online: true, room: x.data.room });
   res.status(404).json({ error: 'No such user.' }); });
 app.post('/api/profile', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in to edit your profile.' });
@@ -169,7 +183,14 @@ io.on('connection', s => {
     if (s.data.name) return cb({ error: 'Already signed in' });
     if (adultR(room) && !s.data.adult && !s.data.master) return cb({ error: room + ' is rated ' + rateOf(room) + '. Confirm you are 18 or older to join.', adult: true });
     if (!s.data.master) { const left = kickedLeft(room, name); if (left > 1e12) return cb({ error: 'You are banned from ' + room + '.' }); if (left) return cb({ error: 'You were bounced from ' + room + '. You can rejoin in about ' + Math.ceil(left / 60e3) + ' min.' }); }
-    if (users.has(name.toLowerCase()) || (s.data.guest && acc.isOnline(name))) return cb({ error: 'That screen name is in use right now. Try another.' });
+    { const dc = devConflict(s, name); if (dc) return cb({ error: 'Another screen name (' + dc + ') is already signed in on this computer. Sign out of it first - only one screen name per computer.' }); }
+    if (users.has(name.toLowerCase())) { const o = io.sockets.sockets.get(users.get(name.toLowerCase()));
+      const mine = o && (s.data.acct ? o.data.acct && o.data.acct.id === s.data.acct.id : o.data.guest && s.data.dev && o.data.dev === s.data.dev);
+      if (o && mine && !s.data.master) { o.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); o.disconnect(true); users.delete(name.toLowerCase()); }
+      else if (o && mine && s.data.master) return cb({ error: 'You are already in a room with this screen name in another tab.' });
+      else if (o) return cb({ error: 'That screen name is in use right now. Try another.' }); }
+    if (s.data.guest && acc.isOnline(name)) return cb({ error: 'That screen name is in use right now. Try another.' });
+    await loadPrefs();
     users.set(name.toLowerCase(), s.id); s.data.name = name;
     if (s.data.acct && db.status().ready) { try { s.data.av = (await db.q('select avatar from users where id=$1', [s.data.acct.id]))[0]?.avatar || ''; } catch { } }
     { const ip = geo.clientIp(s.handshake.headers, s.handshake.address); if (s.data.guest) geo.recordGuest(name, ip).catch(() => {}); else if (s.data.acct) geo.recordAccount(s.data.acct.id, ip, 'room'); }
@@ -177,10 +198,10 @@ io.on('connection', s => {
   });
   const noticeOk = () => !s.data.master || (s.data.announce && !s.data.inc); // masters enter/leave silently by default
   function join(room) {
-    if (s.data.room) { s.leave(s.data.room); if (noticeOk()) push(s.data.room, { sys: true, text: `${esc(s.data.name)} has left the room.` }); lists(s.data.room); }
+    if (s.data.room) { s.leave(s.data.room); if (noticeOk()) push(s.data.room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has left the room.` }); lists(s.data.room); }
     const old = s.data.room; mediaReset(); if (old) upd(old);
     s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); s.emit('history', { room, topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, rating: rateOf(room), mics: micsOf(room) });
-    if (noticeOk()) push(room, { sys: true, text: `${esc(s.data.name)} has entered the room.` }); upd(room); s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce });
+    if (noticeOk()) push(room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has entered the room.` }); upd(room); s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce });
   }
   s.on('create-room', ({ name, topic, rating, mics }, cb) => {
     if (typeof cb !== 'function') return; if (!s.data.acct) return cb({ error: 'Guests cannot create rooms. Get a free screen name to create one.' });
@@ -250,7 +271,7 @@ io.on('connection', s => {
     const e = setMics(s.data.room, n); if (e) return cb({ error: e }); push(s.data.room, { sys: true, text: 'Mic limit set to ' + MICS[s.data.room] + (MICS[s.data.room] === 1 ? ' (single mic).' : ' talkers at once.') }); cb({ ok: true }); });
   s.on('cam', on => { if (!s.data.name || (on && s.data.inc)) return; s.data.cam = !!on; if (!on) { io.to(s.data.room).emit('cam-off', { id: s.id }); s.data.viewers = new Set(); } upd(s.data.room); });
   s.on('view', (id, cb) => { if (s.data.inc) return cb && cb({ error: 'You are incognito.' }); const t = same(id); if (!t || !t.data.cam) return cb && cb({ error: 'That webcam is not available.' });
-    t.data.viewers = t.data.viewers || new Set(); if (t.data.camBlock?.has(s.data.name.toLowerCase())) return cb && cb({ error: t.data.name + ' has blocked you from viewing their webcam.' });
+    t.data.viewers = t.data.viewers || new Set(); if (!s.data.master && t.data.acct && s.data.acct && t.data.blk?.has(s.data.acct.id)) return cb && cb({ error: 'That webcam is not available.' }); if (t.data.camBlock?.has(s.data.name.toLowerCase())) return cb && cb({ error: t.data.name + ' has blocked you from viewing their webcam.' });
     if (!t.data.viewers.has(s.id) && t.data.viewers.size >= MAXVIEW) return cb && cb({ error: 'That webcam has the maximum number of viewers (' + MAXVIEW + ').' });
     t.data.viewers.add(s.id); t.emit('view-req', { id: s.id, name: s.data.name }); upd(s.data.room); cb && cb({ ok: true }); });
   s.on('cam:block', (name, cb) => { if (!s.data.name) return; const lc = String(name || '').toLowerCase(); const v = socks(s.data.room).find(x => x.data.name.toLowerCase() === lc);
@@ -263,10 +284,39 @@ io.on('connection', s => {
   s.on('buzz', () => { if (!s.data.name) return; if (s.data.inc) return s.emit('msg', { sys: true, text: 'You are incognito.' }); if (mod(s.data.room).mt.has(s.data.name.toLowerCase())) return; const now = Date.now(); if (now - lastBuzz < 15000) return s.emit('msg', { sys: true, text: 'Please wait a bit before buzzing again.' }); lastBuzz = now;
     push(s.data.room, { buzz: true, name: esc(s.data.name), t: now }); });
   s.on('typing', () => { if (!s.data.name || s.data.inc) return; const now = Date.now(); if (now - lastTyping < 2000) return; lastTyping = now; s.to(s.data.room).emit('typing', { name: s.data.name }); });
-  s.on('pm', ({ to, text }, cb) => { if (!s.data.name) return; const id = users.get(String(to || '').toLowerCase()); const t0 = id && io.sockets.sockets.get(id), t = t0 && (!t0.data.inc || s.data.master) ? t0 : null;
+  s.on('pm', async ({ to, text } = {}, cb) => { if (!s.data.name) return; const id = users.get(String(to || '').toLowerCase()); const t0 = id && io.sockets.sockets.get(id), t = t0 && (!t0.data.inc || s.data.master) ? t0 : null;
     text = String(text || '').trim().slice(0, MAXLEN); if (!text) return; if (!t) return cb && cb({ error: to + ' is not online.' });
     const now = Date.now(); stamps = stamps.filter(x => now - x < 10000); if (stamps.length >= 5) return cb && cb({ error: 'You are sending messages too fast.' }); stamps.push(now);
+    if (!s.data.master && t.data.acct && ((s.data.acct && t.data.blk?.has(s.data.acct.id)) || (t.data.pmb && !(s.data.acct && await mutualC(t.data.acct.id, s.data.acct.id))))) return cb && cb({ error: "This user isn't accepting messages." });
     t.emit('pm', { from: s.data.name, text: esc(text), t: now }); cb && cb({ ok: true, text: esc(text) }); });
+  // ---- ignore / block / privacy ----
+  s.data.ign = s.data.ign || new Set();
+  async function loadPrefs() { if (!s.data.acct || !db.status().ready) return; try { const id = s.data.acct.id;
+    s.data.ign = new Set((await db.q('select name_lc from ignores where owner=$1', [id])).map(r => r.name_lc));
+    s.data.blk = new Set((await db.q('select blocked from blocks where owner=$1', [id])).map(r => r.blocked));
+    s.data.pmb = !!(await db.q('select pm_buddies from users where id=$1', [id]))[0]?.pm_buddies; } catch { } }
+  async function blockedNames() { if (!s.data.acct) return []; return (await db.q('select u.name from blocks b join users u on u.id=b.blocked where b.owner=$1 order by u.name_lc', [s.data.acct.id])).map(r => r.name); }
+  async function prefs() { const bl = await blockedNames().catch(() => []), ms = await masterLc(), ign = [...s.data.ign];
+    return { ignored: ign, blocked: bl, hide: [...new Set([...ign, ...bl.map(n => n.toLowerCase())])].filter(n => !ms.has(n)), pmBuddies: !!s.data.pmb, account: !!s.data.acct }; }
+  const syncSibs = () => { if (s.data.acct) for (const x of io.sockets.sockets.values()) if (x !== s && x.data.acct?.id === s.data.acct.id) { x.data.ign = new Set(s.data.ign); x.data.blk = new Set(s.data.blk || []); x.data.pmb = s.data.pmb; } };
+  const P = fn => async (d, cb) => { if (typeof d === 'function') { cb = d; d = {}; } cb = typeof cb === 'function' ? cb : () => {}; try { if (s.data.acct && !s.data.prefsLoaded) { await loadPrefs(); s.data.prefsLoaded = true; } cb(await fn(d || {})); } catch (e) { cb({ error: e.maint ? 'Service under maintenance' : 'Something went wrong' }); } };
+  s.on('prefs', P(async () => prefs()));
+  s.on('ign:set', P(async ({ name, on }) => { const lc = String(name || '').toLowerCase().slice(0, 30); if (!/^[a-z][a-z0-9_.]{2,19}$/.test(lc)) return { error: 'Bad name.' };
+    if (s.data.name && lc === s.data.name.toLowerCase()) return { error: 'You cannot ignore yourself.' };
+    if (on === false) { s.data.ign.delete(lc); if (s.data.acct) await db.q('delete from ignores where owner=$1 and name_lc=$2', [s.data.acct.id, lc]); }
+    else { s.data.ign.add(lc); if (s.data.acct) await db.q('insert into ignores(owner,name_lc) values($1,$2) on conflict do nothing', [s.data.acct.id, lc]); }
+    syncSibs(); return { ok: true, ...(await prefs()) }; }));
+  s.on('blk:set', P(async ({ name, on }) => { if (!s.data.acct) return { error: 'Sign in with a screen name to block people. Guests can use Ignore.' };
+    const [t] = await db.q('select id,name from users where name_lc=$1', [String(name || '').toLowerCase().slice(0, 30)]); if (!t) return { error: 'Only registered screen names can be blocked. Use Ignore for guests.' };
+    if (t.id === s.data.acct.id) return { error: 'You cannot block yourself.' }; const uid = s.data.acct.id; s.data.blk = s.data.blk || new Set();
+    if (on === false) { await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]); s.data.blk.delete(t.id); }
+    else { await db.q('insert into blocks(owner,blocked) values($1,$2) on conflict do nothing', [uid, t.id]); s.data.blk.add(t.id);
+      await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)', [uid, t.id]); await db.q('delete from requests where (from_id=$1 and to_id=$2) or (from_id=$2 and to_id=$1)', [uid, t.id]);
+      acc.toUser && (acc.toUser(uid, 'm:gone', { name: t.name }), acc.toUser(t.id, 'm:gone', { name: s.data.acct.name }));
+      for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === t.id && !x.data.master) { for (const y of io.sockets.sockets.values()) if (y.data.acct?.id === uid && y.data.viewers?.delete(x.id)) { y.emit('unview', { id: x.id }); x.emit('cam-blocked', { id: y.id, name: y.data.name }); } } }
+    syncSibs(); if (s.data.room) upd(s.data.room); return { ok: true, name: t.name, ...(await prefs()) }; }));
+  s.on('priv:set', P(async ({ pmBuddies }) => { if (!s.data.acct) return { error: 'Sign in with a screen name to change privacy settings.' }; s.data.pmb = !!pmBuddies;
+    await db.q('update users set pm_buddies=$2 where id=$1', [s.data.acct.id, s.data.pmb]); syncSibs(); return { ok: true, ...(await prefs()) }; }));
   let lastAv = 0;
   s.on('avatar:set', (d, cb) => setAv(d, cb).catch(e => { console.error('[avatar]', e.message); typeof cb === 'function' && cb({ error: 'Could not save your avatar.' }); }));
   async function setAv(d, cb) {
@@ -284,8 +334,8 @@ io.on('connection', s => {
     io.emit('avatar', { name, av }); cb({ ok: true, av });
   }
   s.on('report', ({ who, why } = {}) => { if (!s.data.name) return; MASTER.report(s.data.name, s.data.room, String(who || '').slice(0, 30), String(why || '').slice(0, 300)); console.log('[REPORT ABUSE]', new Date().toISOString(), 'by', s.data.name, 'in', s.data.room, 'against', String(who || '').slice(0, 30), '-', String(why || '').slice(0, 300)); });
-  s.on('disconnect', () => { if (!s.data.name) return; users.delete(s.data.name.toLowerCase()); if (s.data.guest) { AVMEM.delete(s.data.name.toLowerCase()); geo.guestOff(s.data.name); } const r0 = s.data.room; mediaReset(); s.leave(r0); upd(r0);
-    if (s.data.room && noticeOk()) push(s.data.room, { sys: true, text: `${esc(s.data.name)} has left the room.` }); });
+  s.on('disconnect', () => { if (!s.data.name) return; if (users.get(s.data.name.toLowerCase()) === s.id) users.delete(s.data.name.toLowerCase()); if (s.data.guest) { AVMEM.delete(s.data.name.toLowerCase()); geo.guestOff(s.data.name); } const r0 = s.data.room; mediaReset(); s.leave(r0); upd(r0);
+    if (s.data.room && noticeOk()) push(s.data.room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has left the room.` }); });
 });
 acc.sockets(io, { roomExists: r => !!ROOMS[r] });
 const MASTER = require('./master')({ app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, setMicOpts, RATINGS, KICK_MS });

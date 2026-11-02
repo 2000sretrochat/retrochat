@@ -94,7 +94,7 @@ function sockets(io, hooks) {
   const fmt = m => ({ b: !!m.b, i: !!m.i, u: !!m.u, color: COLORS.includes(m.color) ? m.color : '#000000', f: FONTS.includes(m.f) ? m.f : 'Arial' });
   hooks.onlineName = n => { for (const [uid, st] of state) if (st.name.toLowerCase() === String(n).toLowerCase() && online.has(uid)) return uid; return null; };
   presFn = hooks.presence = uid => online.has(uid) ? { online: true, status: state.get(uid)?.status || 'online', msg: state.get(uid)?.msg || '' } : { online: false, status: 'offline', msg: '' };
-  hooks.toUser = toUser; isOnlineFn = n => !!hooks.onlineName(n);
+  hooks.toUser = toUser; toUserFn = toUser; isOnlineFn = n => !!hooks.onlineName(n);
 
   io.on('connection', async s => {
     const acct = s.data.acct; if (!acct) return;
@@ -103,6 +103,8 @@ function sockets(io, hooks) {
     let stamps = [];
     const flood = () => { const now = Date.now(); stamps = stamps.filter(t => now - t < 10000); if (stamps.length >= 8) return true; stamps.push(now); return false; };
     s.on('m:init', safe(async () => {
+      if (!s.data.master) { const dc = module.exports.devConflict && module.exports.devConflict(s, me); if (dc) return { error: 'Another screen name (' + dc + ') is already signed in on this computer. Sign out of it first - only one screen name per computer.' };
+        for (const x of [...(online.get(uid) || [])]) if (x !== s && x.data.mess) { x.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); online.get(uid).delete(x); x.disconnect(true); } }
       const [u] = await db.q('select name,status,status_msg,avatar from users where id=$1', [uid]);
       const first = !online.has(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; ready = true;
       if (!state.has(uid)) state.set(uid, { name: u.name, status: STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg, avatar: u.avatar, idle: false });
@@ -151,15 +153,15 @@ function sockets(io, hooks) {
     s.on('m:remove', safe(async ({ name }) => { if (!ready) return; const t = await idOf(name); if (!t) return; await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)', [uid, t.id]);
       toUser(uid, 'm:gone', { name: t.name }); toUser(t.id, 'm:gone', { name: me }); }));
     s.on('m:block', safe(async ({ name, on }) => { if (!ready) return; const t = await idOf(name); if (!t || t.id === uid) return { error: 'Not found' };
-      if (on === false) { await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]); return { ok: true }; }
+      if (on === false) { await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]); for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === uid) x.data.blk?.delete(t.id); return { ok: true }; }
       await db.q('insert into blocks(owner,blocked) values($1,$2) on conflict do nothing', [uid, t.id]);
       await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)', [uid, t.id]); await db.q('delete from requests where from_id=$1 and to_id=$2', [t.id, uid]);
-      toUser(uid, 'm:gone', { name: t.name }); toUser(t.id, 'm:gone', { name: me }); return { ok: true, name: t.name }; }));
+      toUser(uid, 'm:gone', { name: t.name }); toUser(t.id, 'm:gone', { name: me }); for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === uid && x.data.blk) x.data.blk.add(t.id); return { ok: true, name: t.name }; }));
     s.on('m:group', safe(async ({ name, group }) => { if (!ready) return; group = String(group || '').trim().slice(0, 24); if (!group || /[<>]/.test(group)) return { error: 'Group names are 1-24 characters.' };
       await db.q('insert into groups(owner,name) values($1,$2) on conflict do nothing', [uid, group]);
       if (name) { const t = await idOf(name); if (t) await db.q('update contacts set grp=$3 where owner=$1 and contact=$2', [uid, t.id, group]); } return { ok: true, group }; }));
     // relay helpers: only between mutual contacts, never to/from blockers
-    async function peer(name) { const t = await idOf(name); if (!t || !(await mutual(uid, t.id)) || (await blocked(t.id, uid))) return null; return t; }
+    async function peer(name) { const t = await idOf(name); if (!t || !(await mutual(uid, t.id)) || (!s.data.master && await blocked(t.id, uid))) return null; return t; }
     s.on('m:im', safe(async m => {
       if (!ready || !m) return; if (flood()) return { error: 'You are sending messages too fast.' };
       const text = String(m.text || '').trim().slice(0, 1000); if (!text) return; const t = await peer(m.to); if (!t) return { error: 'You can only message your contacts.' };
@@ -182,5 +184,5 @@ function sockets(io, hooks) {
   });
 }
 let isOnlineFn = () => false, setAvFn = async () => {};
-let presFn = null;
-module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), setAvatar: (uid, av) => setAvFn(uid, av) };
+let presFn = null, toUserFn = () => {};
+module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), toUser: (u, e, d) => toUserFn(u, e, d), devConflict: null, setAvatar: (uid, av) => setAvFn(uid, av) };

@@ -39,7 +39,7 @@ button{font:12px Tahoma;background:linear-gradient(#fff,#e3ecf7);border:1px soli
 #talk{background:linear-gradient(#8fe08f,#3cb371);border:1px solid #1e7a3c;font-weight:bold;padding:4px 18px;border-radius:2px;color:#062}#talk.on{background:linear-gradient(#ffe066,#ffb300);border-color:#a60;color:#530}
 .meter{width:56px;height:16px;border:1px solid #7f9db9;background:repeating-linear-gradient(90deg,#ddd 0 2px,#fff 2px 4px);position:relative;overflow:hidden}
 .meter i{position:absolute;left:0;top:0;bottom:0;width:0;background:repeating-linear-gradient(90deg,#3cb371 0 2px,transparent 2px 4px);transition:width .08s}
-#vstat{color:#c00;font-weight:bold;font-size:11px;min-width:120px}#vright{margin-left:auto;display:flex;align-items:center;gap:6px}
+#vstat{color:#c00;font-weight:bold;font-size:11px;min-width:120px}#vright{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}#fsz{flex-basis:100%;display:flex;align-items:center;justify-content:flex-end;gap:3px}#fsr{width:110px;accent-color:#1877E8}#log.fsz,#log.fsz>div,#log.fsz .tx{font-size:var(--chatfs)!important}
 #vol{width:70px;accent-color:#3cb371}
 #erow{display:flex;align-items:center;gap:8px;padding:0 8px 3px;position:relative}
 #smb,#tb{cursor:pointer;line-height:0;padding:2px;border:1px solid transparent;border-radius:3px}#smb:hover,#tb:hover,#tb.on{border-color:#7f9db9;background:var(--pale)}
@@ -137,7 +137,7 @@ html.dark .meter{background:repeating-linear-gradient(90deg,#2a3f6b 0 7px,transp
  <div>Room<div class="dd"><div id="mJoin">Join Room...</div><div id="mCreate">Create Room...</div><div id="mTopic">Change Topic (owner)...</div><div id="mAv">Change My Avatar...</div><div id="mMess">Open Messenger</div><div id="mRooms"></div><hr><div id="mLeave">Leave Room / Sign Out</div></div></div>
  <div>Edit<div class="dd"><div id="mCopy">Copy Selected Text</div><div id="mSelAll">Select All Chat Text</div><hr><div id="mClearIn">Clear Message Box</div></div></div>
  <div>View<div class="dd"><div data-fs="s">Small Text</div><div data-fs="m" class="chk">Medium Text</div><div data-fs="l">Large Text</div><hr><div id="mTs">Show Timestamps (messages &amp; notices)</div><div id="mJl" class="chk">Show Join/Leave Notices</div><div id="mTyp" class="chk">Show "is typing"</div></div></div>
- <div>Actions<div class="dd"><div id="mIgn">Ignore / Unignore Selected User</div><div id="mIgnL">Show Ignore List</div><div id="mIm">Send IM to Selected User</div><div id="mProf">View Profile of Selected User</div><div id="mMyProf">Edit My Profile...</div><div id="mKick">Room Admin Console...</div><hr><div id="mRep">Report Abuse...</div><div id="mBuzz">Buzz the Room (BUZZ!!!)</div><div id="mClear">Clear Chat Window</div></div></div>
+ <div>Actions<div class="dd"><div id="mIgn">Ignore / Unignore Selected User</div><div id="mIgnL">Ignore &amp; Blocked Lists...</div><div id="mSet">Settings / Privacy...</div><div id="mIm">Send IM to Selected User</div><div id="mProf">View Profile of Selected User</div><div id="mMyProf">Edit My Profile...</div><div id="mKick">Room Admin Console...</div><hr><div id="mRep">Report Abuse...</div><div id="mBuzz">Buzz the Room (BUZZ!!!)</div><div id="mClear">Clear Chat Window</div></div></div>
  <div>Help<div class="dd"><div id="mHelp">How to Use Voice &amp; Webcam</div><div id="mAbout">About YappChat</div><div id="mSite">Site Moderator Key...</div></div></div>
 </div>
 <div id="rhead"><span id="rtile"></span><div><div class=rn id=rname></div><div class=rt id=rtopic></div><div id="viewers"></div></div><span class=sp></span>
@@ -147,7 +147,7 @@ html.dark .meter{background:repeating-linear-gradient(90deg,#2a3f6b 0 7px,transp
 <div id="mpane"><div id=phead>People in Room (<span id=pcnt>0</span>)<span class=sp></span><button class=ib id=bPs style="width:30px;height:30px"><i data-i=search data-s=18></i></button></div><div class=srch id=psearch><i data-i=search data-s=16></i><input id=pq placeholder="Find someone..."></div><div id="mem"></div><div id="mbtns"><button id="bIm" title="Send a private message"><u>I</u>M</button><button id="bIgn"><u>I</u>gnore User</button></div></div></div>
 <div id=hq style="display:none;padding:4px 12px;font:12px var(--sys);background:#fff8e1;border-top:1px solid #f0d78c"></div><div id="vrow"><label><input type="checkbox" id="hf"> Hands Free</label><button id="talk" title="Hold to talk (or hold Ctrl)"><i data-i=mic data-s=18></i>Talk</button>
 <div class="meter" title="Your mic level"><i id="m1"></i></div><div class="meter" id=m2w title="Room voice level"><i id="m2"></i></div><span id=micn title="Mics in use / mic limit" style="font:600 12px var(--sys);color:#555;margin:0 6px"></span><button id=hand class=hb style="display:none;margin:0 6px" title="Join the line for the mic">Raise Hand</button><span id=mtl style="font:600 12px var(--sys);color:#c00"></span><span id="vstat"></span>
-<div id="vright"><input type="checkbox" id="mute"><button class=ib id=bMute title="Mute all voices"><i data-i=micoff></i></button><i data-i=vol style="color:var(--muted);margin-left:4px"></i><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" title="Speaker volume"><button class=ib id=bGear title="Settings"><i data-i=gear></i></button></div></div>
+<div id="vright"><input type="checkbox" id="mute"><button class=ib id=bMute title="Mute all voices"><i data-i=micoff></i></button><i data-i=vol style="color:var(--muted);margin-left:4px"></i><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" title="Speaker volume"><button class=ib id=bGear title="Settings"><i data-i=gear></i></button><div id="fsz" title="Chat text size (scroll to adjust)"><b style="font-size:11px;color:var(--muted)">A</b><b style="font-size:15px;color:var(--muted)">a</b><input type="range" id="fsr" min="11" max="24" step="1"><span id="fsv" style="font-size:11px;color:var(--muted);min-width:28px"></span></div></div></div>
 <div id="erow"><span id="smb" title="Smileys"></span><span id="tb" title="Text style">T</span><div id="smp"></div><span id="ra">Report Abuse</span></div>
 <div id="sty"><button id="bB"><b>B</b></button><button id="bI"><i>I</i></button><button id="bU"><u>U</u></button> Color: <span id="sws"></span>
  Font: <select id="font"><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Comic Sans MS</option><option>Times New Roman</option><option>Courier New</option></select></div>
@@ -162,17 +162,19 @@ html.dark .meter{background:repeating-linear-gradient(90deg,#2a3f6b 0 7px,transp
 <div id=modown class=modg><button id=mAdm>Make Admin</button><button id=mBan>Ban</button><label style="margin-left:8px">Mics <select id=mMics><option value=1>Single mic</option><option value=2>Multi: 2</option><option value=3>Multi: 3</option><option value=4>Multi: 4</option><option value=5>Multi: 5</option></select></label><label style="margin-left:8px"><input type=checkbox id=mHq style="width:auto;display:inline"> Hands up</label><label style="margin-left:8px">Turn timer <select id=mTm><option value=0>Off</option><option value=30>30 sec</option><option value=60>1 min</option><option value=90>1 min 30</option><option value=c>Custom...</option></select></label></div>
 <div style="font-weight:700">Muted / bounced</div><div id=modl></div><div id=modadm style="font-size:12px;color:var(--muted)"></div></div></div>
 <div id="foot"><span class="appname-plain"></span> &middot; an original nostalgia project</div>
-<script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/avatar.js"></script><script>
+<script src="/device.js"></script><script src="/settings.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/avatar.js"></script><script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Yapp','Chat'];
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
 document.querySelectorAll('.lgs').forEach(e=>e.innerHTML=YI.logo(26));document.querySelectorAll('.lgbig').forEach(e=>e.innerHTML=YI.logo(56));
 function setHdr(){$('hdr').textContent=room+' ('+(typeof ros!='undefined'?ros.length:0)+') \u2013 Chat Room'}
 document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('');
-const $=id=>document.getElementById(id), S=io();
+const $=id=>document.getElementById(id), S=io();YSet.init(S);
+(function(){const r=$('fsr'),L=$('log'),set=v=>{v=Math.max(11,Math.min(24,Math.round(+v||14)));r.value=v;$('fsv').textContent=v+'px';L.style.setProperty('--chatfs',v+'px');L.classList.add('fsz');localStorage.rcChatFs=v};
+ set(localStorage.rcChatFs||14);r.oninput=()=>set(r.value);$('fsz').addEventListener('wheel',e=>{e.preventDefault();set(+r.value+(e.deltaY<0?1:-1))},{passive:false})})();
 let room=new URLSearchParams(location.search).get('room')||'Lobby',owner=null,acct=null, st={b:false,i:false,u:false,color:'#000000',f:'Arial'}, rooms=[], selName=null;
 const prefs=Object.assign({ts:true,jl:true,typ:true,fs:'m'},JSON.parse(localStorage.rcPrefs||'{}'));
-const ignored=new Set(JSON.parse(localStorage.rcIgnore||'[]'));const saveIgn=()=>localStorage.rcIgnore=JSON.stringify([...ignored]);
+const ignored={has:n=>YSet.hidden(n),get size(){return YSet.get().hide.length}};YSet.on(()=>{renderRoster();applyAudioAll();for(const id in wins){const r=ros.find(x=>x.id==id);if(r&&ignored.has(r.name))closeWin(id)}});
 if(!localStorage.rcV9){try{const o=JSON.parse(localStorage.rcPrefs||'{}');o.ts=true;localStorage.rcPrefs=JSON.stringify(o);prefs.ts=true}catch(e){}localStorage.rcV9=1}
 const savePrefs=()=>localStorage.rcPrefs=JSON.stringify(prefs);
 const escT=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
@@ -272,7 +274,7 @@ function drawMod(){const r=myRole();if(!r){$('modw').style.display='none';return
  const t=ros.find(m=>m.name==modSel)||{};$('modown').style.display=r=='owner'?'':'none';$('mAdm').textContent=t.role=='admin'?'Remove Admin':'Make Admin';
  $('mDot').textContent=t.dot?'Lift Dot':'Dot (off mic)';$('mMt').textContent=t.mt?'Unmute Text':'Mute Text';$('mMm').textContent=t.mm?'Unmute Mic':'Mute Mic';$('mMb').textContent=t.mt&&t.mm?'Unmute Both':'Mute Both';
  S.emit('mod:list',l=>{if(l.error)return;$('modl').innerHTML=(l.muted.map(x=>`<div>${YI.svg('micoff',14)} <b>${escT(x.name)}</b> <small>${x.text&&x.mic?'text + mic':x.text?'text':'mic'}</small><a data-u="${escT(x.name)}" data-a=unmuteall>unmute</a></div>`).join('')
-  +(l.dotted||[]).map(x=>`<div><span style="color:#d22">${YI.svg('micoff',14)}</span> <b>${escT(x.name)}</b> <small>dotted${x.secs?', '+Math.ceil(x.secs/60)+' min left':''}</small><a data-u="${escT(x.name)}" data-a=undot>lift</a></div>`).join('')+l.kicked.map(x=>`<div>${YI.svg('out',14)} <b>${escT(x.name)}</b> <small>bounced, ${x.mins} min left</small><a data-u="${escT(x.name)}" data-a=unkick>lift</a></div>`).join(''))||'<div style="color:var(--muted)">Nobody is muted, dotted or bounced.</div>';
+  +(l.dotted||[]).map(x=>`<div><span style="color:#d22">${YI.svg('micoff',14)}</span> <b>${escT(x.name)}</b> <small>dotted${x.secs?', '+Math.ceil(x.secs/60)+' min left':''}</small><a data-u="${escT(x.name)}" data-a=undot>lift</a></div>`).join('')+l.kicked.map(x=>`<div>${YI.svg('out',14)} <b>${escT(x.name)}</b> <small>${x.ban?'banned':'bounced, '+x.mins+' min left'}</small><a data-u="${escT(x.name)}" data-a=${x.ban?'unban':'unkick'}>${x.ban?'unban':'lift'}</a></div>`).join(''))||'<div style="color:var(--muted)">Nobody is muted, dotted, bounced or banned.</div>';
   $('modadm').textContent=l.admins.length?'Admins: '+l.admins.join(', '):'No room admins yet.';
   $('modl').querySelectorAll('a[data-a]').forEach(a=>a.onclick=()=>doMod(a.dataset.a,a.dataset.u))})}
 $('mMics')&&($('mMics').onchange=e=>S.emit('set-mics',+e.target.value,r=>{if(r.error)alert(r.error)}));$('mBan')&&($('mBan').onclick=()=>{if(modSel&&confirm('Ban '+modSel+' from this room?'))doMod('ban')});
@@ -285,9 +287,11 @@ function applyPrefs(){$('log').className=(prefs.ts?'':'nots ')+(prefs.jl?'':'noj
  document.querySelectorAll('[data-fs]').forEach(e=>e.classList.toggle('chk',e.dataset.fs==prefs.fs));savePrefs()}
 document.querySelectorAll('[data-fs]').forEach(e=>e.onclick=()=>{prefs.fs=e.dataset.fs;applyPrefs()});
 $('mTs').onclick=()=>{prefs.ts=!prefs.ts;applyPrefs()};$('mJl').onclick=()=>{prefs.jl=!prefs.jl;applyPrefs()};$('mTyp').onclick=()=>{prefs.typ=!prefs.typ;applyPrefs()};applyPrefs();
-function toggleIgnore(n){if(!n||n==me)return alert('Select someone in the member list first.');ignored.has(n)?ignored.delete(n):ignored.add(n);saveIgn();renderRoster();applyAudioAll();
- add({sys:1,text:escT(n)+(ignored.has(n)?' is now ignored. You will not see their messages or hear their voice.':' is no longer ignored.')})}
-$('mIgn').onclick=$('bIgn').onclick=()=>toggleIgnore(selName);$('mIgnL').onclick=()=>alert(ignored.size?'Ignored users:\n'+[...ignored].join('\n'):'Your ignore list is empty.');
+function isIgn(n){return YSet.get().ignored.includes(String(n).toLowerCase())}function isBlk(n){return YSet.get().blocked.some(x=>x.toLowerCase()==String(n).toLowerCase())}
+async function toggleIgnore(n,on){if(!n||n==me)return alert('Select someone in the member list first.');on=on===undefined?!isIgn(n):on;const r=await YSet.setIgnore(n,on);if(r.error)return;
+ add({sys:1,text:escT(n)+(on?' is now ignored. You will not see their messages, hear their voice or see their cam.':' is no longer ignored.')})}
+async function toggleBlock(n,on){if(!n||n==me)return;on=on===undefined?!isBlk(n):on;if(on&&!confirm('Block '+n+'? They will not see you online, cannot IM you, add you, or view your cam. Block also ignores them.'))return;const r=await YSet.setBlock(n,on);if(r.error)return;add({sys:1,text:escT(n)+(on?' is now blocked.':' is no longer blocked.')})}
+$('mIgn').onclick=$('bIgn').onclick=()=>toggleIgnore(selName);$('mIgnL').onclick=()=>YSet.open();$('mSet').onclick=()=>YSet.open();
 $('mIm').onclick=$('bIm').onclick=()=>{if(!selName||selName==me)return alert('Select someone in the member list first.');openPm(selName)};
 $('mBuzz').onclick=()=>S.emit('buzz');document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.key.toLowerCase()=='g'&&me){e.preventDefault();S.emit('buzz')}});
 $('mHelp').onclick=()=>alert('Voice: hold the green Talk button (or hold Ctrl) to talk. Tick Hands Free to stay on the mic. Mute silences everyone.\nWebcam: click Webcam to share yours. Click the camera icon next to a name to view theirs.\nBuzz: Ctrl+G.');
@@ -298,7 +302,7 @@ $('ra').onclick=()=>{const who=prompt('Report abuse: which screen name?',selName
 const tstr=t=>t?new Date(t).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'';
 function add(m){const L=$('log'),d=document.createElement('div'),atB=L.scrollHeight-L.scrollTop-L.clientHeight<40;
  const ts=`<span class=ts>[${tstr(m.t||Date.now())}]</span>`;
- if(m.name&&ignored.has(m.name.replace(/&#39;/g,"'")))return;
+ if(m.name&&ignored.has(m.name.replace(/&#39;/g,"'")))return;if(m.who&&ignored.has(m.who))return;
  if(m.buzz){d.className='buzz';d.innerHTML=ts+`${m.name}: BUZZ!!!`;const c=$('chat');c.classList.remove('buzzing');void c.offsetWidth;c.classList.add('buzzing')}
  else if(m.sys){d.className='sys'+(/has (joined|entered|left) the room/.test(m.text)?' jl':'');d.innerHTML=ts+m.text}
  else{let t=smile(m.text);const sty=`color:${m.color};font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
@@ -390,7 +394,7 @@ S.on('view-req',({id})=>{if(!camS)return;closePc('v',id);const pc=pcFor('v',id,t
 S.on('unview',({id})=>closePc('v',id));
 S.on('cam-off',({id})=>closeWin(id,true));
 S.on('media-gone',({id})=>{['a','v','w'].forEach(k=>closePc(k,id));closeWin(id,true)});
-function view(id,name){if(wins[id])return;S.emit('view',id,r=>{if(r.error)return alert(r.error);openWin(id,name)})}
+function view(id,name){if(wins[id])return;if(ignored.has(name))return alert(name+' is ignored. Unignore them to view their cam.');S.emit('view',id,r=>{if(r.error)return alert(r.error);openWin(id,name)})}
 // Cam strip: each open cam is a tile at the top of the room; pop-out opens a big draggable/resizable window
 function openWin(id,name,stream){const w=document.createElement('div');w.className='tile';w.dataset.id=id;
  w.innerHTML=`<video autoplay playsinline muted></video><div class=tb><span class=po title="Pop out / make bigger">&#8599;</span><span class=fs title="Full screen">&#9974;</span><span class=x2 title="Close">&#10005;</span></div><div class=lbl>&#128247; <b>${name}</b><span class=sp></span><span class="st ft">${stream?'You':'Connecting...'}</span></div>`;
@@ -406,8 +410,8 @@ function openWin(id,name,stream){const w=document.createElement('div');w.classNa
 function fullCam(v){const f=v.requestFullscreen||v.webkitRequestFullscreen||v.webkitEnterFullscreen;if(f)f.call(v).catch?.(()=>{})}
 function closeWin(id,remote){const w=wins[id];if(!w)return;if(w.pop)w.pop.remove();w.remove();delete wins[id];$('camstrip').classList.toggle('has',!!$('camstrip').children.length);if(id!=S.id){closePc('w',id);if(!remote)S.emit('unview',id)}}
 function ctxMenu(ev,n){document.querySelectorAll('.yctx').forEach(x=>x.remove());const m=document.createElement('div');m.className='yctx imenu open';m.style.cssText=`position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;display:block;z-index:300`;
- m.innerHTML='<div data-c=p>View Profile</div>'+(n!=me?'<div data-c=im>Private Message</div>':'')+(myRole()&&n!=me?'<div data-c=mod>Room Admin Console...</div>':'');document.body.appendChild(m);
- m.onclick=e=>{const c=e.target.dataset.c;m.remove();if(c=='p')YProf.show(n,{me:acct?me:''});else if(c=='im')openPm(n);else if(c=='mod')openMod(n)};setTimeout(()=>addEventListener('click',()=>m.remove(),{once:true}),0)}
+ m.innerHTML='<div data-c=p>View Profile</div>'+(n!=me?'<div data-c=im>Private Message</div><div data-c=ign>'+(isIgn(n)?'Unignore':'Ignore')+'</div>'+(acct?'<div data-c=blk>'+(isBlk(n)?'Unblock':'Block')+'</div>':''):'')+(myRole()&&n!=me?'<div data-c=mod>Room Admin Console...</div>':'');document.body.appendChild(m);
+ m.onclick=e=>{const c=e.target.dataset.c;m.remove();if(c=='p')YProf.show(n,{me:acct?me:''});else if(c=='im')openPm(n);else if(c=='ign')toggleIgnore(n);else if(c=='blk')toggleBlock(n);else if(c=='mod')openMod(n)};setTimeout(()=>addEventListener('click',()=>m.remove(),{once:true}),0)}
 $('mProf').onclick=()=>{if(!selName)return alert('Select a user in the people list first.');YProf.show(selName,{me:acct?me:''})};$('mMyProf').onclick=()=>acct?YProf.edit():YProf.show(me);
 S.on('rating',d=>{if(d.room==room)$('rname').innerHTML=escT(room)+YProf.badge(d.rating)});
 S.on('cam-blocked',d=>{closeWin(d.id,true);alert(d.name+' stopped sharing their webcam with you.')});
