@@ -35,11 +35,10 @@ const DIR_TREE = {
   'Romance': { 'By Age': ["20's Love", "30's Love", "40's Love", "50's Love", "60's Love"], 'Singles & Dating': ['Romance', 'Singles', 'Single Parents', 'Flirting', 'Pickup Bar', 'Disco Inferno', 'Moonlight Way', 'Love Stinks', 'Asian Connections', 'Interracial Dating', 'BBW and Admirers'], 'Adult (18+)': ['Married & Flirting', 'Adult Romance'] },
   'Schools & Education': ["Professors' Chat", 'Study Group', 'The University Years', 'Homework Help', 'High School', 'Teachers', 'Violence in Schools'],
   'Science': { 'Science': ['Beyond Planet Earth', 'Biology', 'Physics', 'Chemistry', 'Astronomy', 'Extraterrestrial Life', 'Paranormal'], 'Animals & Pets': ['Cat Chat', 'Dog Chat', 'Pets'] },
-  'Teen': ['Teen Lobby', 'Teen Chat', 'Teen Music', 'Teen Advice', 'Teen Gamers'],
 };
 const DIR = {}, PATH = {};
 for (const [c, n] of Object.entries(DIR_TREE)) (function walk(node, path) { if (Array.isArray(node)) { for (const r of node) { (DIR[c] = DIR[c] || []).push(r); PATH[r] = path; } return; } for (const [k, v] of Object.entries(node)) walk(v, k ? [...path, k] : path); })(n, []);
 const ADULT_ROOMS = new Set(['Married & Flirting', 'Adult Romance']);
-const CAT_ORDER = [...Object.keys(DIR), 'User Rooms'];
+const CAT_ORDER = [...Object.keys(DIR)];
 { const all = Object.values(DIR).flat(); if (new Set(all).size !== all.length) throw new Error('duplicate room in rooms-dir: ' + all.filter((r, i) => all.indexOf(r) !== i)); }
 module.exports = { DIR, PATH, ADULT_ROOMS, CAT_ORDER };

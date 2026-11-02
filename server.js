@@ -4,7 +4,7 @@ const express = require('express'), http = require('http'), { Server } = require
 const acc = require('./accounts'), db = require('./db'), geo = require('./geo');
 const app = express(), server = http.createServer(app);
 app.set('trust proxy', 1);
-const io = new Server(server, { maxHttpBufferSize: 1e5, allowRequest: (req, cb) => { const o = req.headers.origin; try { cb(null, !o || new URL(o).host === req.headers.host); } catch { cb(null, false); } } });
+const io = new Server(server, { pingInterval: 20000, pingTimeout: 40000, maxHttpBufferSize: 1e5, allowRequest: (req, cb) => { const o = req.headers.origin; try { cb(null, !o || new URL(o).host === req.headers.host); } catch { cb(null, false); } } });
 io.use(async (s, next) => { if (MASTER.ipBanned(geo.clientIp(s.handshake.headers, s.handshake.address))) return next(new Error('banned'));
   s.data.acct = await acc.userFromCookie(s.handshake.headers.cookie);
   if (s.data.acct) { try { const u = (await db.q('select adult,is_master,m_incog,m_announce from users where id=$1', [s.data.acct.id]))[0]; s.data.adult = !!u?.adult; s.data.master = !!u?.is_master; if (s.data.master) { s.data.incPref = !!u.m_incog; s.data.announce = !!u.m_announce; } } catch { } }
@@ -26,17 +26,18 @@ const ROOMS = {}; for (const [c, rs] of Object.entries(DIR)) for (const r of rs)
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
 for (const r of Object.keys(ROOMS)) if (!TOPICS[r]) TOPICS[r] = ADULT_ROOMS.has(r) ? r + ' - adults only (18+)' : 'Welcome to ' + r + ' - chat about ' + r.toLowerCase();
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033','#8b5cf6'];
-const users = new Map(); const VERSION = 'v12.0-desktop-windows-clear-history'; // lower(name) -> socket.id
+const GRACE = new Map(); const users = new Map(); const VERSION = 'v13.0'; // lower(name) -> socket.id
 const history = Object.fromEntries(Object.keys(ROOMS).map(r => [r, []]));
 // ---- user-created rooms (public, in memory; removed after ~10 min empty) ----
 const UROOMS = new Map(); // name -> { owner, ownerLc, emptySince }
 // user rooms persist in Postgres (user_rooms) and are restored at boot
-const saveURoom = n => { const r = UROOMS.get(n); if (!r) return; Promise.resolve().then(() => db.q('insert into user_rooms(name,cat,owner,rating,mics,topic) values($1,$2,$3,$4,$5,$6) on conflict(name) do update set rating=$4,mics=$5,topic=$6', [n, ROOMS[n] || 'User Rooms', r.owner, RATE[n] || 'PG-13', MICS[n] || 1, TOPICS[n] || ''])).catch(() => {}); };
+const saveURoom = n => { const r = UROOMS.get(n); if (!r) return; Promise.resolve().then(() => db.q('insert into user_rooms(name,cat,owner,rating,mics,topic,icon,last_used) values($1,$2,$3,$4,$5,$6,$7,now()) on conflict(name) do update set cat=$2,rating=$4,mics=$5,topic=$6,icon=$7,last_used=now()', [n, ROOMS[n] || 'Cultures & Community', r.owner, RATE[n] || 'PG-13', MICS[n] || 1, TOPICS[n] || '', r.icon || ''])).catch(e => console.error('save room', e.message)); };
+const ICONS = ['💬','🎵','🎮','⚽','🏀','🎬','📚','💻','🍕','☕','🌙','⭐','❤️','🔥','🌈','🐶','🐱','🌎','✈️','🎨','📷','🎤','🎧','🍷','🌸','🏖️','🧠','👻','🎉','💎','🚀','🎲'];
 const delURoom = n => { Promise.resolve().then(() => db.q('delete from user_rooms where name=$1', [n])).catch(() => {}); };
 const RATINGS = ['PG-13', 'R'], RATE = {}; const adultR = r => RATE[r] === 'R'; // official rooms default PG-13
 const rateOf = r => RATE[r] || 'PG-13';
 for (const r of ADULT_ROOMS) RATE[r] = 'R';
-const OFFICIAL = new Set(Object.keys(ROOMS)), MAXU = 2, EMPTY_MS = 10 * 60e3;
+const OFFICIAL = new Set(Object.keys(ROOMS)), MAXU = 5, EMPTY_MS = 10 * 60e3;
 const BAD = /(fuck|shit|bitch|cunt|nigg|fag|dick|cock|pussy|whore|slut|rape|nazi|porn|sex|penis|vagina|asshole|retard)/i;
 const roomKey = n => String(n).toLowerCase().replace(/\s+/g, ' ').trim();
 function roomNameError(n) {
@@ -46,7 +47,7 @@ function roomNameError(n) {
   return null;
 }
 const cleanTopic = t => String(t || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 100); // raw; client escapes
-setInterval(() => { const now = Date.now(); for (const [n, r] of UROOMS) { if (socks(n).length) r.emptySince = 0; else if (!r.emptySince) r.emptySince = now; else if (now - r.emptySince > EMPTY_MS) { UROOMS.delete(n); delURoom(n); delete ROOMS[n]; delete TOPICS[n]; delete history[n]; delete RATE[n]; } } }, 30e3).unref();
+// user rooms are kept permanently (owner can reopen them with their settings); nothing is deleted when they empty out
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 app.use((req,res,next)=>{res.setHeader('Permissions-Policy','camera=(self), microphone=(self), display-capture=(self)');next()});
 acc.http(app, express, { reservedName: n => MASTER.reserved(n), ipBanned: ip => MASTER.ipBanned(ip), seedMaster: (id, n) => MASTER.seedMaster(id, n), guestInUse: n => users.has(String(n).toLowerCase()) && !!io.sockets.sockets.get(users.get(String(n).toLowerCase()))?.data.guest });
@@ -75,7 +76,7 @@ app.get('/av/:name', async (req, res) => {
 });
 geo.admin(app, n => acc.isOnline(n) || users.has(String(n).toLowerCase())); // admin-key only
 app.get('/healthz', (q, r) => r.send('ok')); app.get('/api/version', (q, r) => r.json({ version: VERSION }));
-const roomList = (adult, vm) => Object.entries(ROOMS).filter(([n]) => adult || !adultR(n)).map(([name, cat]) => { const ss = seen(name, vm); return { name, cat, path: PATH[name] || [], topic: TOPICS[name], rating: rateOf(name), mics: micsOf(name), count: ss.length + botsIn(name).length, cams: ss.filter(x => x.data.cam).length, owner: UROOMS.get(name)?.owner || null }; });
+const roomList = (adult, vm) => Object.entries(ROOMS).filter(([n]) => adult || !adultR(n)).map(([name, cat]) => { const ss = seen(name, vm); return { name, cat, path: PATH[name] || [], topic: TOPICS[name], rating: rateOf(name), mics: micsOf(name), count: ss.length + botsIn(name).length, cams: ss.filter(x => x.data.cam).length, owner: UROOMS.get(name)?.owner || null, icon: UROOMS.get(name)?.icon || '', user: UROOMS.has(name) }; });
 // favorites + "mine" (owner/admin) decoration for a signed-in account
 const userFromReq = req => acc.userFromCookie(req.headers.cookie);
 async function decorate(list, acct) { if (!acct) return list; const lc = acct.name.toLowerCase(); let f = new Set();
@@ -86,7 +87,7 @@ app.post('/api/fav', express.json(), async (req, res) => { const a = await userF
   try { await db.q(req.body?.on ? 'insert into favorites(owner,room) values($1,$2) on conflict do nothing' : 'delete from favorites where owner=$1 and room=$2', [lc, room]); res.json({ ok: true }); } catch { res.status(503).json({ error: 'Favorites are unavailable right now.' }); } });
 // ---- idle chat bots (Late Night), toggled by masters; not sockets, so they never count toward IP/session limits ----
 (function loadURooms(n) { if (!db.status().ready) return n < 90 && setTimeout(() => loadURooms(n + 1), 2000).unref?.();
-  Promise.resolve().then(() => db.q('select * from user_rooms')).then(rs => { for (const r of rs) { if (ROOMS[r.name] && !UROOMS.has(r.name)) continue; UROOMS.set(r.name, { owner: r.owner, ownerLc: r.owner.toLowerCase(), emptySince: Date.now() }); ROOMS[r.name] = r.cat || 'User Rooms'; TOPICS[r.name] = r.topic || 'Welcome to ' + r.name; history[r.name] = history[r.name] || []; if (r.rating) RATE[r.name] = r.rating; if (r.mics) MICS[r.name] = r.mics; } if (rs.length) console.log('restored', rs.length, 'user rooms'); }).catch(e => console.error('user rooms', e.message)); })(0);
+  Promise.resolve().then(() => db.q('select * from user_rooms')).then(rs => { for (const r of rs) { if (ROOMS[r.name] && !UROOMS.has(r.name)) continue; UROOMS.set(r.name, { owner: r.owner, ownerLc: r.owner.toLowerCase(), emptySince: Date.now(), icon: r.icon || '' }); ROOMS[r.name] = DIR[r.cat] ? r.cat : 'Cultures & Community'; TOPICS[r.name] = r.topic || 'Welcome to ' + r.name; history[r.name] = history[r.name] || []; if (r.rating) RATE[r.name] = r.rating; if (r.mics) MICS[r.name] = r.mics; } if (rs.length) console.log('restored', rs.length, 'user rooms'); }).catch(e => console.error('user rooms', e.message)); })(0);
 // ICE servers (STUN + optional TURN), credentials come from env, never hardcoded in the client
 let iceCache = null;
 // room preview (Browse Rooms hover / long-press): who's inside, minus incognito masters and blocked users
@@ -120,11 +121,37 @@ function setBots(on, room) { if (room !== undefined) { if (!BOTMOD.byRoom[room])
 const getBots = () => ({ on: botsOn, total: BOTS.length, rooms: botRooms().map(r => ({ room: r, on: !botOff.has(r), bots: BOTMOD.byRoom[r].map(b => b.name) })) });
 (function loadBots(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadBots(n + 1), 2000).unref?.(); Promise.resolve().then(() => db.q("select v from kv where k='bots'")).then(r => { if (r[0]) { const v = r[0].v; if (v === 'on' || v === 'off') botsOn = v !== 'off'; else try { const j = JSON.parse(v); botsOn = j.on !== false; (j.off || []).forEach(x => botOff.add(x)); } catch { } } botRooms().forEach(x => ROOMS[x] && upd(x)); }).catch(() => {}); })(0);
 // each bot room ticks on its own randomized, staggered timer (every ~3-7 min) and only talks while real people are there
-function botTick(room) { setTimeout(() => botTick(room), (180 + Math.random() * 240) * 1000).unref?.();
-  const bs = botsIn(room); if (!bs.length || !socks(room).length) return; const b = bs[Math.floor(Math.random() * bs.length)], L = BOTMOD.P[b.lang] || BOTMOD.P.en;
-  push(room, { name: b.name, av: b.av || '', role: '', text: L[Math.floor(Math.random() * L.length)], color: '#000080', b: false, i: false, u: false, f: 'Arial', t: Date.now() }); }
+// bots: each room has its own random timer. Faster (40s-2.5min) while people are in the room, slow (4-10 min) while empty so rooms keep recent text.
+const botSay = (room, b, text) => push(room, { name: b.name, av: b.av || '', role: '', text: esc(text), color: b.color || '#000080', b: false, i: false, u: false, f: b.font || 'Arial', t: Date.now() });
+const lastBot = {};
+function botTick(room) { const busy = socks(room).length > 0; setTimeout(() => botTick(room), (busy ? 40 + Math.random() * 110 : 240 + Math.random() * 360) * 1000).unref?.();
+  const bs = botsIn(room); if (!bs.length) return; const b = bs[Math.floor(Math.random() * bs.length)];
+  const line = BOTMOD.line(b, room, lastBot[room]); lastBot[room] = line; botSay(room, b, line);
+  // sometimes a second bot answers a moment later, so it reads like a conversation
+  if (bs.length > 1 && Math.random() < 0.35) { const o = bs.filter(x => x !== b)[Math.floor(Math.random() * (bs.length - 1))]; setTimeout(() => botsIn(room).includes(o) && botSay(room, o, BOTMOD.reply(o, b.name)), 6000 + Math.random() * 14000).unref?.(); } }
+// a bot may greet a person who says hi or mentions it
+function botHear(room, who, text) { const bs = botsIn(room); if (!bs.length) return; const t = String(text).toLowerCase();
+  const named = bs.find(b => t.includes(b.name.toLowerCase())); const hi = /\b(hi|hey|hello|hola|sup|yo|wassup|anyone)\b/.test(t);
+  if (!named && !(hi && Math.random() < 0.6)) return; const b = named || bs[Math.floor(Math.random() * bs.length)];
+  setTimeout(() => botsIn(room).includes(b) && botSay(room, b, BOTMOD.greet(b, who)), 3000 + Math.random() * 6000).unref?.(); }
 botRooms().forEach((r, i) => setTimeout(() => botTick(r), 60e3 + i * 7000 + Math.random() * 120e3).unref?.());
 const onlineTotal = () => new Set([...io.sockets.sockets.values()].filter(x => (x.data.name || x.data.acct) && !x.data.inc).map(x => (x.data.acct?.name || x.data.name).toLowerCase())).size + botRooms().reduce((n, r) => n + botsIn(r).length, 0);
+// buddy list for the room Invite picker (signed-in only)
+app.get('/api/buddies', async (req, res) => { const a = await userFromReq(req).catch(() => null); if (!a) return res.status(401).json({ error: 'Sign in to invite buddies.' });
+  try { const cs = await db.q('select u.id,u.name,u.avatar from contacts c join users u on u.id=c.contact where c.owner=$1 order by lower(u.name)', [a.id]);
+    res.set('Cache-Control', 'no-store').json(cs.map(c => { const p = acc.presence(c.id) || {}; return { name: c.name, avatar: c.avatar || '', online: !!p.online, status: p.online ? (p.status || 'available') : 'offline', room: p.room || null }; })); } catch { res.json([]); } });
+// ---- "Snap" a profile photo from your phone: one-time QR link (10 min) ----
+const SNAP = new Map(); setInterval(() => { const n = Date.now(); for (const [k, v] of SNAP) if (v.exp < n) SNAP.delete(k); }, 60e3).unref();
+app.get('/snap', (q, r) => r.sendFile(require('path').join(__dirname, 'public', 'snap.html')));
+app.get('/snapchk', (q, r) => { const v = SNAP.get(String(q.query.t || '')); r.set('Cache-Control', 'no-store').json(v && v.exp > Date.now() ? { ok: true, name: v.name } : { error: 'This photo link expired or was already used. Make a new QR code on your computer.' }); });
+app.post('/snapup', express.json({ limit: '80kb' }), async (req, res) => { const t = String(req.body?.t || ''), v = SNAP.get(t);
+  if (!v || v.exp < Date.now()) return res.status(410).json({ error: 'This photo link expired or was already used. Make a new QR code on your computer.' });
+  const p = parseAvatar(req.body?.img); if (p.error) return res.status(400).json(p); SNAP.delete(t);
+  try { if (!db.status().ready) return res.status(503).json({ error: 'Accounts are temporarily unavailable.' }); const av = 'c' + Date.now().toString(36);
+    await db.q('insert into avatars(user_id,mime,data,updated) values($1,$2,$3,now()) on conflict(user_id) do update set mime=$2,data=$3,updated=now()', [v.uid, p.mime, p.buf]);
+    await db.q('update users set avatar=$2 where id=$1', [v.uid, av]); await acc.setAvatar(v.uid, av);
+    for (const [, x] of io.sockets.sockets) if (x.data.acct && x.data.acct.id === v.uid) { x.data.av = av; x.emit('snap:done', { av }); }
+    io.emit('avatar', { name: v.name, av }); res.json({ ok: true }); } catch (e) { console.error('[snap]', e.message); res.status(500).json({ error: 'Could not save the photo.' }); } });
 app.get('/api/online', (q, r) => r.set('Cache-Control', 'no-store').json({ n: onlineTotal() }));
 async function isAdultReq(req) { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return false; try { return !!(await db.q('select adult from users where id=$1', [u.id]))[0]?.adult; } catch { return false; } }
 app.get('/api/rooms', async (q, r) => r.json(await decorate(roomList(await isAdultReq(q)), await userFromReq(q).catch(() => null))));
@@ -142,7 +169,7 @@ app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.
   res.status(404).json({ error: 'No such user.' }); });
 app.post('/api/profile', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in to edit your profile.' });
   const b = req.body || {}; let age = b.age === '' || b.age == null ? null : parseInt(b.age, 10);
-  if (age !== null && !(age >= 13 && age <= 120)) return res.status(400).json({ error: 'Age must be between 13 and 120 (or left blank).' });
+  if (age !== null && !(age >= 18 && age <= 120)) return res.status(400).json({ error: 'Age must be between 18 and 120 (or left blank). YappChat is for adults 18+.' });
   await db.q('update users set display_name=$2, age=$3, location=$4, bio=$5, interests=$6 where id=$1', [u.id, PCLEAN(b.displayName, 30), age, PCLEAN(b.location, 50), PCLEAN(b.bio, 300), PCLEAN(b.interests, 150)]);
   res.json({ ok: true }); });
 // ---- site admin: room ratings / closing (ADMIN_KEY) ----
@@ -204,7 +231,13 @@ function modList(room) { const m = mod(room); [...m.kicked.keys()].forEach(k => 
   return { admins: [...m.admins], muted: [...new Set([...m.mt, ...m.mm])].map(n => ({ name: n, text: m.mt.has(n), mic: m.mm.has(n) })), dotted: [...m.dot.keys()].filter(n => dotLeft(room, n) !== null).map(n => { const l = dotLeft(room, n); return { name: n, secs: l ? Math.ceil(l / 1000) : 0 }; }), kicked: [...m.kicked].map(([n, u]) => ({ name: n, ban: u > 1e15, mins: u > 1e15 ? 0 : Math.ceil((u - Date.now()) / 60e3) })), owner: UROOMS.get(room)?.owner || null }; }
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
 const keyOk = k => { if (!ADMIN_KEY || typeof k !== 'string') return false; const a = Buffer.from(k), b = Buffer.from(ADMIN_KEY); return a.length === b.length && require('crypto').timingSafeEqual(a, b); };
-function push(room, m) { m.t = m.t || Date.now(); history[room].push(m); if (history[room].length > HIST) history[room].shift(); io.to(room).emit('msg', m); }
+function push(room, m) { m.t = m.t || Date.now(); (history[room] = history[room] || []).push(m); if (history[room].length > HIST) history[room].shift(); io.to(room).emit('msg', m);
+  if (!/has (entered|left) the room/.test(m.text || '') && db.status().ready) Promise.resolve().then(() => db.q('insert into room_history(room,msg) values($1,$2)', [room, JSON.stringify(m)])).catch(() => {}); }
+// trim stored history to the last HIST messages per room
+setInterval(() => { if (db.status().ready) Promise.resolve().then(() => db.q('delete from room_history h using (select id, row_number() over (partition by room order by id desc) rn from room_history) x where h.id=x.id and x.rn>$1', [HIST])).catch(() => {}); }, 10 * 60e3).unref();
+(function loadHist(n) { if (!db.status().ready) return n < 90 && setTimeout(() => loadHist(n + 1), 2000).unref?.();
+  Promise.resolve().then(() => db.q('select room,msg from (select room,msg,id,row_number() over (partition by room order by id desc) rn from room_history) x where rn<=$1 order by id', [HIST])).then(rs => { const by = {}; for (const r of rs) (by[r.room] = by[r.room] || []).push(typeof r.msg === 'string' ? JSON.parse(r.msg) : r.msg);
+    for (const [k, v] of Object.entries(by)) if (ROOMS[k] || UROOMS.has(k)) { const live = (history[k] || []).filter(m => !v.some(o => o.t === m.t && o.text === m.text)); history[k] = v.concat(live).slice(-HIST); } if (rs.length) console.log('restored history for', Object.keys(by).length, 'rooms'); }).catch(e => console.error('history', e.message)); })(0);
 function modAct(s, room, { action, who, mins } = {}, cb) {
   cb = typeof cb === 'function' ? cb : () => {}; const me = roleOf(s, room); if (!room || !me) return cb({ error: 'Only the room owner and admins can do that.' });
   const m = mod(room), lc = String(who || '').toLowerCase().slice(0, 30), t = socks(room).find(x => x.data.name.toLowerCase() === lc && (!x.data.inc || s.data.master)), nm = esc(t ? t.data.name : String(who || '').slice(0, 30)), by = s.data.master ? 'a moderator' : esc(s.data.name), byRaw = s.data.master ? 'a moderator' : s.data.name;
@@ -258,19 +291,20 @@ io.on('connection', s => {
     { const ip = geo.clientIp(s.handshake.headers, s.handshake.address); if (s.data.guest) geo.recordGuest(name, ip).catch(() => {}); else if (s.data.acct) geo.recordAccount(s.data.acct.id, ip, 'room'); }
     join(room); cb({ ok: true, name, colors: COLORS, account: !!s.data.acct, ...(s.data.master ? { m: true } : {}) });
   });
+  const graceSkip = room => { const g = GRACE.get(s.data.name.toLowerCase()); if (!g) return false; GRACE.delete(s.data.name.toLowerCase()); clearTimeout(g.t); return g.room === room; };
   const noticeOk = () => !s.data.master || (s.data.announce && !s.data.inc); // masters enter/leave silently by default
   function join(room) {
     if (s.data.room) { s.leave(s.data.room); if (noticeOk()) push(s.data.room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has left the room.` }); lists(s.data.room); }
     const old = s.data.room; mediaReset(); if (old) upd(old);
-    s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); s.emit('history', { room, topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, rating: rateOf(room), mics: micsOf(room), ann: ANN[room] || '' });
-    if (noticeOk()) push(room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has entered the room.` }); upd(room); s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce });
+    s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); s.emit('history', { room, topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, icon: UROOMS.get(room)?.icon || '', rating: rateOf(room), mics: micsOf(room), ann: ANN[room] || '' });
+    if (!graceSkip(room) && noticeOk()) push(room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has entered the room.` }); upd(room); s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce });
   }
-  s.on('create-room', ({ name, topic, rating, mics }, cb) => {
+  s.on('create-room', ({ name, topic, rating, mics, cat, icon }, cb) => {
     if (typeof cb !== 'function') return; if (!s.data.acct) return cb({ error: 'Guests cannot create rooms. Get a free screen name to create one.' });
     name = String(name || '').replace(/\s+/g, ' ').trim(); const e = roomNameError(name); if (e) return cb({ error: e });
     if (!RATINGS.includes(rating)) return cb({ error: 'Choose a rating for your room: PG-13 or R.' }); if (rating !== 'PG-13' && !s.data.adult) return cb({ error: 'Confirm you are 18 or older to create an R-rated room.', adult: true });
-    const lc = s.data.acct.name.toLowerCase(); if ([...UROOMS.values()].filter(r => r.ownerLc === lc).length >= MAXU) return cb({ error: 'You can own at most ' + MAXU + ' rooms at a time.' });
-    UROOMS.set(name, { owner: s.data.acct.name, ownerLc: lc, emptySince: Date.now() }); ROOMS[name] = 'User Rooms'; TOPICS[name] = cleanTopic(topic) || 'Welcome to ' + name; history[name] = []; RATE[name] = rating; MASTER.saveRating(name, rating); mics = [1, 2, 3, 4, 5].includes(+mics) ? +mics : 1; MICS[name] = mics; MASTER.saveMics(name, mics);
+    const lc = s.data.acct.name.toLowerCase(); if (!s.data.master && [...UROOMS.values()].filter(r => r.ownerLc === lc).length >= MAXU) return cb({ error: 'You can own at most ' + MAXU + ' rooms at a time.' });
+    if (!DIR[cat]) return cb({ error: 'Choose a section (category) for your room.' }); UROOMS.set(name, { owner: s.data.acct.name, ownerLc: lc, emptySince: Date.now(), icon: ICONS.includes(icon) ? icon : '' }); ROOMS[name] = cat; TOPICS[name] = cleanTopic(topic) || 'Welcome to ' + name; history[name] = []; RATE[name] = rating; MASTER.saveRating(name, rating); mics = [1, 2, 3, 4, 5].includes(+mics) ? +mics : 1; MICS[name] = mics; MASTER.saveMics(name, mics);
     saveURoom(name); cb({ ok: true, name, rating, mics }); if (s.data.name) join(name);
   });
   const isOwner = () => { const r = UROOMS.get(s.data.room); return r && s.data.acct && r.ownerLc === s.data.acct.name.toLowerCase(); };
@@ -282,8 +316,12 @@ io.on('connection', s => {
     if (!keyOk(k)) return cb({ error: 'Wrong admin key.' }); s.data.site = true; upd(s.data.room); cb({ ok: true }); });
   s.on('mod:list', cb => { if (typeof cb !== 'function') return; if (!roleOf(s, s.data.room)) return cb({ error: 'Only the room owner and admins can do that.' }); cb(modList(s.data.room)); });
   s.on('mod', (d, cb) => doMod(d || {}, cb));
+  s.on('room:cats', cb => typeof cb === 'function' && cb({ cats: Object.keys(DIR), icons: ICONS }));
+  s.on('room:icon', (icon, cb) => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room, u = UROOMS.get(room); if (!u) return cb({ error: 'Only rooms created by members can have a custom icon.' });
+    if (roleOf(s, room) !== 'owner') return cb({ error: 'Only the room owner can change the room icon.' }); if (icon && !ICONS.includes(icon)) return cb({ error: 'Pick an icon from the list.' });
+    u.icon = icon || ''; saveURoom(room); io.to(room).emit('room-icon', { room, icon: u.icon }); cb({ ok: true }); });
   s.on('mod:clearhist', cb => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room; if (!room || !roleOf(s, room)) return cb({ error: 'Only the room owner and admins can do that.' });
-    history[room] = []; io.to(room).emit('clear-history', { by: s.data.master ? 'a moderator' : s.data.name }); push(room, { sys: true, mod: true, text: 'Room history was cleared by ' + (s.data.master ? 'a moderator' : esc(s.data.name)) + '.' }); cb({ ok: true }); });
+    history[room] = []; Promise.resolve().then(() => db.q('delete from room_history where room=$1', [room])).catch(() => {}); io.to(room).emit('clear-history', { by: s.data.master ? 'a moderator' : s.data.name }); push(room, { sys: true, mod: true, text: 'Room history was cleared by ' + (s.data.master ? 'a moderator' : esc(s.data.name)) + '.' }); cb({ ok: true }); });
   function doMod(d, cb) { modAct(s, s.data.room, d, cb); }
   s.data.rejoin = r => join(r);
   s.on('rooms', async cb => typeof cb === 'function' && cb(await decorate(roomList(!!s.data.adult || !!s.data.master, !!s.data.master), s.data.acct)));
@@ -302,6 +340,7 @@ io.on('connection', s => {
     if (s.data.inc) { if (m.vis !== true) { stamps.pop(); return s.emit('incwarn', { text }); } s.data.inc = false; upd(s.data.room); s.emit('inc', { on: false, announce: !!s.data.announce }); }
     const FONTS = ['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'];
     push(s.data.room, { name: esc(s.data.name), av: s.data.av || '', role: s.data.master ? '' : roleOf(s, s.data.room), text: esc(text), color: COLORS.includes(m.color) ? m.color : '#000000', b: !!m.b, i: !!m.i, u: !!m.u, f: FONTS.includes(m.f) ? m.f : 'Arial', t: now });
+    if (!s.data.inc) botHear(s.data.room, s.data.name, text);
   });
   function mediaReset() {
     const room = s.data.room; if (!room) return;
@@ -350,7 +389,7 @@ io.on('connection', s => {
   let lastBuzz = 0, lastTyping = 0;
   s.on('buzz', () => { if (!s.data.name) return; if (s.data.inc) return s.emit('msg', { sys: true, text: 'You are incognito.' }); if (mod(s.data.room).mt.has(s.data.name.toLowerCase())) return; const now = Date.now(); if (now - lastBuzz < 15000) return s.emit('msg', { sys: true, text: 'Please wait a bit before buzzing again.' }); lastBuzz = now;
     push(s.data.room, { buzz: true, name: esc(s.data.name), t: now }); });
-  s.on('typing', () => { if (!s.data.name || s.data.inc) return; const now = Date.now(); if (now - lastTyping < 2000) return; lastTyping = now; s.to(s.data.room).emit('typing', { name: s.data.name }); });
+  s.on('typing', () => { if (!s.data.name || s.data.inc) return; const now = Date.now(); if (now - lastTyping < 2000) return; lastTyping = now; /* room typing indicator removed in v13 (IMs only) */ });
   s.on('ann:set', async ({ text } = {}, cb) => { const room = s.data.room; if (!room || typeof cb !== 'function') return; if (!s.data.master && !roleOf(s, room)) return cb({ error: 'Only the room owner or admins can set the announcement.' });
     const t = String(text || '').trim().slice(0, 300); if (t) ANN[room] = esc(t); else delete ANN[room];
     try { await (t ? db.q('insert into room_ann(room,text,by) values($1,$2,$3) on conflict(room) do update set text=$2,by=$3,t=now()', [room, ANN[room], s.data.name]) : db.q('delete from room_ann where room=$1', [room])); } catch { }
@@ -395,6 +434,8 @@ io.on('connection', s => {
   s.on('priv:set', P(async ({ pmBuddies }) => { if (!s.data.acct) return { error: 'Sign in with a screen name to change privacy settings.' }; s.data.pmb = !!pmBuddies;
     await db.q('update users set pm_buddies=$2 where id=$1', [s.data.acct.id, s.data.pmb]); syncSibs(); return { ok: true, ...(await prefs()) }; }));
   let lastAv = 0;
+  s.on('snap:token', cb => { if (typeof cb !== 'function') return; const a = s.data.acct; if (!a) return cb({ error: 'Sign in with a screen name to use a phone photo.' });
+    for (const [k, v] of SNAP) if (v.uid === a.id) SNAP.delete(k); const t = require('crypto').randomBytes(18).toString('base64url'); SNAP.set(t, { uid: a.id, name: a.name, exp: Date.now() + 600e3 }); cb({ t }); });
   s.on('avatar:set', (d, cb) => setAv(d, cb).catch(e => { console.error('[avatar]', e.message); typeof cb === 'function' && cb({ error: 'Could not save your avatar.' }); }));
   async function setAv(d, cb) {
     if (typeof cb !== 'function') cb = () => {}; const acct = s.data.acct, name = acct ? acct.name : (s.data.guest && s.data.name);
@@ -412,7 +453,7 @@ io.on('connection', s => {
   }
   s.on('report', ({ who, why } = {}) => { if (!s.data.name) return; MASTER.report(s.data.name, s.data.room, String(who || '').slice(0, 30), String(why || '').slice(0, 300)); console.log('[REPORT ABUSE]', new Date().toISOString(), 'by', s.data.name, 'in', s.data.room, 'against', String(who || '').slice(0, 30), '-', String(why || '').slice(0, 300)); });
   s.on('disconnect', () => { if (!s.data.name) return; if (users.get(s.data.name.toLowerCase()) === s.id) users.delete(s.data.name.toLowerCase()); if (s.data.guest) { AVMEM.delete(s.data.name.toLowerCase()); geo.guestOff(s.data.name); } const r0 = s.data.room; mediaReset(); s.leave(r0); upd(r0); if (s.data.acct) setImmediate(() => AH.roomChanged?.(s.data.name));
-    if (s.data.room && noticeOk()) push(s.data.room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has left the room.` }); });
+    if (s.data.room && noticeOk()) { const nm = s.data.name, rm = s.data.room, lc = nm.toLowerCase(); const old = GRACE.get(lc); if (old) clearTimeout(old.t); GRACE.set(lc, { room: rm, t: setTimeout(() => { GRACE.delete(lc); if (ROOMS[rm]) push(rm, { sys: true, who: nm, text: `${esc(nm)} has left the room.` }); }, 20000) }); } });
 });
 acc.sockets(io, AH);
 const RESET = require('./reset')(app, express);
