@@ -20,6 +20,12 @@ alter table users add column if not exists last_loc text;
 alter table users add column if not exists last_at timestamptz;
 create table if not exists login_history(id serial primary key, user_id int not null references users(id) on delete cascade, ip text, loc text, kind text, at timestamptz not null default now());
 create index if not exists login_history_u on login_history(user_id, id);
+alter table users add column if not exists adult boolean not null default false;
+alter table users add column if not exists display_name text not null default '';
+alter table users add column if not exists age int;
+alter table users add column if not exists location text not null default '';
+alter table users add column if not exists bio text not null default '';
+alter table users add column if not exists interests text not null default '';
 create table if not exists guest_log(id serial primary key, name text not null, ip text, loc text, at timestamptz not null default now());`;
 async function init() {
   if (!process.env.DATABASE_URL) { error = 'DATABASE_URL is not set'; console.warn('[db] ' + error + ' - accounts disabled (maintenance mode)'); return; }
