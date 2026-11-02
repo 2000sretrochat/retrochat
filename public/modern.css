@@ -57,3 +57,17 @@ html.dark #log span[style*="#8b5cf6" i],html.dark .bb span[style*="#8b5cf6" i],h
 .adph-c{height:50px;width:calc(100% - 20px);max-width:468px;margin:0 auto 8px;flex:none;box-sizing:border-box}
 @media (min-width:500px){.adph-c{height:60px}}
 .im .adph-c,.pmwin .adph-c{height:50px;max-width:320px}
+/* v13.2 narrow IM + people list */
+.im .ihead{min-width:0;flex-wrap:wrap;row-gap:6px}.im .ihead>div:not(.st){min-width:0}
+@media (max-width:480px){
+ .im .ihead{gap:6px!important;padding:8px 10px!important}
+ .im .ihead .ib{width:32px!important;height:32px!important;min-width:32px;padding:0!important}
+ .im .ihead .ib svg{width:18px;height:18px}
+ .im .ihead .pav{transform:scale(.85)}
+ .im .inbox{flex-wrap:wrap!important;gap:6px!important;padding:8px!important}
+ .im .inbox>textarea,.im .inbox>input,.im .inbox>.ta,.im .inbox>[contenteditable]{flex:1 1 100%!important;order:-1;min-width:0;width:100%!important}
+ .im .inbox>.ib{width:34px!important;height:34px!important;min-width:34px}
+}
+.mem{min-width:0}.mem .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}.mem .gt,.mem .ci,.mem .sdot,.mem .mi{flex:none}
+@media (max-width:860px){#fsv{display:none}#fsr{width:56px!important}}
+#mem{overflow-x:hidden}
