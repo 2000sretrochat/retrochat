@@ -21,6 +21,9 @@ let srv; const start = async () => { srv = spawn('node', ['server.js'], { env: {
     const me2 = await (await get('/api/me', uc)).json(); ok(me2.name && !('m' in me2), '/api/me has no master field for normal users');
     for (const p of ['/master', '/api/master/data', '/api/master/rooms', '/api/master/reports', '/api/master/watch']) ok((await get(p, uc)).status === 404, 'non-master gets 404 on ' + p);
     ok((await get('/master', mc)).status === 200, 'master can open /master console');
+    const ui = await get('/api/master/ui.js', mc); ok(ui.status === 200 && /openMasterConsole/.test(await ui.text()), 'master gets in-app console window script');
+    ok((await get('/api/master/ui.js', uc)).status === 404 && (await get('/api/master/ui.js')).status === 404, 'console window script is master-only');
+    const ph = await (await fetch(U + '/rooms.html')).text() + await (await fetch(U + '/')).text(); ok(!/window\.open\('\/master'|href='\/master'/.test(ph), 'menus no longer navigate to /master');
     ok((await post('/api/master/account', { name: 'mv' + sfx, action: 'grant' }, uc)).status === 404, 'non-master cannot grant master');
     // hidden in rooms
     const m = conn(mc), u = conn(uc), v = conn(vc); socks.push(m, u, v); const ulog = []; u.on('msg', x => ulog.push(x)); let uros = []; u.on('roster', r => uros = r);

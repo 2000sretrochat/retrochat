@@ -41,6 +41,7 @@ module.exports = function (C) {
   function kickOut(name) { // disconnect all sockets (rooms + messenger) for an account name
     const lc = String(name).toLowerCase(); for (const s of io.sockets.sockets.values()) if ((s.data.acct && s.data.acct.name.toLowerCase() === lc) || (s.data.name && s.data.name.toLowerCase() === lc && !s.data.guest)) { s.emit('m:signedout'); s.disconnect(true); } }
 
+  app.get('/api/master/ui.js', guard((req, res) => { res.set('Cache-Control', 'no-store'); res.sendFile(path.join(__dirname, 'master-win.js')); }));
   app.get('/master', guard((req, res) => res.sendFile(path.join(__dirname, 'master.html'))));
   app.get('/api/master/data', guard(async (req, res) => {
     const d = await geo.adminData(acc.isOnline); const ms = new Set((await q('select name from users where is_master')).map(r => r.name));
