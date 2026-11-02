@@ -1,261 +1,283 @@
-<!doctype html><html><head><meta charset="utf-8"><title>YappChat</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html><head><meta charset="utf-8"><title>YappChat Messenger</title><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-/* palette from poplyglot.github.io/poplyglot-russian-test: #1877E8 brand, #176FCF blue, #2468D7 deep, #10234A/#12213F ink, #4AB7F2 bubbles, #F4F9FF bg */
-:root{--brand:#1877E8;--blue:#176FCF;--deep:#2468D7;--navy:#10234A;--bub:rgba(74,183,242,.58);--sys:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--sky:#4AB7F2;--ink:#12213F;--line:#E1ECF7;--bg:#F6FAFE;--pale:#DCEBFC;--mid:#BFDCFA;--acc:#FFCE00;--muted:#5A6E88}
-body{margin:0;background:linear-gradient(#F4F9FF,#DCEBFC) fixed;font:13px Tahoma,Verdana,Arial,sans-serif;color:var(--ink)}
-.win{background:#f3f6fa;border:1px solid var(--deep);border-radius:6px 6px 2px 2px;box-shadow:0 3px 14px rgba(15,79,154,.35);margin:12px auto;max-width:1000px;overflow:hidden}
+:root{--brand:#1877E8;--blue:#176FCF;--deep:#2468D7;--navy:#10234A;--ink:#12213F;--sky:#4AB7F2;--bub:rgba(74,183,242,.58);--line:#d5e2f0;--pale:#eaf3fd;--mid:#cfe3fa;--muted:#5b6b85;--acc:#FFCE00;
+ --sys:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(#F4F9FF,#DCEBFC) fixed;font:12px Tahoma,Verdana,Arial,sans-serif;color:var(--ink)}
+.win{background:#f3f6fa;border:1px solid var(--deep);border-radius:7px 7px 3px 3px;box-shadow:0 4px 16px rgba(15,79,154,.35);overflow:hidden}
 .tbar{background:linear-gradient(#4AB7F2,#1877E8 55%,#2468D7);color:#fff;font-weight:bold;padding:5px 8px;display:flex;align-items:center;gap:6px;text-shadow:0 1px 1px rgba(0,0,0,.4);user-select:none}
-.tbar .ico{width:16px;height:16px}.tbar .sp{flex:1}.tbar .wb{width:18px;height:16px;border:1px solid #fff;border-radius:3px;background:rgba(255,255,255,.2);font:bold 10px Tahoma;text-align:center;line-height:14px;cursor:default}
-.tbar .wb.x{background:#d9534f;cursor:pointer}
-#login{max-width:520px}#login .in{padding:14px}
-.cat{font-weight:bold;color:var(--deep);margin-top:8px}.room{display:inline-block;margin:3px 8px 3px 14px;color:var(--blue);cursor:pointer;text-decoration:underline}.room.sel{background:var(--acc);color:#000}
-input[type=text],textarea{font:13px Tahoma;border:1px solid #7f9db9;padding:3px}
-button{font:12px Tahoma;background:linear-gradient(#fff,#e3ecf7);border:1px solid #7f9db9;border-radius:3px;padding:3px 12px;cursor:pointer;color:var(--ink)}button:hover{border-color:var(--blue)}button:active{background:var(--mid)}button:disabled{color:#999;cursor:default}
-#err{color:#c00;margin-top:6px}
-#chat{display:none}
+.tbar .sp{flex:1}.wb{width:18px;height:16px;border:1px solid #fff;border-radius:3px;background:rgba(255,255,255,.2);font:bold 10px Tahoma;text-align:center;line-height:13px;cursor:pointer}.wb.x{background:#d9534f}
+button{font:12px Tahoma;background:linear-gradient(#fff,#e3ecf7);border:1px solid #7f9db9;border-radius:3px;padding:3px 10px;cursor:pointer;color:var(--ink)}button:hover{border-color:var(--blue)}button:disabled{opacity:.5;cursor:default}
+button.pri{background:linear-gradient(#ffe066,#ffc400);border-color:#c79a00;font-weight:bold}
+input[type=text],input[type=password],input[type=email],select,textarea{font:12px Tahoma;border:1px solid #7f9db9;padding:4px;border-radius:2px}
+.logo{font:800 30px var(--sys);letter-spacing:-.5px;line-height:1}.logo .a{color:var(--brand)}.logo .b{color:var(--navy)}
+#mwin{position:fixed;left:16px;top:16px;width:290px;height:calc(100vh - 32px);max-height:680px;display:flex;flex-direction:column;z-index:5}
 #menu{display:flex;background:#f3f6fa;border-bottom:1px solid var(--line);padding:1px 4px;position:relative;z-index:30}
-#menu>div{position:relative;padding:3px 9px;cursor:default}#menu>div:hover,#menu>div.open{background:var(--blue);color:#fff}
-#menu .dd{display:none;position:absolute;left:0;top:100%;background:#fff;color:var(--ink);border:1px solid #7f9db9;box-shadow:2px 2px 5px rgba(0,0,0,.25);min-width:190px;padding:2px 0}
-#menu>div.open .dd{display:block}#menu .dd div{padding:4px 18px;white-space:nowrap}#menu .dd div:hover{background:var(--blue);color:#fff}#menu .dd hr{border:0;border-top:1px solid var(--line);margin:2px 0}
-#menu .dd .chk:before{content:"\2713";margin-left:-13px;margin-right:4px}
-#tools{display:flex;gap:4px;padding:4px 6px;border-bottom:1px solid var(--line);background:linear-gradient(#fff,#eef4fb)}
-.tbtn{display:flex;flex-direction:column;align-items:center;font-size:11px;padding:2px 8px;border:1px solid transparent;border-radius:3px;background:none;min-width:52px}
-.tbtn span{font-size:22px;line-height:26px}.tbtn:hover{border-color:#7f9db9;background:var(--pale)}.tbtn.on{border-color:var(--deep);background:var(--mid)}
-#viewers{margin-left:auto;align-self:center;font-size:11px;color:var(--deep)}
-#main{display:flex;gap:6px;padding:6px 6px 0}
-#lpane{flex:1;display:flex;flex-direction:column;min-width:0;border:1px solid #7f9db9;background:#fff}
-#topic{padding:5px 8px;color:#080;border-bottom:1px solid var(--line)}#topic b{color:#060}#topic i{color:var(--ink);font-style:normal}
-#log{height:300px;overflow-y:auto;padding:6px 8px;font:13px Arial;line-height:1.45}
-#log.fs-s{font-size:11px}#log.fs-l{font-size:16px}
-#log .sys{color:var(--muted);font-style:italic}#log .n{font-weight:bold}#log .ts{color:#999;font-size:10px;margin-right:4px}#log.nots .ts{display:none}#log.nojl .jl{display:none}
-#log .buzz{color:#d00;font-weight:bold}
-#typing{height:16px;font-size:11px;color:var(--muted);padding:0 8px;border-top:1px solid var(--line);background:var(--bg)}
-#mpane{width:200px;display:flex;flex-direction:column;gap:4px}
-#mem{flex:1;height:290px;overflow-y:auto;background:#fff;border:1px solid #7f9db9;padding:3px}
-.mem{display:flex;align-items:center;gap:4px;padding:1px 3px;cursor:pointer;white-space:nowrap}.mem:hover{background:var(--line)}.mem.sel{background:var(--blue);color:#fff}
-.mem.ign{opacity:.45;text-decoration:line-through}.mem.talking .nm{font-weight:bold;color:#c00}.mem.sel.talking .nm{color:#fff}.mi{width:18px;text-align:center;line-height:0}.ci{cursor:pointer;font-size:14px;line-height:1}
-#mbtns{display:flex;gap:4px}#mbtns button{flex:1;padding:3px 4px}
-#vrow{display:flex;align-items:center;gap:10px;padding:6px 8px;flex-wrap:wrap}
-#talk{background:linear-gradient(#8fe08f,#3cb371);border:1px solid #1e7a3c;font-weight:bold;padding:4px 18px;border-radius:2px;color:#062}#talk.on{background:linear-gradient(#ffe066,#ffb300);border-color:#a60;color:#530}
-.meter{width:56px;height:16px;border:1px solid #7f9db9;background:repeating-linear-gradient(90deg,#ddd 0 2px,#fff 2px 4px);position:relative;overflow:hidden}
-.meter i{position:absolute;left:0;top:0;bottom:0;width:0;background:repeating-linear-gradient(90deg,#3cb371 0 2px,transparent 2px 4px);transition:width .08s}
-#vstat{color:#c00;font-weight:bold;font-size:11px;min-width:120px}#vright{margin-left:auto;display:flex;align-items:center;gap:6px}
-#vol{width:70px;accent-color:#3cb371}
-#erow{display:flex;align-items:center;gap:8px;padding:0 8px 3px;position:relative}
-#smb,#tb{cursor:pointer;line-height:0;padding:2px;border:1px solid transparent;border-radius:3px}#smb:hover,#tb:hover,#tb.on{border-color:#7f9db9;background:var(--pale)}
-#tb{font:bold 20px "Times New Roman";color:var(--blue);line-height:20px;padding:0 4px}
-#ra{margin-left:auto;color:var(--blue);font-size:12px;cursor:pointer;text-decoration:underline}
-#sty{display:none;align-items:center;gap:6px;padding:3px 8px;flex-wrap:wrap;font-size:12px}#sty.open{display:flex}#sty button{padding:1px 8px}#sty .on{background:var(--mid);border-color:var(--deep)}
-.sw{display:inline-block;width:14px;height:14px;border:1px solid #555;vertical-align:middle;cursor:pointer;margin-left:2px}.sw.on{outline:2px solid var(--acc)}
-#form{display:flex;gap:6px;padding:0 8px 8px}#msg{flex:1;height:44px;resize:none}#send{width:70px}
-#smp{display:none;position:absolute;bottom:28px;left:6px;width:340px;max-height:230px;overflow:auto;background:#fff;border:1px solid var(--deep);box-shadow:2px 2px 6px rgba(0,0,0,.3);padding:4px;z-index:40}#smp.open{display:block}#smp span[data-k]{display:inline-block;padding:2px;cursor:pointer}#smp span[data-k]:hover{background:var(--acc)}
-#ad-slot{min-height:90px;max-width:728px;margin:6px auto 10px;border:1px dashed #d5e2f0}
-.camwin,.pmwin{position:fixed;background:#f3f6fa;border:1px solid var(--deep);border-radius:5px 5px 2px 2px;box-shadow:3px 3px 10px rgba(0,0,0,.35);z-index:50;overflow:hidden}
-.camwin{width:244px}.pmwin{width:300px}
-.camwin .tbar,.pmwin .tbar{cursor:move;font-size:11px;padding:3px 6px}.x{cursor:pointer;background:#d9534f;padding:0 5px;border:1px solid #fff;border-radius:3px}
-.camwin video{width:240px;height:180px;background:#000;display:block;margin:2px}.camwin .ft{font-size:10px;padding:0 4px 3px;color:var(--muted)}
-.pmwin .pl{height:160px;overflow-y:auto;background:#fff;border:1px solid #7f9db9;margin:4px;padding:4px;font:12px Arial}.pmwin form{display:flex;gap:4px;margin:0 4px 4px}.pmwin input{flex:1}
-@keyframes buzz{10%,50%,90%{transform:translate(-6px,2px)}30%,70%{transform:translate(6px,-2px)}}.buzzing{animation:buzz .5s 2}
-#brand{display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:14px 0 2px}
-.logo{font:800 38px var(--sys);letter-spacing:-.5px;line-height:1}.logo .a{color:var(--brand)}.logo .b{color:var(--navy);white-space:pre}
-#brand .tag{font:13px var(--sys);color:var(--muted);text-align:center}
-.bub{display:inline-block;vertical-align:middle}
-#foot{text-align:center;font-size:10px;color:var(--muted)}
-@media (max-width:760px){#mpane{width:140px}#log{height:240px}.meter{display:none}}
+#menu>div{position:relative;padding:3px 8px;cursor:default}#menu>div:hover,#menu>div.open{background:var(--blue);color:#fff}
+#menu .dd{display:none;position:absolute;left:0;top:100%;background:#fff;color:var(--ink);border:1px solid #7f9db9;box-shadow:2px 2px 5px rgba(0,0,0,.25);min-width:180px;padding:2px 0}
+#menu>div.open .dd{display:block}#menu .dd div{padding:4px 16px;white-space:nowrap}#menu .dd div:hover{background:var(--blue);color:#fff}#menu hr{border:0;border-top:1px solid var(--line);margin:2px 0}
+/* sign-in */
+#signin{flex:1;display:flex;flex-direction:column;align-items:center;padding:22px 18px;gap:8px;background:linear-gradient(#fff,#eaf3fd)}
+#signin label{align-self:stretch;font-weight:bold;color:var(--navy)}#signin input[type=text],#signin input[type=password],#signin input[type=email]{width:100%}
+#signin .row{align-self:stretch;display:flex;align-items:center;gap:6px}
+.err{color:#c00;min-height:15px;align-self:stretch}.ok{color:#080}.note{background:#fff6c8;border:1px solid #e6c84a;padding:8px;border-radius:4px;align-self:stretch}
+a{color:var(--blue);cursor:pointer}
+/* main */
+#main{flex:1;display:none;flex-direction:column;min-height:0}
+#me{display:flex;gap:8px;padding:8px;background:linear-gradient(#fff,#eaf3fd);border-bottom:1px solid var(--line)}
+.av{width:48px;height:48px;border:1px solid #7f9db9;border-radius:4px;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer}
+.av .rcw{zoom:1.7}.av.sm{width:26px;height:26px;cursor:default}.av.sm .rcw{zoom:1}
+#me .info{flex:1;min-width:0}#me .nm{font-weight:bold;font-size:14px;color:var(--navy);overflow:hidden;text-overflow:ellipsis}
+#stsel{margin:3px 0;max-width:100%}#smsg{width:100%;font-size:11px;color:var(--muted)}
+#search{margin:5px 6px;display:flex;gap:4px}#q{flex:1}
+#tabs{display:flex;padding:0 6px}#tabs div{padding:3px 10px;border:1px solid var(--line);border-bottom:0;border-radius:4px 4px 0 0;background:#e8eef6;cursor:pointer}#tabs .on{background:#fff;font-weight:bold}
+#list{flex:1;overflow:auto;background:#fff;margin:0 6px;border:1px solid #7f9db9}
+.grp{font-weight:bold;color:var(--deep);padding:3px 4px;cursor:pointer;background:#f3f7fc;border-bottom:1px solid var(--line);user-select:none}.grp:before{content:"\25BE ";}.grp.closed:before{content:"\25B8 ";}
+.ct{display:flex;align-items:center;gap:6px;padding:3px 6px 3px 14px;cursor:default;user-select:none}.ct:hover{background:var(--pale)}.ct.sel{background:var(--mid)}
+.ct .t{flex:1;min-width:0}.ct .n{font-weight:bold}.ct.off .n{color:#888;font-weight:normal}.ct .sm{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.35);flex:none}
+.d-available{background:radial-gradient(circle at 35% 35%,#b9f5a0,#2db52d)}.d-busy{background:radial-gradient(circle at 35% 35%,#ffb3a8,#d9251c)}.d-away,.d-brb,.d-idle{background:radial-gradient(circle at 35% 35%,#fff2a0,#e0a800)}
+.d-offline,.d-invisible{background:#ccc}
+#reqs .rq{background:#fff6c8;border-bottom:1px solid #e6c84a;padding:5px 6px}#reqs .rq button{padding:1px 8px;margin-right:4px}
+#bottom{display:flex;gap:4px;padding:6px;flex-wrap:wrap;border-top:1px solid var(--line)}#bottom button{flex:1;padding:4px 2px}
+#foot{font-size:10px;color:var(--muted);text-align:center;padding:2px 0 5px}
+/* IM windows */
+.im{position:fixed;width:400px;display:flex;flex-direction:column;z-index:10}.im .tbar{cursor:move}
+.im .tools{display:flex;gap:2px;padding:3px 4px;border-bottom:1px solid var(--line);background:linear-gradient(#fff,#eef4fb)}
+.tb{display:flex;flex-direction:column;align-items:center;font-size:10px;padding:1px 6px;border:1px solid transparent;border-radius:3px;background:none;min-width:46px}.tb span{font-size:18px;line-height:22px}.tb:hover{border-color:#7f9db9;background:var(--pale)}.tb.on{background:var(--mid);border-color:var(--deep)}
+.im .peer{display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:11px;color:var(--muted)}
+.im .log{height:210px;overflow:auto;background:#fff;border:1px solid #7f9db9;margin:0 6px;padding:5px;font:13px Arial;line-height:1.4}
+.im .log .sys{color:var(--muted);font-style:italic;font-size:11px}.im .log .bz{color:#d00;font-weight:bold}.im .log .ts{color:#999;font-size:10px;margin-right:3px}
+.im .typ{height:15px;font-size:11px;color:var(--muted);padding:1px 8px}
+.im .fmt{display:flex;align-items:center;gap:5px;padding:2px 6px;position:relative;flex-wrap:wrap}.im .fmt button{padding:0 7px}.im .fmt .on{background:var(--mid);border-color:var(--deep)}
+.im .fmt .smb{cursor:pointer;line-height:0}
+.sw{display:inline-block;width:12px;height:12px;border:1px solid #555;cursor:pointer}.sw.on{outline:2px solid var(--acc)}
+.im form{display:flex;gap:5px;padding:4px 6px 6px}.im textarea{flex:1;height:46px;resize:none}.im form button{width:64px}
+.smp{display:none;position:absolute;bottom:24px;left:4px;width:330px;max-height:210px;overflow:auto;background:#fff;border:1px solid var(--deep);box-shadow:2px 2px 6px rgba(0,0,0,.3);padding:4px;z-index:40}.smp.open{display:block}.smp span{cursor:pointer;display:inline-block;padding:2px}
+.call{display:none;padding:4px 6px;background:#10234A;color:#fff;gap:6px;align-items:center;flex-wrap:wrap}.call.on{display:flex}
+.call video{width:180px;height:135px;background:#000;border:1px solid #4AB7F2}.call video.me{width:72px;height:54px}.call .cs{flex:1;min-width:120px}
+@keyframes buzz{10%,50%,90%{transform:translate(-7px,2px)}30%,70%{transform:translate(7px,-2px)}}.buzzing{animation:buzz .5s 2}
+#toasts{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;z-index:99}
+.toast{width:250px;background:linear-gradient(#fff,#eaf3fd);border:1px solid var(--deep);border-radius:5px;box-shadow:0 3px 10px rgba(0,0,0,.3);display:flex;gap:8px;align-items:center;padding:8px;animation:tin .3s}
+@keyframes tin{from{transform:translateY(30px);opacity:0}}
+#avpick{display:none;position:absolute;left:8px;top:110px;background:#fff;border:1px solid var(--deep);padding:6px;z-index:40;box-shadow:2px 2px 6px rgba(0,0,0,.3)}#avpick .av{display:inline-flex;margin:2px}
+#modal{display:none;position:fixed;inset:0;background:rgba(16,35,74,.35);z-index:200;align-items:center;justify-content:center}#modal.on{display:flex}
+#modal .win{width:320px}#modal .in{padding:12px;display:flex;flex-direction:column;gap:6px;background:#fff}
+@media (max-width:760px){#mwin{left:0;top:0;width:100%;height:100vh;max-height:none}.im{left:0!important;top:0!important;width:100%;height:100vh}.im .log{flex:1;height:auto}}
 </style></head><body>
-<div id="brand"><div style="text-align:center"><div><svg class="bub" viewBox="0 0 34 24" width="46" height="32"><circle cx="5" cy="13" r="3" fill="rgba(74,183,242,.58)"/><circle cx="13" cy="19" r="4.2" fill="rgba(74,183,242,.58)"/><circle cx="26" cy="9" r="7.5" fill="rgba(74,183,242,.58)"/></svg></div><div class="logo appname"></div><div class="tag">Chat rooms, voice &amp; webcams &mdash; old school.</div></div></div>
-<div id="login" class="win"><div class="tbar"><span class=ico2><svg class="bub" viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg></span> Sign In to <span class="appname-plain"></span><span class="sp"></span></div><div class="in">
-Screen name: <input type="text" id="nm" maxlength="20" autocomplete="off"> <button id="go">Enter Chat</button><div id="err"></div>
-<div style="margin-top:10px">Choose a room:</div><div id="rlist"></div></div></div>
-<div id="chat" class="win">
-<div class="tbar"><svg class="bub" viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg> <span id="hdr">Lobby -- YappChat</span><span class="sp"></span><span class="wb">_</span><span class="wb">&#9633;</span><span class="wb x" id="wx" title="Leave chat">X</span></div>
-<div id="menu">
- <div>Chat<div class="dd"><div id="mJoin">Join Room...</div><div id="mRooms"></div><hr><div id="mLeave">Leave Room / Sign Out</div></div></div>
- <div>Edit<div class="dd"><div id="mCopy">Copy Selected Text</div><div id="mSelAll">Select All Chat Text</div><hr><div id="mClearIn">Clear Message Box</div></div></div>
- <div>View<div class="dd"><div data-fs="s">Small Text</div><div data-fs="m" class="chk">Medium Text</div><div data-fs="l">Large Text</div><hr><div id="mTs">Show Timestamps</div><div id="mJl" class="chk">Show Join/Leave Notices</div><div id="mTyp" class="chk">Show "is typing"</div></div></div>
- <div>Actions<div class="dd"><div id="mIgn">Ignore / Unignore Selected User</div><div id="mIgnL">Show Ignore List</div><div id="mIm">Send IM to Selected User</div><hr><div id="mBuzz">Buzz the Room (BUZZ!!!)</div><div id="mClear">Clear Chat Window</div></div></div>
- <div>Help<div class="dd"><div id="mHelp">How to Use Voice &amp; Webcam</div><div id="mAbout">About RetroChat</div></div></div>
+<div id="mwin" class="win">
+ <div class="tbar"><svg viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg><span class="appname-plain"></span>&nbsp;Messenger<span class="sp"></span><span class="wb">_</span><span class="wb x" id="wx" title="Sign out">X</span></div>
+ <div id="menu">
+  <div>Messenger<div class="dd"><div id="mStatus">Change My Status...</div><div id="mAvatar">Change My Display Image...</div><div id="mSound">Sounds: On</div><hr><div id="mOut">Sign Out</div></div></div>
+  <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mGroup">Add a Group...</div><div id="mMove">Move Selected to Group...</div><hr><div id="mRem">Remove Selected Contact</div><div id="mBlock">Block Selected Contact</div><div id="mBlocked">Blocked List...</div></div></div>
+  <div>Actions<div class="dd"><div id="mIm">Send an IM to Selected</div><div id="mBuzz">Buzz Selected</div><div id="mInv">Invite Selected to a Chat Room...</div><hr><div id="mRooms">Chat Rooms</div></div></div>
+  <div>Help<div class="dd"><div id="mHelp">Getting Started</div><div id="mAbout">About</div></div></div>
+ </div>
+ <div id="signin">
+  <svg viewBox="0 0 34 24" width="64" height="45"><circle cx="5" cy="13" r="3" fill="rgba(74,183,242,.58)"/><circle cx="13" cy="19" r="4.2" fill="rgba(74,183,242,.58)"/><circle cx="26" cy="9" r="7.5" fill="rgba(74,183,242,.58)"/></svg>
+  <div class="logo appname"></div><div style="color:var(--muted);margin-bottom:6px">Messenger</div>
+  <div id="maint" class="note" style="display:none"></div>
+  <div id="fIn" style="display:contents">
+   <label for="iName">Screen name</label><input type="text" id="iName" maxlength="20" autocomplete="username">
+   <label for="iPw">Password</label><input type="password" id="iPw" maxlength="100" autocomplete="current-password">
+   <div class="row"><label style="font-weight:normal"><input type="checkbox" id="iRem"> Remember me</label></div>
+   <button class="pri" id="bIn" style="width:100%">Sign In</button><div class="err" id="eIn"></div>
+   <div>Don't have a screen name? <a id="toUp">Get one free</a></div>
+  </div>
+  <div id="fUp" style="display:none;flex-direction:column;gap:6px;align-self:stretch">
+   <label for="uName">Choose a screen name</label><input type="text" id="uName" maxlength="20" autocomplete="username"><div id="uAv" style="font-size:11px;min-height:14px"></div>
+   <label for="uPw">Password (8+ characters)</label><input type="password" id="uPw" maxlength="100" autocomplete="new-password">
+   <label for="uPw2">Confirm password</label><input type="password" id="uPw2" maxlength="100" autocomplete="new-password">
+   <label for="uEm">Email <span style="font-weight:normal;color:var(--muted)">(optional, for password reset later)</span></label><input type="email" id="uEm" maxlength="200" autocomplete="email">
+   <label style="font-weight:normal"><input type="checkbox" id="uRem"> Remember me</label>
+   <button class="pri" id="bUp">Create My Screen Name</button><div class="err" id="eUp"></div>
+   <div><a id="toIn">&laquo; Back to Sign In</a></div>
+  </div>
+  <div style="margin-top:auto;text-align:center">or <a href="/rooms.html">Sign in as Guest</a> to visit the Chat Rooms</div>
+ </div>
+ <div id="main">
+  <div id="me"><div class="av" id="myav" title="Change display image"></div><div class="info"><div class="nm" id="myname"></div>
+   <select id="stsel"><option value="available">&#9679; Available</option><option value="busy">&#9679; Busy</option><option value="away">&#9679; Away</option><option value="brb">&#9679; Be Right Back</option><option value="invisible">&#9675; Invisible</option></select>
+   <input type="text" id="smsg" maxlength="60" placeholder="What's on your mind? (status message)"></div></div>
+  <div id="avpick"></div>
+  <div id="search"><input type="text" id="q" placeholder="Search contacts..."></div>
+  <div id="tabs"><div class="on">Contacts</div></div>
+  <div id="list"><div id="reqs"></div><div id="tree"></div></div>
+  <div id="bottom"><button id="bAdd">&#10133; Add a Contact</button><button id="bRooms">&#128172; Chat Rooms</button></div>
+ </div>
+ <div id="foot"><span class="appname-plain"></span> &middot; an original nostalgia project</div>
 </div>
-<div id="tools"><button class="tbtn" id="cam" title="Share My Webcam"><span>&#128247;</span>Webcam</button><button class="tbtn" id="vbtn" title="Show/hide voice controls"><span>&#127908;</span>Voice</button>
-<button class="tbtn" disabled title="Send File - coming soon"><span>&#128206;</span>Send File</button><button class="tbtn" id="cbtn" title="Rooms"><span>&#128172;</span>Chat</button><div id="viewers"></div></div>
-<div id="main"><div id="lpane"><div id="topic"></div><div id="log"></div><div id="typing"></div></div>
-<div id="mpane"><div id="mem"></div><div id="mbtns"><button id="bIm" title="Send a private message"><u>I</u>M</button><button id="bIgn"><u>I</u>gnore User</button></div></div></div>
-<div id="vrow"><label><input type="checkbox" id="hf"> Hands Free</label><button id="talk" title="Hold to talk (or hold Ctrl)">Talk</button>
-<div class="meter" title="Your mic level"><i id="m1"></i></div><div class="meter" title="Room voice level"><i id="m2"></i></div><span id="vstat"></span>
-<div id="vright"><label><input type="checkbox" id="mute"> Mute</label><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" title="Speaker volume"></div></div>
-<div id="erow"><span id="smb" title="Smileys"></span><span id="tb" title="Text style">T</span><div id="smp"></div><span id="ra">Report Abuse</span></div>
-<div id="sty"><button id="bB"><b>B</b></button><button id="bI"><i>I</i></button><button id="bU"><u>U</u></button> Color: <span id="sws"></span>
- Font: <select id="font"><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Comic Sans MS</option><option>Times New Roman</option><option>Courier New</option></select></div>
-<div id="form"><textarea id="msg" maxlength="300" autocomplete="off"></textarea><button id="send">Send</button></div>
-</div>
-<!-- Ad slot: paste the AdSense <ins class="adsbygoogle"> unit inside this div -->
-<div id="ad-slot"></div>
-<div id="foot"><span class="appname-plain"></span> &middot; an original nostalgia project</div>
-<script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script>
+<div id="toasts"></div>
+<div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
+<script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script>
+<script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Yapp','Chat'];
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
-document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('');
-const $=id=>document.getElementById(id), S=io();
-let room='Lobby', st={b:false,i:false,u:false,color:'#000000',f:'Arial'}, rooms=[], selName=null;
-const prefs=Object.assign({ts:false,jl:true,typ:true,fs:'m'},JSON.parse(localStorage.rcPrefs||'{}'));
-const ignored=new Set(JSON.parse(localStorage.rcIgnore||'[]'));const saveIgn=()=>localStorage.rcIgnore=JSON.stringify([...ignored]);
-const savePrefs=()=>localStorage.rcPrefs=JSON.stringify(prefs);
-const escT=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const smile=t=>RCSmileys.replace(t);
-const NCOL=['#c0392b','#1877E8','#8e44ad','#16a085','#d35400','#2c3e50','#27ae60','#b0186b'];const ncol=n=>NCOL[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%NCOL.length];
-fetch('/api/rooms').then(r=>r.json()).then(rs=>{rooms=rs;let cats={};rs.forEach(r=>(cats[r.cat]=cats[r.cat]||[]).push(r));
- $('rlist').innerHTML=Object.entries(cats).map(([c,l])=>`<div class=cat>${c}</div>`+l.map(r=>`<span class="room${r.name==room?' sel':''}" data-r="${r.name}" title="${escT(r.topic||'')}">${r.name} (${r.count})</span>`).join('')).join('');
- $('mRooms').innerHTML=rs.map(r=>`<div data-j="${r.name}">&nbsp;&nbsp;${r.name}</div>`).join('');
- $('mRooms').style.padding='0';
- document.querySelectorAll('[data-j]').forEach(e=>e.onclick=()=>S.emit('join',e.dataset.j));
- document.querySelectorAll('.room').forEach(e=>e.onclick=()=>{room=e.dataset.r;document.querySelectorAll('.room').forEach(x=>x.classList.toggle('sel',x==e))});});
-function login(){S.emit('login',{name:$('nm').value,room},r=>{if(r.error)return $('err').textContent=r.error;
- me=r.name;$('login').style.display='none';$('brand').style.display='none';$('chat').style.display='block';
- $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" style="background:${c}"></span>`).join('');
- document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;$('msg').style.color=st.color;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
- $('msg').focus();});}
-$('go').onclick=login;$('nm').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();login()}});
-// smileys + text style
-$('smb').innerHTML=RCSmileys.html(':)');
-$('smp').innerHTML=RCSmileys.ordered.map(m=>`<span data-k="${m.esc}">${m.html}</span>`).join('');
-$('smb').onclick=e=>{e.stopPropagation();$('smp').classList.toggle('open')};
-document.querySelectorAll('#smp>span').forEach(e=>e.onclick=()=>{const t=document.createElement('textarea');t.innerHTML=e.dataset.k;$('msg').value+=' '+t.value+' ';$('smp').classList.remove('open');$('msg').focus()});
-$('tb').onclick=()=>{$('sty').classList.toggle('open');$('tb').classList.toggle('on')};
-const tog=(k,id,css,val)=>$(id).onclick=()=>{st[k]=!st[k];$(id).classList.toggle('on',st[k]);$('msg').style[css]=st[k]?val:''};
-tog('b','bB','fontWeight','bold');tog('i','bI','fontStyle','italic');tog('u','bU','textDecoration','underline');
-$('font').onchange=()=>{st.f=$('font').value;$('msg').style.fontFamily=st.f};
-function send(){const t=$('msg').value.trim();if(!t)return;S.emit('say',{text:t,...st});$('msg').value='';$('msg').focus()}
-$('send').onclick=send;
-$('msg').addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();send()}else if(e.key.length==1)S.emit('typing')});
-// menus
+document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('')+' Messenger';
+const $=id=>document.getElementById(id);
+const escT=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const AV={a1:[':)','#cfe8ff'],a2:['B-)','#ffe0b3'],a3:[';)','#d9f7c8'],a4:[':D','#ffd1dc'],a5:['<):)','#efe0c4'],a6:['O:-)','#e6e0ff'],a7:['>:)','#ffd6cc'],a8:[':ar!','#d4f1f4']};
+const avHtml=(a,cls='')=>{const v=AV[a]||AV.a1;return `<div class="av ${cls}" style="background:radial-gradient(circle at 40% 30%,#fff,${v[1]})">${RCSmileys.html(v[0])}</div>`};
+const STL={available:'Available',busy:'Busy',away:'Away',brb:'Be Right Back',invisible:'Invisible',offline:'Offline',idle:'Idle'};
+const api=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{}),credentials:'same-origin'}).then(async r=>({status:r.status,...await r.json().catch(()=>({error:'Server error'}))}));
+let S=null,ME=null,contacts={},groups=['Friends'],blockedL=[],sel=null,closedG=new Set(JSON.parse(localStorage.ycClosed||'[]'));
+let sound=localStorage.ycSound!=='off';
+// ---------- sounds (generated with WebAudio; original) ----------
+let AC=null;function tone(seq){if(!sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();let t=AC.currentTime;
+ for(const [f,d,type] of seq){const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.8}}catch{}}
+const SND={on:()=>tone([[660,.12],[880,.12],[1175,.22]]),off:()=>tone([[880,.12],[660,.12],[440,.25]]),im:()=>tone([[988,.08],[1319,.14]]),buzz:()=>tone([[110,.12,'square'],[95,.12,'square'],[110,.12,'square'],[95,.18,'square']]),ring:()=>tone([[784,.18],[988,.18],[784,.18],[988,.3]])};
+$('mSound').onclick=()=>{sound=!sound;localStorage.ycSound=sound?'on':'off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')};$('mSound').textContent='Sounds: '+(sound?'On':'Off');
+function toast(html,av){const d=document.createElement('div');d.className='toast';d.innerHTML=(av?avHtml(av,'sm'):'')+'<div>'+html+'</div>';$('toasts').appendChild(d);setTimeout(()=>d.remove(),5000);d.onclick=()=>d.remove()}
+// ---------- modal ----------
+function modal(title,html,onok,okText='OK'){$('mdT').textContent=title;$('mdB').innerHTML=html+`<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px"><button class=pri id=mdOk>${okText}</button><button id=mdC>Cancel</button></div><div class=err id=mdE></div>`;
+ $('modal').classList.add('on');const close=()=>$('modal').classList.remove('on');$('mdX').onclick=$('mdC').onclick=close;
+ $('mdOk').onclick=async()=>{const r=await onok();if(r&&r.error)$('mdE').textContent=r.error;else close()};const f=$('mdB').querySelector('input,select');f&&f.focus();
+ $('mdB').onkeydown=e=>{if(e.key=='Enter'&&e.target.tagName!='TEXTAREA'){e.preventDefault();$('mdOk').click()}}}
+const emit=(ev,d)=>new Promise(r=>S.emit(ev,d,x=>r(x||{})));
+// ---------- menus ----------
 document.querySelectorAll('#menu>div').forEach(m=>m.addEventListener('click',e=>{const was=m.classList.contains('open');document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!was&&!e.target.closest('.dd'))m.classList.add('open')}));
-document.addEventListener('click',e=>{if(!e.target.closest('#menu'))document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!e.target.closest('#smp,#smb'))$('smp').classList.remove('open')});
-const leave=()=>{if(confirm('Leave the chat and sign out?'))location.reload()};
-$('mLeave').onclick=leave;$('wx').onclick=leave;$('mJoin').onclick=()=>{const r=prompt('Join which room?\n'+rooms.map(r=>r.name).join(', '),'');const f=r&&rooms.find(x=>x.name.toLowerCase()==r.trim().toLowerCase());if(f)S.emit('join',f.name);else if(r)alert('No room named '+r)};
-$('cbtn').onclick=e=>{e.stopPropagation();document.querySelector('#menu>div').classList.add('open')};
-$('mCopy').onclick=()=>navigator.clipboard?.writeText(String(getSelection()));$('mSelAll').onclick=()=>{const r=document.createRange();r.selectNodeContents($('log'));getSelection().removeAllRanges();getSelection().addRange(r)};
-$('mClearIn').onclick=()=>$('msg').value='';$('mClear').onclick=()=>$('log').innerHTML='';
-function applyPrefs(){$('log').className=(prefs.ts?'':'nots ')+(prefs.jl?'':'nojl ')+'fs-'+prefs.fs;$('mTs').classList.toggle('chk',prefs.ts);$('mJl').classList.toggle('chk',prefs.jl);$('mTyp').classList.toggle('chk',prefs.typ);
- document.querySelectorAll('[data-fs]').forEach(e=>e.classList.toggle('chk',e.dataset.fs==prefs.fs));savePrefs()}
-document.querySelectorAll('[data-fs]').forEach(e=>e.onclick=()=>{prefs.fs=e.dataset.fs;applyPrefs()});
-$('mTs').onclick=()=>{prefs.ts=!prefs.ts;applyPrefs()};$('mJl').onclick=()=>{prefs.jl=!prefs.jl;applyPrefs()};$('mTyp').onclick=()=>{prefs.typ=!prefs.typ;applyPrefs()};applyPrefs();
-function toggleIgnore(n){if(!n||n==me)return alert('Select someone in the member list first.');ignored.has(n)?ignored.delete(n):ignored.add(n);saveIgn();renderRoster();applyAudioAll();
- add({sys:1,text:escT(n)+(ignored.has(n)?' is now ignored. You will not see their messages or hear their voice.':' is no longer ignored.')})}
-$('mIgn').onclick=$('bIgn').onclick=()=>toggleIgnore(selName);$('mIgnL').onclick=()=>alert(ignored.size?'Ignored users:\n'+[...ignored].join('\n'):'Your ignore list is empty.');
-$('mIm').onclick=$('bIm').onclick=()=>{if(!selName||selName==me)return alert('Select someone in the member list first.');openPm(selName)};
-$('mBuzz').onclick=()=>S.emit('buzz');document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.key.toLowerCase()=='g'&&me){e.preventDefault();S.emit('buzz')}});
-$('mHelp').onclick=()=>alert('Voice: hold the green Talk button (or hold Ctrl) to talk. Tick Hands Free to stay on the mic. Mute silences everyone.\nWebcam: click Webcam to share yours. Click the camera icon next to a name to view theirs.\nBuzz: Ctrl+G.');
-$('mAbout').onclick=()=>alert(APP_NAME.join('')+' - an original nostalgia chat project.');
-$('vbtn').onclick=()=>{const v=$('vrow');v.style.display=v.style.display=='none'?'':'none';$('vbtn').classList.toggle('on',v.style.display!='none')};$('vbtn').classList.add('on');
-$('ra').onclick=()=>{const who=prompt('Report abuse: which screen name?',selName||'');if(!who)return;const why=prompt('What happened?','')||'';S.emit('report',{who,why});alert('Thanks. Your report was sent to the room moderators.')};
-// chat log
-const tstr=t=>t?new Date(t).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'';
-function add(m){const L=$('log'),d=document.createElement('div'),atB=L.scrollHeight-L.scrollTop-L.clientHeight<40;
- const ts=`<span class=ts>[${tstr(m.t||Date.now())}]</span>`;
- if(m.name&&ignored.has(m.name.replace(/&#39;/g,"'")))return;
- if(m.buzz){d.className='buzz';d.innerHTML=ts+`${m.name}: BUZZ!!!`;const c=$('chat');c.classList.remove('buzzing');void c.offsetWidth;c.classList.add('buzzing')}
- else if(m.sys){d.className='sys'+(/has (joined|left) the room/.test(m.text)?' jl':'');d.innerHTML=ts+m.text}
- else{let t=smile(m.text);const sty=`color:${m.color};font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
-  d.innerHTML=ts+`<span class=n style="color:${ncol(m.name)}">${m.name}:</span> <span style="${sty}">${t}</span>`}
- L.appendChild(d);if(atB)L.scrollTop=L.scrollHeight}
-S.on('history',h=>{room=h.room;$('hdr').textContent=h.room+' -- '+APP_NAME.join('');$('topic').innerHTML=`You are in <b>"${escT(h.room)}"</b> <i>( ${escT(h.topic||'')} )</i>`;$('log').innerHTML='';h.msgs.forEach(add)});
-S.on('msg',add);
-let typers={};S.on('typing',({name})=>{if(ignored.has(name))return;typers[name]=Date.now()+3500;showTyping()});
-function showTyping(){const now=Date.now(),n=Object.keys(typers).filter(k=>typers[k]>now);$('typing').textContent=prefs.typ&&n.length?n.join(', ')+(n.length>1?' are':' is')+' typing...':''}
-setInterval(showTyping,1000);S.on('msg',m=>{if(m.name)delete typers[m.name]});
-S.on('disconnect',()=>add({sys:1,text:'Disconnected from server. Reload to reconnect.'}));
-// draggable windows
+document.addEventListener('click',e=>{if(!e.target.closest('#menu'))document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!e.target.closest('.smp,.smb'))document.querySelectorAll('.smp').forEach(x=>x.classList.remove('open'));if(!e.target.closest('#avpick,#myav'))$('avpick').style.display='none'});
+// ---------- sign in / sign up ----------
+fetch('/api/status').then(r=>r.json()).then(s=>{if(!s.accounts){$('maint').style.display='block';$('maint').innerHTML='<b>Maintenance:</b> '+escT(s.message);['bIn','bUp'].forEach(i=>$(i).disabled=true)}});
+fetch('/api/me').then(r=>r.json()).then(m=>{if(m.name)start()});
+$('toUp').onclick=()=>{$('fIn').style.display='none';$('fUp').style.display='flex';$('uName').focus()};$('toIn').onclick=()=>{$('fUp').style.display='none';$('fIn').style.display='contents'};
+async function doIn(){$('eIn').textContent='';const r=await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;$('iPw').value='';start()}
+$('bIn').onclick=doIn;['iName','iPw'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doIn()}}));
+let avT;$('uName').addEventListener('input',()=>{clearTimeout(avT);const n=$('uName').value.trim();if(!n)return $('uAv').textContent='';avT=setTimeout(async()=>{const r=await fetch('/api/available?name='+encodeURIComponent(n)).then(r=>r.json()).catch(()=>({}));
+ $('uAv').innerHTML=r.valid===false?'<span class=err>3-20 characters, start with a letter; letters, numbers, _ or .</span>':r.available?'<span class=ok>&#10004; '+escT(n)+' is available</span>':r.error?'':'<span class=err>&#10008; '+escT(n)+' is taken</span>'},350)});
+async function doUp(){$('eUp').textContent='';if($('uPw').value!==$('uPw2').value)return $('eUp').textContent='Passwords do not match.';
+ const r=await api('/api/signup',{name:$('uName').value.trim(),password:$('uPw').value,email:$('uEm').value.trim()||undefined,remember:$('uRem').checked});if(r.error)return $('eUp').textContent=r.error;$('uPw').value=$('uPw2').value='';start()}
+$('bUp').onclick=doUp;$('fUp').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doUp()}});
+async function signOut(){if(!confirm('Sign out of '+APP_NAME.join('')+' Messenger?'))return;await api('/api/logout');S&&S.disconnect();location.reload()}
+$('mOut').onclick=$('wx').onclick=signOut;
+// ---------- connect ----------
+function start(){$('signin').style.display='none';$('main').style.display='flex';S=io();
+ S.on('connect',async()=>{const r=await emit('m:init');if(r.error)return alert(r.error);ME=r.me;groups=r.groups;blockedL=r.blocked;contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
+  $('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);$('myav').outerHTML=avHtml(ME.avatar).replace('class="av ','id="myav" title="Change display image" class="av ');$('myav').onclick=pickAv;
+  $('reqs').innerHTML='';r.requests.forEach(showReq);render();
+  if(r.offline.length){const by={};r.offline.forEach(m=>(by[m.from]=by[m.from]||[]).push(m));for(const f in by){const w=openIm(f);sys(w,'Offline messages received while you were away:');by[f].forEach(m=>line(w,f,m,true))}SND.im();toast('You have <b>'+r.offline.length+'</b> offline message(s).')}});
+ S.on('disconnect',()=>toast('Disconnected from '+APP_NAME.join('')+'. Reconnecting...'));
+ S.on('m:presence',p=>{const k=p.name.toLowerCase(),c=contacts[k];if(!c)return;const was=c.online;Object.assign(c,p);render();
+  if(!was&&p.online){SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar)}else if(was&&!p.online){SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar)}
+  const w=ims[k];w&&peerInfo(w,p.name)});
+ S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;$('stsel').value=x.status;$('smsg').value=dec(x.msg)});
+ S.on('m:request',showReq);S.on('m:contact',c=>{contacts[c.name.toLowerCase()]=c;if(!groups.includes(c.group))groups.push(c.group);render();document.querySelector(`.rq[data-n="${CSS.escape(c.name.toLowerCase())}"]`)?.remove()});
+ S.on('m:gone',({name})=>{delete contacts[name.toLowerCase()];render()});S.on('m:toast',({text})=>{SND.im();toast(text)});
+ S.on('m:im',m=>{const w=openIm(m.from);line(w,m.from,m);clearTyp(w);SND.im();if(document.hidden)document.title='* '+m.from+' says...'});
+ S.on('m:im-echo',m=>{const w=openIm(m.to);line(w,ME.name,m)});
+ S.on('m:typing',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;w.querySelector('.typ').textContent=from+' is typing...';clearTimeout(w._tt);w._tt=setTimeout(()=>clearTyp(w),4000)});
+ S.on('m:buzz',({from})=>{const w=openIm(from);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(from)}: BUZZ!!!</div>`);scroll(w);SND.buzz();for(const el of [w,$('mwin')]){el.classList.remove('buzzing');void el.offsetWidth;el.classList.add('buzzing')}});
+ S.on('m:invite',({from,room})=>{SND.im();const w=openIm(from);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=sys>${ts()}${escT(from)} invited you to the chat room <b>${escT(room)}</b>. <a href="/rooms.html?room=${encodeURIComponent(room)}" target="yapprooms">Join room</a></div>`);scroll(w);toast('<b>'+escT(from)+'</b> invited you to <b>'+escT(room)+'</b>')});
+ S.on('m:call',onCall);S.on('m:callans',onCallAns);S.on('m:sig',onSig);S.on('m:hang',({from})=>{const w=ims[from.toLowerCase()];if(w){endCall(w,false);sys(w,from+' ended the call.')}});
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=APP_NAME.join('')+' Messenger'});
+const dec=s=>{const t=document.createElement('textarea');t.innerHTML=s||'';return t.value};
+// ---------- status / avatar / idle ----------
+$('stsel').onchange=async()=>{const r=await emit('m:status',{status:$('stsel').value});if(r.status)ME.status=r.status};
+$('smsg').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();$('smsg').blur()}});$('smsg').onchange=()=>emit('m:status',{msg:$('smsg').value});
+$('mStatus').onclick=()=>modal('Change My Status',`<select id=xs>${Object.keys(STL).slice(0,5).map(k=>`<option value=${k}${k==ME.status?' selected':''}>${STL[k]}</option>`).join('')}</select><input type=text id=xm maxlength=60 placeholder="Custom status message" value="${escT(dec(ME.msg))}">`,
+ async()=>{const r=await emit('m:status',{status:$('xs').value,msg:$('xm').value});if(r.status){ME.status=r.status;ME.msg=r.msg;$('stsel').value=r.status;$('smsg').value=dec(r.msg)}return r});
+function pickAv(){const p=$('avpick');p.innerHTML='<div style="margin-bottom:4px;font-weight:bold">Choose a display image</div>'+Object.keys(AV).map(k=>avHtml(k).replace('class="av','data-a="'+k+'" class="av')).join('');p.style.display='block';
+ p.querySelectorAll('[data-a]').forEach(e=>e.onclick=async()=>{await emit('m:avatar',e.dataset.a);ME.avatar=e.dataset.a;$('myav').outerHTML=avHtml(ME.avatar).replace('class="av ','id="myav" title="Change display image" class="av ');$('myav').onclick=pickAv;p.style.display='none'})}
+$('mAvatar').onclick=e=>{e.stopPropagation();pickAv()};
+let lastAct=Date.now(),idle=false;['mousemove','keydown','pointerdown'].forEach(ev=>addEventListener(ev,()=>{lastAct=Date.now();if(idle&&S){idle=false;S.emit('m:idle',false)}},{passive:true}));
+setInterval(()=>{if(S&&!idle&&Date.now()-lastAct>10*60e3){idle=true;S.emit('m:idle',true)}},30e3);
+// ---------- contact list ----------
+$('q').oninput=render;
+function render(){const q=$('q').value.trim().toLowerCase(),cs=Object.values(contacts).filter(c=>!q||c.name.toLowerCase().includes(q)||dec(c.msg).toLowerCase().includes(q));
+ const gs=[...new Set(['Friends',...groups,...cs.map(c=>c.group)])];
+ $('tree').innerHTML=gs.map(g=>{const l=cs.filter(c=>c.group==g).sort((a,b)=>(b.online-a.online)||a.name.localeCompare(b.name));const on=l.filter(c=>c.online).length;
+  return `<div class="grp${closedG.has(g)?' closed':''}" data-g="${escT(g)}">${escT(g)} (${on}/${l.length})</div>`+(closedG.has(g)?'':l.map(c=>{const st=c.online?(c.idle?'idle':c.status):'offline';
+   return `<div class="ct${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${STL[st]}">${avHtml(c.avatar,'sm')}<span class="dot d-${st}"></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${c.msg?RCSmileys.replace(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
+  +(cs.length||q?'':'<div style="padding:10px;color:var(--muted)">No contacts yet. Click <b>Add a Contact</b> to send a buddy request.</div>');
+ document.querySelectorAll('.grp').forEach(e=>e.onclick=()=>{const g=e.dataset.g;closedG.has(g)?closedG.delete(g):closedG.add(g);localStorage.ycClosed=JSON.stringify([...closedG]);render()});
+ document.querySelectorAll('.ct').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>openIm(e.dataset.n).querySelector('textarea').focus();
+  e.oncontextmenu=ev=>{ev.preventDefault();sel=e.dataset.n;render();document.querySelectorAll('#menu>div')[1].classList.add('open')}})}
+function showReq(r){$('reqs').insertAdjacentHTML('beforeend',`<div class=rq data-n="${escT(r.name.toLowerCase())}"><b>${escT(r.name)}</b> wants to add you as a contact.${r.msg?'<br><i>"'+r.msg+'"</i>':''}<div style="margin-top:4px"><button class=pri data-y=1>Accept</button><button data-y=0>Decline</button></div></div>`);
+ const d=$('reqs').lastElementChild;d.querySelectorAll('button').forEach(b=>b.onclick=async()=>{const x=await emit('m:respond',{name:r.name,accept:b.dataset.y=='1'});if(x.error)alert(x.error);d.remove()});SND.im();toast('<b>'+escT(r.name)+'</b> sent you a contact request.')}
+const addC=()=>modal('Add a Contact','Screen name:<input type=text id=an maxlength=20>Message (optional):<input type=text id=am maxlength=120 placeholder="Hi, it\'s me!">',async()=>{const r=await emit('m:add',{name:$('an').value.trim(),msg:$('am').value});if(!r.error)toast(r.text);return r},'Send Request');
+$('bAdd').onclick=$('mAdd').onclick=addC;
+const need=()=>{if(!sel){alert('Select a contact first.');return null}return sel};
+$('mRem').onclick=()=>{const n=need();if(n&&confirm('Remove '+n+' from your contacts?'))emit('m:remove',{name:n})};
+$('mBlock').onclick=()=>{const n=need();if(n&&confirm('Block '+n+'? They will be removed from your contacts and cannot message you.'))emit('m:block',{name:n}).then(r=>{if(r.name)blockedL.push(r.name)})};
+$('mBlocked').onclick=()=>modal('Blocked List',blockedL.length?blockedL.map(n=>`<label><input type=checkbox value="${escT(n)}"> ${escT(n)}</label>`).join('')+'<small>Tick names to unblock.</small>':'Nobody is blocked.',async()=>{for(const c of $('mdB').querySelectorAll('input:checked')){await emit('m:block',{name:c.value,on:false});blockedL=blockedL.filter(x=>x!=c.value)}},'Unblock');
+$('mGroup').onclick=()=>modal('Add a Group','Group name:<input type=text id=gn maxlength=24>',async()=>{const r=await emit('m:group',{group:$('gn').value});if(r.group&&!groups.includes(r.group)){groups.push(r.group);render()}return r});
+$('mMove').onclick=()=>{const n=need();if(!n)return;modal('Move '+n,`Move to group:<select id=gm>${groups.map(g=>`<option>${escT(g)}</option>`).join('')}</select>`,async()=>{const r=await emit('m:group',{name:n,group:$('gm').value});if(r.group){contacts[n.toLowerCase()].group=r.group;render()}return r})};
+$('mIm').onclick=()=>{const n=need();n&&openIm(n)};$('mBuzz').onclick=()=>{const n=need();n&&buzz(n)};
+$('mRooms').onclick=$('bRooms').onclick=()=>window.open('/rooms.html','yapprooms');
+$('mInv').onclick=()=>{const n=need();n&&invite(n)};
+$('mHelp').onclick=()=>alert('Add a Contact sends a buddy request. Once they accept, double-click their name to IM.\nUse the IM window buttons for BUZZ!, voice calls and webcam.\nChange your status and message at the top. Right-click a contact for more options.');
+$('mAbout').onclick=()=>alert(APP_NAME.join('')+' Messenger - an original nostalgia project.');
+async function invite(n){const rs=await fetch('/api/rooms').then(r=>r.json());modal('Invite '+n+' to a Chat Room',`Room:<select id=ir>${rs.map(r=>`<option value="${escT(r.name)}">${escT(r.name)} (${r.count})</option>`).join('')}</select>`,async()=>{const r=await emit('m:invite',{to:n,room:$('ir').value});if(!r.error){const w=openIm(n);sys(w,'You invited '+n+' to '+$('ir').value+'.')}return r},'Invite')}
+// ---------- IM windows ----------
+const ims={};const COLORS=['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033'];
+const ts=t=>`<span class=ts>[${new Date(t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}]</span>`;
+const scroll=w=>{const l=w.querySelector('.log');l.scrollTop=l.scrollHeight};
+const sys=(w,t)=>{w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=sys>${ts()}${escT(t)}</div>`);scroll(w)};
+const clearTyp=w=>{w.querySelector('.typ').textContent=''};
+function line(w,from,m,old){const sty=`color:${m.color};font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
+ const mine=ME&&from.toLowerCase()==ME.name.toLowerCase();w.querySelector('.log').insertAdjacentHTML('beforeend',`<div>${ts(m.t)}<b style="color:${mine?'#1877E8':'#c0392b'}">${escT(from)}:</b> <span style="${sty}">${RCSmileys.replace(m.text)}</span>${m.offline?' <i class=sys>(will be delivered when they sign in)</i>':''}</div>`);scroll(w)}
+function peerInfo(w,n){const c=contacts[n.toLowerCase()],st=c?(c.online?(c.idle?'idle':c.status):'offline'):'offline';
+ w.querySelector('.peer').innerHTML=avHtml(c?c.avatar:'a1','sm')+`<span class="dot d-${st}"></span><b>${escT(c?c.name:n)}</b> &mdash; ${STL[st]}${c&&c.msg?' &middot; '+RCSmileys.replace(c.msg):''}`}
+let zTop=20;
+function openIm(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTop;return ims[k]}const name=(contacts[k]||{}).name||n;
+ const w=document.createElement('div');w.className='im win';const i=Object.keys(ims).length;w.style.left=(330+i*28)+'px';w.style.top=(30+i*28)+'px';w.style.zIndex=++zTop;w.dataset.n=name;
+ w.innerHTML=`<div class=tbar>&#128172; ${escT(name)} &mdash; Instant Message<span class=sp></span><span class="wb x">X</span></div>
+ <div class=tools><button class=tb data-a=voice title="Start a voice call"><span>&#127908;</span>Call</button><button class=tb data-a=video title="Start a webcam call"><span>&#128247;</span>Webcam</button>
+ <button class=tb data-a=buzz title="BUZZ! (Ctrl+G)"><span>&#128243;</span>Buzz</button><button class=tb data-a=invite title="Invite to a chat room"><span>&#128101;</span>Invite</button><button class=tb disabled title="Coming soon"><span>&#128206;</span>Files</button></div>
+ <div class=call><video class=them autoplay playsinline></video><video class=me autoplay playsinline muted></video><div class=cs></div><button class=hang style="background:#d9534f;color:#fff;border-color:#a33">Hang Up</button></div>
+ <div class=peer></div><div class=log></div><div class=typ></div>
+ <div class=fmt><span class=smb title=Smileys>${RCSmileys.html(':)')}</span><button data-s=b><b>B</b></button><button data-s=i><i>I</i></button><button data-s=u><u>U</u></button>${COLORS.map(c=>`<span class=sw data-c="${c}" style="background:${c}"></span>`).join('')}
+ <select class=font>${['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'].map(f=>`<option>${f}</option>`).join('')}</select><div class=smp></div></div>
+ <form><textarea maxlength=1000 placeholder="Type your message..."></textarea><button>Send</button></form>`;
+ document.body.appendChild(w);ims[k]=w;peerInfo(w,name);drag(w);w.onpointerdown=()=>w.style.zIndex=++zTop;
+ const st=w._st={b:false,i:false,u:false,color:'#000000',f:'Arial'},ta=w.querySelector('textarea');
+ w.querySelector('.x').onclick=()=>{endCall(w,true);w.remove();delete ims[k]};
+ w.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{st[b.dataset.s]=!st[b.dataset.s];b.classList.toggle('on',st[b.dataset.s]);ta.style.fontWeight=st.b?'bold':'';ta.style.fontStyle=st.i?'italic':'';ta.style.textDecoration=st.u?'underline':''});
+ w.querySelectorAll('.sw').forEach(s=>s.onclick=()=>{st.color=s.dataset.c;ta.style.color=st.color;w.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==s))});w.querySelector('.sw').classList.add('on');
+ w.querySelector('.font').onchange=e=>{st.f=e.target.value;ta.style.fontFamily=st.f};
+ const smp=w.querySelector('.smp');smp.innerHTML=RCSmileys.ordered.map(m=>`<span data-k="${m.esc}">${m.html}</span>`).join('');
+ w.querySelector('.smb').onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};smp.querySelectorAll('span[data-k]').forEach(e=>e.onclick=()=>{ta.value+=' '+dec(e.dataset.k)+' ';smp.classList.remove('open');ta.focus()});
+ const send=async()=>{const t=ta.value.trim();if(!t)return;ta.value='';const r=await emit('m:im',{to:name,text:t,...st});if(r.error)return sys(w,r.error);line(w,ME.name,r)};
+ w.querySelector('form').onsubmit=e=>{e.preventDefault();send()};let lt=0;
+ ta.addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();send()}else if(e.ctrlKey&&e.key.toLowerCase()=='g'){e.preventDefault();buzz(name)}else if(e.key.length==1&&Date.now()-lt>2500){lt=Date.now();S.emit('m:typing',{to:name})}});
+ w.querySelector('[data-a=buzz]').onclick=()=>buzz(name);w.querySelector('[data-a=invite]').onclick=()=>invite(name);
+ w.querySelector('[data-a=voice]').onclick=()=>startCall(w,name,'audio');w.querySelector('[data-a=video]').onclick=()=>startCall(w,name,'video');w.querySelector('.hang').onclick=()=>endCall(w,true);
+ return w}
+async function buzz(n){const w=openIm(n);const r=await emit('m:buzz',{to:n});if(r.error)return sys(w,r.error);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(ME.name)}: BUZZ!!!</div>`);scroll(w)}
 function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.target.closest('.x'))return;const ox=e.clientX-w.offsetLeft,oy=e.clientY-w.offsetTop;
  const mv=e=>{w.style.left=Math.max(0,e.clientX-ox)+'px';w.style.top=Math.max(0,e.clientY-oy)+'px'},up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};addEventListener('pointermove',mv);addEventListener('pointerup',up)}}
-// private IM
-const pms={};
-function openPm(n){if(pms[n]){pms[n].querySelector('input').focus();return pms[n]}const w=document.createElement('div');w.className='pmwin';const k=Object.keys(pms).length;w.style.left=(320+k*30)+'px';w.style.top=(140+k*30)+'px';
- w.innerHTML=`<div class=tbar>&#128172; ${escT(n)} -- Instant Message<span class=sp></span><span class=x>X</span></div><div class=pl></div><form><input type=text maxlength=300><button>Send</button></form>`;
- document.body.appendChild(w);pms[n]=w;drag(w);w.querySelector('.x').onclick=()=>{w.remove();delete pms[n]};
- w.querySelector('form').onsubmit=e=>{e.preventDefault();const i=w.querySelector('input'),t=i.value.trim();if(!t)return;S.emit('pm',{to:n,text:t},r=>{if(r.error)pmLine(n,'<i style=color:#c00>'+escT(r.error)+'</i>');else pmLine(n,`<b style="color:var(--brand)">${escT(me)}:</b> ${smile(r.text)}`)});i.value=''};
- w.querySelector('input').focus();return w}
-function pmLine(n,html){const w=pms[n]||openPm(n),l=w.querySelector('.pl'),d=document.createElement('div');d.innerHTML=html;l.appendChild(d);l.scrollTop=l.scrollHeight}
-S.on('pm',({from,text})=>{if(ignored.has(from))return;pmLine(from,`<b style="color:#c0392b">${escT(from)}:</b> ${smile(text)}`)});
-// audio volume / mute / ignore
-function applyAudio(a,id){const r=ros.find(x=>x.id==id);a.muted=$('mute').checked||(r&&ignored.has(r.name));a.volume=+$('vol').value}
-function applyAudioAll(){document.querySelectorAll('audio[id^=au]').forEach(a=>applyAudio(a,a.id.slice(2)))}
-$('mute').onchange=applyAudioAll;$('vol').oninput=applyAudioAll;
-// level meters
-let actx=null;const lv={m1:0,m2:{}};
-function meter(stream,key,id){try{actx=actx||new AudioContext();actx.resume();const an=actx.createAnalyser();an.fftSize=256;actx.createMediaStreamSource(stream).connect(an);const buf=new Uint8Array(an.fftSize);
- const tick=()=>{if(!stream.active)return;an.getByteTimeDomainData(buf);let m=0;for(const v of buf)m=Math.max(m,Math.abs(v-128));if(key=='m1')lv.m1=m/128;else lv.m2[id]=m/128;requestAnimationFrame(tick)};tick()}catch(e){}}
-setInterval(()=>{$('m1').style.width=Math.min(100,(talking?lv.m1:0)*250)+'%';const r=Math.max(0,...Object.values(lv.m2));$('m2').style.width=Math.min(100,($('mute').checked?0:r)*250)+'%'},100);
-function renderRoster(){
- $('mem').innerHTML=ros.map(m=>{const ic=m.talk?'&#127908;':(m.cam?'':'');return `<div class="mem${m.talk?' talking':''}${m.name==selName?' sel':''}${ignored.has(m.name)?' ign':''}" data-n="${escT(m.name)}"><span class=mi>${m.talk?'<span style="font-size:14px;line-height:1">&#127908;</span>':RCSmileys.html(':)')}</span><span class=nm>${escT(m.name)}</span>${m.cam?`<span class="ci" title="View Webcam" data-v="${m.id}" data-n="${escT(m.name)}">&#128247;</span>`:''}</div>`}).join('');
- $('mem').querySelectorAll('.mem').forEach(e=>{e.onclick=ev=>{if(ev.target.closest('.ci'))return;selName=e.dataset.n;renderRoster()};e.ondblclick=()=>{if(e.dataset.n!=me)openPm(e.dataset.n)}});
- $('mem').querySelectorAll('.ci').forEach(e=>e.onclick=()=>e.dataset.v==S.id?0:view(e.dataset.v,e.dataset.n));
- const t=ros.filter(m=>m.talk&&!ignored.has(m.name)).map(m=>escT(m.name));$('vstat').innerHTML=t.length?t.join(', ')+(t.length>1?' are':' is')+' talking':'';}
-// ===== Voice & webcam (WebRTC mesh, Socket.IO signaling) =====
+// ---------- 1:1 voice / webcam calls (WebRTC P2P, Socket.IO signaling, Google STUN) ----------
 const ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]};
-let me=null, ros=[], mic=null, camS=null, pcs={}, talking=false, wins={};
-function pcFor(k,id,init){ // k: 'a' audio | 'v' video I broadcast | 'w' video I watch
- if(pcs[k+id])return pcs[k+id];const pc=new RTCPeerConnection(ICE);pcs[k+id]=pc;
- const rk={a:'a',v:'w',w:'v'}[k]; // the key the remote side uses
- pc.onicecandidate=e=>e.candidate&&S.emit('signal',{to:id,data:{k:rk,c:e.candidate}});
- pc.onnegotiationneeded=async()=>{if(!init)return;await pc.setLocalDescription(await pc.createOffer());S.emit('signal',{to:id,data:{k:rk,sdp:pc.localDescription}})};
- pc.ontrack=e=>{if(k=='a'){let a=document.getElementById('au'+id);if(!a){a=document.createElement('audio');a.id='au'+id;a.autoplay=true;document.body.appendChild(a)}a.srcObject=e.streams[0]||new MediaStream([e.track]);applyAudio(a,id);meter(a.srcObject,'m2',id);a.play().catch(()=>{})}
-  if(k=='w'&&wins[id]){const v=wins[id].querySelector('video');v.srcObject=e.streams[0]||new MediaStream([e.track]);v.play().catch(()=>{})}};
- pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState))closePc(k,id)};
- return pc}
-function closePc(k,id){const pc=pcs[k+id];if(!pc)return;delete pcs[k+id];try{pc.close()}catch(e){}if(k=='a')document.getElementById('au'+id)?.remove()}
-let sq=Promise.resolve();S.on('signal',m=>{sq=sq.then(()=>onSig(m)).catch(e=>console.log('sig',e.message))});
-async function onSig({from,data}){const {k}=data;let pc=pcs[k+from];
- if(data.sdp){if(data.sdp.type=='offer'){closePc(k,from);pc=pcFor(k,from,false);if(k=='a'&&mic&&!pc.getSenders().some(s=>s.track))mic.getTracks().forEach(t=>pc.addTrack(t,mic));
-   await pc.setRemoteDescription(data.sdp);await pc.setLocalDescription(await pc.createAnswer());S.emit('signal',{to:from,data:{k:{a:'a',v:'w',w:'v'}[k],sdp:pc.localDescription}})}
-  else if(pc)await pc.setRemoteDescription(data.sdp)}
- else if(data.c&&pc)try{await pc.addIceCandidate(data.c)}catch(e){}}
-function syncAudio(){ // connect audio to every room member where at least one side has a mic; mic holder (lower id if both) offers
- const ids=new Set(ros.filter(r=>r.id!=S.id).map(r=>r.id));
- Object.keys(pcs).filter(x=>x[0]=='a'&&!ids.has(x.slice(1))).forEach(x=>closePc('a',x.slice(1)));
- for(const r of ros){if(r.id==S.id)continue;const mine=!!mic,their=r.voice;if(!mine&&!their){closePc('a',r.id);continue}
-  const iInit=mine&&(!their||S.id<r.id);if(iInit&&!pcs['a'+r.id]){const pc=pcFor('a',r.id,true);mic.getTracks().forEach(t=>pc.addTrack(t,mic))}}}
-async function getMic(){if(mic)return true;try{mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}catch(e){alert('Microphone not available: '+e.message);return false}
- mic.getAudioTracks().forEach(t=>t.enabled=false);meter(mic,'m1');
- Object.keys(pcs).filter(x=>x[0]=='a').forEach(x=>closePc('a',x.slice(1))); // rebuild with mic
- S.emit('voice',true);return true}
-async function setTalk(on){if(on&&!(await getMic()))return;if(talking==on)return;talking=on;mic&&mic.getAudioTracks().forEach(t=>t.enabled=on);$('talk').classList.toggle('on',on);S.emit('talk',on)}
-const tb=$('talk');
-tb.addEventListener('pointerdown',e=>{e.preventDefault();if(!$('hf').checked)setTalk(true)});
-['pointerup','pointerleave','pointercancel'].forEach(ev=>tb.addEventListener(ev,()=>{if(!$('hf').checked)setTalk(false)}));
-tb.addEventListener('click',()=>{if($('hf').checked)setTalk(!talking)});
-document.addEventListener('keydown',e=>{if(e.key=='Control'&&!e.repeat&&me&&!$('hf').checked)setTalk(true)});
-document.addEventListener('keyup',e=>{if(e.key=='Control'&&me&&!$('hf').checked)setTalk(false)});
-$('hf').onchange=async()=>{if($('hf').checked){await setTalk(true);tb.textContent='Talk (on)'}else{await setTalk(false);tb.textContent='Talk'}};
-$('cam').onclick=async()=>{if(camS){stopCam();return}
- if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return camErr({name:'InsecureContext',message:'Camera API unavailable (page must be opened over https)'});
- try{camS=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:15}},audio:false})}catch(e){
-  if(e.name=='OverconstrainedError'||e.name=='ConstraintNotSatisfiedError'||e.name=='TypeError'){try{camS=await navigator.mediaDevices.getUserMedia({video:true})}catch(e2){return camErr(e2)}}else return camErr(e)}
- $('cam').classList.add('on');$('cam').innerHTML='<span>&#128247;</span>Stop Cam';S.emit('cam',true);openWin(S.id,me+' (you)',camS)};
-function camErr(e){console.warn('[webcam]',e.name,e.message);const n=e.name||'Error';let m;
- if(n=='NotAllowedError'||n=='PermissionDeniedError'||n=='SecurityError')m='Camera permission was denied ('+n+').\n\nTo allow it: click the lock / site-settings icon left of the address bar \u2192 Camera \u2192 Allow, then reload the page.\nAlso check your OS privacy settings (macOS: System Settings \u2192 Privacy & Security \u2192 Camera; Windows: Settings \u2192 Privacy \u2192 Camera) allow your browser.';
- else if(n=='NotReadableError'||n=='TrackStartError'||n=='AbortError')m='Your camera is in use by another app ('+n+').\n\nClose Zoom/Teams/FaceTime/OBS or other tabs using the camera, then try again.';
- else if(n=='NotFoundError'||n=='DevicesNotFoundError')m='No camera was found ('+n+').\n\nPlug in or enable a webcam, then try again.';
- else if(n=='OverconstrainedError')m='Your camera does not support the requested video mode ('+n+').';
- else m='Webcam not available ('+n+': '+(e.message||'')+').';
- alert(m)}
-function stopCam(){camS&&camS.getTracks().forEach(t=>t.stop());camS=null;Object.keys(pcs).filter(x=>x[0]=='v').forEach(x=>closePc('v',x.slice(1)));
- $('cam').classList.remove('on');$('cam').innerHTML='<span>&#128247;</span>Webcam';$('viewers').textContent='';S.emit('cam',false);closeWin(S.id,true)}
-S.on('view-req',({id})=>{if(!camS)return;closePc('v',id);const pc=pcFor('v',id,true);camS.getTracks().forEach(t=>pc.addTrack(t,camS))});
-S.on('unview',({id})=>closePc('v',id));
-S.on('cam-off',({id})=>closeWin(id,true));
-S.on('media-gone',({id})=>{['a','v','w'].forEach(k=>closePc(k,id));closeWin(id,true)});
-function view(id,name){if(wins[id])return;S.emit('view',id,r=>{if(r.error)return alert(r.error);openWin(id,name)})}
-function openWin(id,name,stream){const w=document.createElement('div');w.className='camwin';const n=Object.keys(wins).length;w.style.left=(20+n*30)+'px';w.style.top=(120+n*30)+'px';
- w.innerHTML=`<div class=tbar>&#128247; ${name}<span class=sp></span><span class=x>X</span></div><video autoplay playsinline muted></video><div class=ft>${stream?'Your webcam':'Connecting...'}</div>`;
- document.body.appendChild(w);wins[id]=w;const v=w.querySelector('video');if(stream){v.srcObject=stream;v.play().catch(()=>{})}else v.onplaying=()=>w.querySelector('.ft').textContent='Live';
- w.querySelector('.x').onclick=()=>id==S.id?stopCam():closeWin(id);
- drag(w)}
-function closeWin(id,remote){const w=wins[id];if(!w)return;w.remove();delete wins[id];if(id!=S.id){closePc('w',id);if(!remote)S.emit('unview',id)}}
-S.on('roster',r=>{ros=r;renderRoster();
- const mine=r.find(m=>m.id==S.id);if(mine&&mine.cam)$('viewers').innerHTML='Viewing your cam: '+(mine.viewers.length?mine.viewers.map(escT).join(', '):'nobody yet');
- Object.keys(wins).forEach(id=>{if(id!=S.id&&!r.find(m=>m.id==id&&m.cam))closeWin(id,true)});
- syncAudio()});
-S.on('history',()=>{Object.keys(wins).forEach(id=>id==S.id||closeWin(id,true));Object.keys(pcs).forEach(x=>closePc(x[0],x.slice(1)));
- if(camS)stopCam();if(mic){setTalk(false);S.emit('voice',true)}});
+function mediaErr(e,kind){const n=e.name||'Error',dev=kind=='video'?'camera':'microphone';
+ if(n=='NotAllowedError'||n=='SecurityError')return `Permission to use your ${dev} was denied (${n}). Click the lock / site-settings icon left of the address bar, allow ${kind=='video'?'Camera and Microphone':'Microphone'}, then reload. Also check your OS privacy settings.`;
+ if(n=='NotReadableError'||n=='AbortError')return `Your ${dev} is in use by another app (${n}). Close other apps or tabs using it and try again.`;
+ if(n=='NotFoundError')return `No ${dev} was found (${n}).`;return `Could not start your ${dev} (${n}: ${e.message||''}).`}
+async function getMedia(kind){if(!navigator.mediaDevices||!window.isSecureContext)throw {name:'InsecureContext',message:'needs https'};
+ const audio={echoCancellation:true,noiseSuppression:true};if(kind!='video')return navigator.mediaDevices.getUserMedia({audio});
+ const a=await navigator.mediaDevices.getUserMedia({audio});let v;try{v=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:15}}})}
+ catch(e){if(e.name=='OverconstrainedError')v=await navigator.mediaDevices.getUserMedia({video:true});else{a.getTracks().forEach(t=>t.stop());throw e}}
+ return new MediaStream([...a.getTracks(),...v.getTracks()])}
+function callUI(w,on,txt){const c=w.querySelector('.call');c.classList.toggle('on',on);c.querySelector('.cs').innerHTML=txt||'';const vid=w._call&&w._call.kind=='video';c.querySelectorAll('video').forEach(v=>v.style.display=vid?'':'none')}
+async function startCall(w,n,kind){if(w._call)return sys(w,'You are already in a call.');const c=contacts[n.toLowerCase()];if(!c||!c.online)return sys(w,n+' is offline.');
+ w._call={kind,peer:n,role:'caller',q:Promise.resolve()};callUI(w,true,'Starting your '+(kind=='video'?'webcam':'microphone')+'...');
+ try{w._call.stream=await getMedia(kind)}catch(e){const m=mediaErr(e,kind);w._call=null;callUI(w,false);return sys(w,m)}
+ w.querySelector('.me').srcObject=w._call.stream;const r=await emit('m:call',{to:n,kind});if(r.error){endCall(w,false);return sys(w,r.error)}callUI(w,true,'Calling <b>'+escT(n)+'</b>... &#128222;');sys(w,'Calling '+n+' ('+(kind=='video'?'webcam':'voice')+')...')}
+function onCall({from,kind}){const w=openIm(from);if(w._call){S.emit('m:callans',{to:from,accept:false});return}SND.ring();w._call={kind,peer:from,role:'callee',q:Promise.resolve(),pending:true};
+ callUI(w,true,`<b>${escT(from)}</b> is calling you (${kind=='video'?'webcam':'voice'}). <button class=pri data-ans=1>Answer</button> <button data-ans=0>Decline</button>`);
+ w.querySelectorAll('[data-ans]').forEach(b=>b.onclick=async()=>{if(b.dataset.ans=='0'){S.emit('m:callans',{to:from,accept:false});w._call=null;callUI(w,false);return sys(w,'You declined the call.')}
+  callUI(w,true,'Starting your '+(kind=='video'?'webcam':'microphone')+'...');try{w._call.stream=await getMedia(kind)}catch(e){const m=mediaErr(e,kind);S.emit('m:callans',{to:from,accept:false});w._call=null;callUI(w,false);return sys(w,m)}
+  w.querySelector('.me').srcObject=w._call.stream;w._call.pending=false;S.emit('m:callans',{to:from,accept:true});callUI(w,true,'Connecting to <b>'+escT(from)+'</b>...')});
+ toast('<b>'+escT(from)+'</b> is calling you')}
+function mkPc(w){const c=w._call,pc=c.pc=new RTCPeerConnection(ICE);c.stream.getTracks().forEach(t=>pc.addTrack(t,c.stream));
+ pc.onicecandidate=e=>e.candidate&&S.emit('m:sig',{to:c.peer,data:{ice:e.candidate}});
+ pc.ontrack=e=>{const v=w.querySelector('.them');v.srcObject=e.streams[0]||new MediaStream([e.track]);v.muted=false;v.play().catch(()=>{});if(c.kind!='video'){let a=w.querySelector('audio');if(!a){a=document.createElement('audio');a.autoplay=true;w.appendChild(a)}a.srcObject=v.srcObject}};
+ pc.onconnectionstatechange=()=>{const s=pc.connectionState;if(s=='connected')callUI(w,true,'&#128994; In a '+(c.kind=='video'?'webcam':'voice')+' call with <b>'+escT(c.peer)+'</b>');if(s=='failed'){sys(w,'The call could not connect (network/firewall).');endCall(w,true)}};return pc}
+async function onCallAns({from,accept}){const w=ims[from.toLowerCase()];if(!w||!w._call||w._call.role!='caller')return;if(!accept){sys(w,from+' declined the call.');return endCall(w,false)}
+ const pc=mkPc(w);const o=await pc.createOffer();await pc.setLocalDescription(o);S.emit('m:sig',{to:from,data:{sdp:pc.localDescription}});callUI(w,true,'Connecting to <b>'+escT(from)+'</b>...')}
+function onSig({from,data}){const w=ims[from.toLowerCase()];if(!w||!w._call||!data)return;const c=w._call;c.q=c.q.then(async()=>{
+ if(data.sdp){if(data.sdp.type=='offer'){if(c.pending)return;const pc=c.pc||mkPc(w);await pc.setRemoteDescription(data.sdp);const a=await pc.createAnswer();await pc.setLocalDescription(a);S.emit('m:sig',{to:from,data:{sdp:pc.localDescription}})}
+  else if(c.pc)await c.pc.setRemoteDescription(data.sdp)}else if(data.ice&&c.pc)await c.pc.addIceCandidate(data.ice).catch(()=>{})}).catch(e=>console.warn('sig',e))}
+function endCall(w,notify){const c=w._call;if(!c)return;if(notify)S&&S.emit('m:hang',{to:c.peer});c.pc&&c.pc.close();c.stream&&c.stream.getTracks().forEach(t=>t.stop());w.querySelectorAll('video').forEach(v=>v.srcObject=null);w.querySelector('audio')?.remove();w._call=null;callUI(w,false);notify&&sys(w,'Call ended.')}
+addEventListener('beforeunload',()=>Object.values(ims).forEach(w=>endCall(w,true)));
 </script></body></html>
