@@ -64,7 +64,7 @@ button{font:12px Tahoma;background:linear-gradient(#fff,#e3ecf7);border:1px soli
 .gt{font-size:9px;background:#e7eef8;color:#557;border:1px solid #b9c9e0;border-radius:6px;padding:0 4px;margin-left:3px}.mem.sel .gt{color:#334}
 #foot{text-align:center;font-size:10px;color:var(--muted)}
 @media (max-width:760px){#mpane{width:140px}#log{height:240px}.meter{display:none}}
-</style><link rel="stylesheet" href="/modern.css"><script src="/theme.js"></script>
+</style><link rel="stylesheet" href="/modern.css"><script src="/theme.js"></script><script src="/icons.js"></script><script src="/profile.js"></script>
 <style>
 .win{margin:16px auto!important;overflow:visible!important}.win>.tbar{border-radius:var(--r) var(--r) 0 0}
 #login .in{padding:20px!important;line-height:1.9}.cat{color:var(--muted)!important;font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-top:14px!important}
@@ -97,64 +97,110 @@ html.dark .room{color:#8fc8ff!important}
 .tb{position:absolute;top:6px;display:flex;gap:4px;right:6px}.tb span{cursor:pointer;background:rgba(0,0,0,.55);color:#fff;border-radius:8px;padding:2px 7px;font:13px Arial;line-height:18px}.tb span:hover{background:#1877E8}.tb .x2:hover{background:#d9534f}
 .camwin{resize:both;min-width:240px;min-height:200px;display:flex;flex-direction:column}.camwin video{flex:1;width:100%!important;height:auto!important;min-height:0;object-fit:contain;margin:0!important;border-radius:0 0 12px 12px}
 .camwin .tbar span.b{cursor:pointer;margin-left:4px;padding:0 5px;border:1px solid #fff;border-radius:3px}
+</style><link rel="stylesheet" href="/yapp.css"><style>
+#chat{max-width:1040px}
+#rhead{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+#rhead .rn{font:700 20px var(--sys);letter-spacing:-.3px}#rhead .rt{color:var(--muted);font-size:13px;margin-top:2px}#rhead .sp{flex:1}
+.hb{all:unset;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;cursor:pointer;font:500 13px var(--sys);color:var(--ink)}.hb:hover,.hb.on{background:var(--hover)}.hb.on{color:#1877E8}
+#viewers{font-size:11px;color:#1877E8;margin-top:2px}
+#main{padding:0!important;gap:0!important}#lpane{border:0!important;border-radius:0!important}
+#log{height:340px;font-size:14px!important;padding:12px 16px!important}#log>div{padding:2px 0}#log .ts{color:var(--muted)!important;font-size:13px!important;margin-right:6px}#log>div>.av{display:none}
+#mpane{width:250px!important;border-left:1px solid var(--line);gap:0!important}#mpane.hide{display:none!important}
+#phead{display:flex;align-items:center;padding:12px 14px 8px;font-weight:700;font-size:14px}#phead .sp{flex:1}#psearch{display:none;margin:0 10px 6px}#psearch.open{display:flex}
+#mem{border:0!important;border-radius:0!important;background:transparent!important;height:auto!important;padding:0 6px!important}
+.mem{font-weight:600}.mem .sdot{background:#2db52d;width:9px;height:9px}.mi{width:24px!important}.mi .av{width:24px!important;height:24px!important}
+#mbtns{padding:8px 10px;border-top:1px solid var(--line)}#mbtns button{padding:5px!important}
+#vrow{border-top:1px solid var(--line);gap:14px!important;padding:10px 16px!important;background:var(--card)}
+#talk{all:unset;display:inline-flex!important;align-items:center;gap:8px;background:linear-gradient(#2a86ef,#1877E8)!important;color:#fff!important;font:600 14px var(--sys);padding:9px 26px!important;border-radius:6px!important;cursor:pointer;user-select:none}
+#talk.on{background:linear-gradient(#ff6b6b,#e5484d)!important;color:#fff!important}
+.meter{width:110px;height:12px;border:0!important;border-radius:0;background:repeating-linear-gradient(90deg,#d5dfec 0 7px,transparent 7px 10px)!important}
+html.dark .meter{background:repeating-linear-gradient(90deg,#2a3f6b 0 7px,transparent 7px 10px)!important}
+.meter i{background:repeating-linear-gradient(90deg,#2db52d 0 7px,transparent 7px 10px)!important}#m2w{display:none}
+#vright{gap:4px!important}#vol{width:110px;accent-color:#1877E8}#mute{display:none}
+#erow{padding:0!important}#erow #smb,#tb{display:none}#ra{display:none}#smp{bottom:62px;left:12px}
+#sty{padding:6px 16px!important;border-top:1px solid var(--line)}
+#form{padding:0!important}#send{display:none!important}
+#camstrip{padding:10px 16px 10px!important;border-bottom:1px solid var(--line);background:var(--surface)}
+#ad-slot{max-width:728px;margin:14px auto 6px!important;border:1px dashed var(--line)!important;position:relative}#ad-slot:empty:before{content:"Advertisement";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;letter-spacing:.5px}
+#login{max-width:560px}#login .tbar{font-size:15px}#rlist{line-height:2.2}
+@media (max-width:760px){#mpane{width:170px!important}.hb span{display:none}}
+#modw .modg{display:flex;flex-wrap:wrap;gap:6px}#modw .modg button{padding:5px 10px!important;font-size:12px}#modl div{display:flex;align-items:center;gap:6px;padding:3px 0}#modl a{margin-left:auto;color:#1877E8;cursor:pointer}
+.rb{display:inline-flex;vertical-align:-1px;margin-left:4px;color:var(--muted);opacity:.75}.mutedb{display:inline-flex;margin-left:4px;color:#e5484d;opacity:.7}
 </style></head><body>
-<div id="brand"><div style="text-align:center"><div><svg class="bub" viewBox="0 0 34 24" width="46" height="32"><circle cx="5" cy="13" r="3" fill="rgba(74,183,242,.58)"/><circle cx="13" cy="19" r="4.2" fill="rgba(74,183,242,.58)"/><circle cx="26" cy="9" r="7.5" fill="rgba(74,183,242,.58)"/></svg></div><div class="logo appname"></div><div class="tag">Chat rooms, voice &amp; webcams &mdash; old school.</div></div></div>
-<div id="login" class="win"><div class="tbar"><span class=ico2><svg class="bub" viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg></span> Enter <span class="appname-plain"></span> Chat Rooms<span class="sp"></span></div><div class="in">
+<div id="brand"><div style="text-align:center"><div style="display:flex;align-items:center;gap:10px;justify-content:center"><span class=lgbig></span><div class="logo appname"></div></div><div class="tag">Chat rooms, voice &amp; webcams &mdash; old school.</div></div></div>
+<div id="login" class="win"><div class="tbar"><span class=lgs></span> <span><span class="brandname appname"></span> Chat Rooms</span><span class="sp"></span></div><div class="in">
 <div id="who"></div><span id="nmw">Screen name: <input type="text" id="nm" maxlength="20" autocomplete="off"></span> <button id="go">Sign in as Guest</button> <button id="mk" title="Create your own room">Create Room</button><div id="err"></div><div class="privacy" style="font-size:11px;color:var(--muted,#667);margin-top:8px">We log IP address and approximate location for safety and moderation.</div>
 <div style="margin-top:10px">Choose a room:</div><div id="rlist"></div></div></div>
 <div id="chat" class="win">
-<div class="tbar"><svg class="bub" viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg> <span id="hdr">Lobby -- YappChat</span><span class="sp"></span><span class="wb">_</span><span class="wb">&#9633;</span><span class="wb x" id="wx" title="Leave chat">X</span></div>
+<div class="tbar"><span class=lgs></span><span id="hdr">Lobby - Chat Room</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Leave chat"><i data-i=close data-s=16></i></span></div>
 <div id="menu">
- <div>Chat<div class="dd"><div id="mJoin">Join Room...</div><div id="mCreate">Create Room...</div><div id="mTopic">Change Topic (owner)...</div><div id="mAv">Change My Avatar...</div><div id="mMess">Open Messenger</div><div id="mRooms"></div><hr><div id="mLeave">Leave Room / Sign Out</div></div></div>
+ <div>Room<div class="dd"><div id="mJoin">Join Room...</div><div id="mCreate">Create Room...</div><div id="mTopic">Change Topic (owner)...</div><div id="mAv">Change My Avatar...</div><div id="mMess">Open Messenger</div><div id="mRooms"></div><hr><div id="mLeave">Leave Room / Sign Out</div></div></div>
  <div>Edit<div class="dd"><div id="mCopy">Copy Selected Text</div><div id="mSelAll">Select All Chat Text</div><hr><div id="mClearIn">Clear Message Box</div></div></div>
- <div>View<div class="dd"><div data-fs="s">Small Text</div><div data-fs="m" class="chk">Medium Text</div><div data-fs="l">Large Text</div><hr><div id="mTs">Show Timestamps</div><div id="mJl" class="chk">Show Join/Leave Notices</div><div id="mTyp" class="chk">Show "is typing"</div></div></div>
- <div>Actions<div class="dd"><div id="mIgn">Ignore / Unignore Selected User</div><div id="mIgnL">Show Ignore List</div><div id="mIm">Send IM to Selected User</div><div id="mKick">Kick Selected User (owner)</div><hr><div id="mBuzz">Buzz the Room (BUZZ!!!)</div><div id="mClear">Clear Chat Window</div></div></div>
- <div>Help<div class="dd"><div id="mHelp">How to Use Voice &amp; Webcam</div><div id="mAbout">About YappChat</div></div></div>
+ <div>View<div class="dd"><div data-fs="s">Small Text</div><div data-fs="m" class="chk">Medium Text</div><div data-fs="l">Large Text</div><hr><div id="mTs">Show Timestamps (messages &amp; notices)</div><div id="mJl" class="chk">Show Join/Leave Notices</div><div id="mTyp" class="chk">Show "is typing"</div></div></div>
+ <div>Actions<div class="dd"><div id="mIgn">Ignore / Unignore Selected User</div><div id="mIgnL">Show Ignore List</div><div id="mIm">Send IM to Selected User</div><div id="mProf">View Profile of Selected User</div><div id="mMyProf">Edit My Profile...</div><div id="mKick">Room Admin Console...</div><hr><div id="mRep">Report Abuse...</div><div id="mBuzz">Buzz the Room (BUZZ!!!)</div><div id="mClear">Clear Chat Window</div></div></div>
+ <div>Help<div class="dd"><div id="mHelp">How to Use Voice &amp; Webcam</div><div id="mAbout">About YappChat</div><div id="mSite">Site Moderator Key...</div></div></div>
 </div>
-<div id="tools"><button class="tbtn" id="cam" title="Share My Webcam"><span>&#128247;</span>Webcam</button><button class="tbtn" id="vbtn" title="Show/hide voice controls"><span>&#127908;</span>Voice</button>
-<div id="viewers"></div></div>
+<div id="rhead"><span id="rtile"></span><div><div class=rn id=rname></div><div class=rt id=rtopic></div><div id="viewers"></div></div><span class=sp></span>
+<button class=hb id=bMod style="display:none" title="Room Admin Console"><i data-i=shield></i><span>Admin</span></button><button class=hb id=bInfo><i data-i=info></i><span>Room Info</span></button><button class="hb on" id=bUsers><i data-i=users></i><span>Users (<b id=ucnt>0</b>)</span></button><button class=hb id="cam" title="Share My Webcam"><i data-i=video></i><span>Webcam</span></button><button class="hb on" id="vbtn" title="Show/hide voice controls"><i data-i=mic></i><span>Voice</span></button></div>
 <div id="camstrip"></div>
-<div id="main"><div id="lpane"><div id="topic"></div><div id="log"></div><div id="typing"></div></div>
-<div id="mpane"><div id="mem"></div><div id="mbtns"><button id="bIm" title="Send a private message"><u>I</u>M</button><button id="bIgn"><u>I</u>gnore User</button></div></div></div>
-<div id="vrow"><label><input type="checkbox" id="hf"> Hands Free</label><button id="talk" title="Hold to talk (or hold Ctrl)">Talk</button>
-<div class="meter" title="Your mic level"><i id="m1"></i></div><div class="meter" title="Room voice level"><i id="m2"></i></div><span id="vstat"></span>
-<div id="vright"><label><input type="checkbox" id="mute"> Mute</label><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" title="Speaker volume"></div></div>
+<div id="main"><div id="lpane"><div id="topic" style="display:none"><i></i></div><div id="log"></div><div id="typing"></div></div>
+<div id="mpane"><div id=phead>People in Room (<span id=pcnt>0</span>)<span class=sp></span><button class=ib id=bPs style="width:30px;height:30px"><i data-i=search data-s=18></i></button></div><div class=srch id=psearch><i data-i=search data-s=16></i><input id=pq placeholder="Find someone..."></div><div id="mem"></div><div id="mbtns"><button id="bIm" title="Send a private message"><u>I</u>M</button><button id="bIgn"><u>I</u>gnore User</button></div></div></div>
+<div id="vrow"><label><input type="checkbox" id="hf"> Hands Free</label><button id="talk" title="Hold to talk (or hold Ctrl)"><i data-i=mic data-s=18></i>Talk</button>
+<div class="meter" title="Your mic level"><i id="m1"></i></div><div class="meter" id=m2w title="Room voice level"><i id="m2"></i></div><span id="vstat"></span>
+<div id="vright"><input type="checkbox" id="mute"><button class=ib id=bMute title="Mute all voices"><i data-i=micoff></i></button><i data-i=vol style="color:var(--muted);margin-left:4px"></i><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" title="Speaker volume"><button class=ib id=bGear title="Settings"><i data-i=gear></i></button></div></div>
 <div id="erow"><span id="smb" title="Smileys"></span><span id="tb" title="Text style">T</span><div id="smp"></div><span id="ra">Report Abuse</span></div>
 <div id="sty"><button id="bB"><b>B</b></button><button id="bI"><i>I</i></button><button id="bU"><u>U</u></button> Color: <span id="sws"></span>
  Font: <select id="font"><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Comic Sans MS</option><option>Times New Roman</option><option>Courier New</option></select></div>
-<div id="form"><textarea id="msg" maxlength="300" autocomplete="off"></textarea><button id="send">Send</button></div>
+<div id="form" class=inbox><button class=ib id=bAa title="Text style"><i data-i=font data-s=22></i></button><button class=ib id=bSm title="Smileys"><i data-i=smile data-s=22></i></button><button class=ib disabled title="Images coming soon"><i data-i=image data-s=22></i></button><button class=ib disabled title="Files coming soon"><i data-i=clip data-s=22></i></button><textarea id="msg" maxlength="300" autocomplete="off" placeholder="Type a message..."></textarea></div>
 </div>
 <!-- Ad slot: paste the AdSense <ins class="adsbygoogle"> unit inside this div -->
 <div id="ad-slot"></div>
+<div id="modw" class="pmwin" style="display:none;flex-direction:column;width:330px;left:calc(50% - 165px);top:120px"><div class=tbar><i data-i=shield data-s=16></i> Room Admin Console<span class=sp></span><span class=x id=modX><i data-i=close data-s=14></i></span></div>
+<div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+<label>User: <select id=modu style="width:100%"></select></label>
+<div class=modg><button id=mKk>Kick (5 min)</button><button id=mDot>Dot (off mic)</button><button id=mMt>Mute Text</button><button id=mMm>Mute Mic</button><button id=mMb>Mute Both</button></div>
+<div id=modown class=modg><button id=mAdm>Make Admin</button></div>
+<div style="font-weight:700">Muted / kicked</div><div id=modl></div><div id=modadm style="font-size:12px;color:var(--muted)"></div></div></div>
 <div id="foot"><span class="appname-plain"></span> &middot; an original nostalgia project</div>
 <script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/avatar.js"></script><script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Yapp','Chat'];
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
+document.querySelectorAll('.lgs').forEach(e=>e.innerHTML=YI.logo(26));document.querySelectorAll('.lgbig').forEach(e=>e.innerHTML=YI.logo(56));
+function setHdr(){$('hdr').textContent=room+' ('+(typeof ros!='undefined'?ros.length:0)+') \u2013 Chat Room'}
 document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('');
 const $=id=>document.getElementById(id), S=io();
 let room=new URLSearchParams(location.search).get('room')||'Lobby',owner=null,acct=null, st={b:false,i:false,u:false,color:'#000000',f:'Arial'}, rooms=[], selName=null;
-const prefs=Object.assign({ts:false,jl:true,typ:true,fs:'m'},JSON.parse(localStorage.rcPrefs||'{}'));
+const prefs=Object.assign({ts:true,jl:true,typ:true,fs:'m'},JSON.parse(localStorage.rcPrefs||'{}'));
 const ignored=new Set(JSON.parse(localStorage.rcIgnore||'[]'));const saveIgn=()=>localStorage.rcIgnore=JSON.stringify([...ignored]);
+if(!localStorage.rcV9){try{const o=JSON.parse(localStorage.rcPrefs||'{}');o.ts=true;localStorage.rcPrefs=JSON.stringify(o);prefs.ts=true}catch(e){}localStorage.rcV9=1}
 const savePrefs=()=>localStorage.rcPrefs=JSON.stringify(prefs);
 const escT=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const smile=t=>RCSmileys.replace(t);
 const NCOL=['#c0392b','#1877E8','#8e44ad','#16a085','#d35400','#2c3e50','#27ae60','#b0186b'];const ncol=n=>NCOL[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%NCOL.length];
 fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
- else $('who').innerHTML='<small>Signing in as a <b>guest</b>: pick any name that isn&#39;t a registered screen name. Guest names last only for this visit. <a href="/">Sign in or get a screen name</a> to use Messenger or create rooms.</small>';if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{});
-function loadRooms(){fetch('/api/rooms').then(r=>r.json()).then(rs=>{rooms=rs;let cats={};rs.forEach(r=>(cats[r.cat]=cats[r.cat]||[]).push(r));
+ else $('who').innerHTML='<small>Signing in as a <b>guest</b>: pick any name that isn&#39;t a registered screen name. Guest names last only for this visit. <a href="/">Sign in or get a screen name</a> to use Messenger or create rooms.</small>';if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{});
+function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=>r.rating=='R'))adultOk=true;rooms=rs;let cats={};rs.forEach(r=>(cats[r.cat]=cats[r.cat]||[]).push(r));
  if(!cats['User Rooms'])cats['User Rooms']=[];
- $('rlist').innerHTML=Object.entries(cats).map(([c,l])=>`<div class=cat>${escT(c)}</div>`+(l.length?'':'<span class=room style="text-decoration:none;color:#888;cursor:default">No user rooms yet - create one!</span>')+l.map(r=>`<span class="room${r.name==room?' sel':''}" data-r="${escT(r.name)}" title="${escT(r.topic||'')}${r.owner?' - owner: '+escT(r.owner):''}">${escT(r.name)} (${r.count})</span>`).join('')).join('');
+ $('rlist').innerHTML=Object.entries(cats).map(([c,l])=>`<div class=cat>${escT(c)}</div>`+(l.length?'':'<span class=room style="text-decoration:none;color:#888;cursor:default">No user rooms yet - create one!</span>')+l.map(r=>`<span class="room${r.name==room?' sel':''}" data-r="${escT(r.name)}" title="${escT(r.topic||'')}${r.owner?' - owner: '+escT(r.owner):''}">${escT(r.name)} (${r.count})${YProf.badge(r.rating)}</span>`).join('')).join('')+(adultOk?'':'<span class=room id=show18 style="color:#e67e22">Show R-rated rooms (18+)...</span>');
+ $('show18')&&($('show18').onclick=e=>{e.stopPropagation();ask18(loadRooms)});
  $('mRooms').innerHTML=rs.map(r=>`<div data-j="${escT(r.name)}">&nbsp;&nbsp;${escT(r.name)} (${r.count})</div>`).join('');
  $('mRooms').style.padding='0';
  document.querySelectorAll('[data-j]').forEach(e=>e.onclick=()=>joinR(e.dataset.j));
  document.querySelectorAll('.room').forEach(e=>e.onclick=()=>{room=e.dataset.r;document.querySelectorAll('.room').forEach(x=>x.classList.toggle('sel',x==e))});});}
 loadRooms();setInterval(()=>{if($('login').style.display!='none'||document.querySelector('#menu>div.open'))return;loadRooms()},15000);
-const joinR=r=>S.emit('join',r,x=>{if(x&&x.error&&x.error!='Already here')alert(x.error)});
-function createRoom(){if(!acct)return alert('Sign in with a screen name (Messenger) to create rooms.');const n=prompt('Room name (3-30 characters):','');if(!n)return;const t=prompt('Room topic:','')||'';
- S.emit('create-room',{name:n,topic:t},r=>{if(r.error)return alert(r.error);loadRooms();if(!me){room=r.name;login()}})}
+let adultOk=false;function ask18(then){if(!YProf.confirm18())return;S.emit('adult',true,()=>{adultOk=true;then&&then()})}
+const joinR=r=>S.emit('join',r,x=>{if(x&&x.adult)return ask18(()=>joinR(r));if(x&&x.error&&x.error!='Already here')alert(x.error)});
+function createRoom(){if(!acct)return alert('Sign in with a screen name (Messenger) to create rooms.');document.querySelectorAll('.yprof').forEach(x=>x.remove());
+ const w=document.createElement('div');w.className='yprof';w.innerHTML=`<div class=tbar>Create a Chat Room<span class=sp></span><span class=x>X</span></div><div class=pb><label>Room name (3-30 characters)<input id=crN maxlength=30></label><label>Topic<input id=crT maxlength=100></label>
+ <label>Rating (required)</label><label style="font-weight:400"><input type=radio name=crR value="PG-13" style="display:inline;width:auto"> PG-13 &ndash; everyone</label><label style="font-weight:400"><input type=radio name=crR value="R" style="display:inline;width:auto"> R &ndash; adults only (18+)</label>
+ <div class=perr id=crE></div><div class=pbtn><button class=btn id=crC>Cancel</button><button class="btn pri" id=crS>Create Room</button></div></div>`;document.body.appendChild(w);
+ const x=()=>w.remove();w.querySelector('.x').onclick=x;w.querySelector('#crC').onclick=x;
+ const go=()=>{const rt=w.querySelector('input[name=crR]:checked');if(!rt)return w.querySelector('#crE').textContent='Please choose a rating.';
+  S.emit('create-room',{name:w.querySelector('#crN').value,topic:w.querySelector('#crT').value,rating:rt.value},r=>{if(r.adult)return ask18(go);if(r.error)return w.querySelector('#crE').textContent=r.error;x();loadRooms();if(!me){room=r.name;login()}})};
+ w.querySelector('#crS').onclick=go}
 $('mk').onclick=createRoom;
-function login(){S.emit('login',{name:$('nm').value,room},r=>{if(r.error)return $('err').textContent=r.error;
+function login(){S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error)return $('err').textContent=r.error;
  me=r.name;$('login').style.display='none';$('brand').style.display='none';$('chat').style.display='block';
  $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" style="background:${c}"></span>`).join('');
  document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;$('msg').style.color=st.color;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
@@ -170,18 +216,44 @@ const tog=(k,id,css,val)=>$(id).onclick=()=>{st[k]=!st[k];$(id).classList.toggle
 tog('b','bB','fontWeight','bold');tog('i','bI','fontStyle','italic');tog('u','bU','textDecoration','underline');
 $('font').onchange=()=>{st.f=$('font').value;$('msg').style.fontFamily=st.f};
 function send(){const t=$('msg').value.trim();if(!t)return;S.emit('say',{text:t,...st});$('msg').value='';$('msg').focus()}
-$('send').onclick=send;
+$('bAa').onclick=()=>$('tb').click();$('bSm').onclick=e=>{e.stopPropagation();$('smp').classList.toggle('open')};
+$('mRep').onclick=()=>$('ra').click();$('bMute').onclick=()=>{$('mute').checked=!$('mute').checked;$('bMute').classList.toggle('on',$('mute').checked);$('bMute').innerHTML=YI.svg($('mute').checked?'volx':'micoff');applyAudioAll()};
+$('bGear').onclick=e=>{e.stopPropagation();const v=document.querySelectorAll('#menu>div')[2];document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));v.classList.add('open')};
+$('bUsers').onclick=()=>{$('mpane').classList.toggle('hide');$('bUsers').classList.toggle('on',!$('mpane').classList.contains('hide'))};
+$('bPs').onclick=()=>{$('psearch').classList.toggle('open');$('pq').focus()};$('pq').oninput=()=>renderRoster();
+$('bMod').onclick=()=>openMod(selName);$('modX').onclick=()=>$('modw').style.display='none';drag($('modw'));$('modu').onchange=()=>{modSel=$('modu').value;drawMod()};
+$('mKk').onclick=()=>doMod('kick');$('mDot').onclick=()=>doMod('dot');
+$('mMt').onclick=()=>{const t=ros.find(m=>m.name==modSel)||{};doMod(t.mt?'unmutetext':'mutetext')};$('mMm').onclick=()=>{const t=ros.find(m=>m.name==modSel)||{};doMod(t.mm?'unmutemic':'mutemic')};
+$('mMb').onclick=()=>{const t=ros.find(m=>m.name==modSel)||{};doMod(t.mt&&t.mm?'unmuteall':'muteboth')};$('mAdm').onclick=()=>{const t=ros.find(m=>m.name==modSel)||{};doMod(t.role=='admin'?'unadmin':'admin')};
+$('mSite').onclick=()=>{const k=prompt('Site moderator key (lets the site owner moderate official rooms):');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};
+$('bInfo').onclick=()=>alert(room+'\n\nTopic: '+($('rtopic').textContent||'(none)')+'\nPeople here: '+ros.length+(owner?'\nOwner: '+owner:'\nOfficial room'));
 $('msg').addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();send()}else if(e.key.length==1)S.emit('typing')});
 // menus
 document.querySelectorAll('#menu>div').forEach(m=>m.addEventListener('click',e=>{const was=m.classList.contains('open');document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!was&&!e.target.closest('.dd'))m.classList.add('open')}));
-document.addEventListener('click',e=>{if(!e.target.closest('#menu'))document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!e.target.closest('#smp,#smb'))$('smp').classList.remove('open')});
+document.addEventListener('click',e=>{if(!e.target.closest('#menu'))document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!e.target.closest('#smp,#smb,#bSm'))$('smp').classList.remove('open')});
 const leave=()=>{if(confirm('Leave the chat?'))location.href='/rooms.html'};
 $('mCreate').onclick=createRoom;$('mAv').onclick=()=>YAv.editor(S,{name:me});
 YAv.listen(S,(n,av)=>{const k=n.toLowerCase();ros.forEach(r=>{if(r.name.toLowerCase()==k)r.av=av});renderRoster()});$('mMess').onclick=()=>window.open('/','yappmessenger');
 $('mTopic').onclick=()=>{if(!owner||!acct||owner.toLowerCase()!=acct.toLowerCase())return alert('Only the room owner can change the topic.');const t=prompt('New topic:','');if(t)S.emit('set-topic',t,r=>r.error&&alert(r.error))};
-$('mKick').onclick=()=>{if(!owner||!acct||owner.toLowerCase()!=acct.toLowerCase())return alert('Only the room owner can kick users.');if(!selName||selName==me)return alert('Select someone in the member list first.');if(confirm('Kick '+selName+' from this room?'))S.emit('kick',selName,r=>r.error&&alert(r.error))};
-S.on('topic',t=>{$('topic').querySelector('i').textContent='( '+t+' )'});
-S.on('kicked',({room:r,by})=>{alert('You were kicked from '+r+' by '+by+'.')});
+$('mKick').onclick=()=>{if(myRole())return openMod(selName);if(!owner||!acct||owner.toLowerCase()!=acct.toLowerCase())return alert('Only the room owner can kick users.');if(!selName||selName==me)return alert('Select someone in the member list first.');if(confirm('Kick '+selName+' from this room?'))S.emit('kick',selName,r=>r.error&&alert(r.error))};
+S.on('topic',t=>{$('rtopic').textContent=t});
+S.on('kicked',({room:r,by,mins})=>{alert('You were kicked from '+r+' by '+by+'.'+(mins?' You can rejoin in '+mins+' minutes.':''))});
+S.on('dotted',({by,muted})=>{$('hf').checked=false;setTalk(false);$('talk').innerHTML=YI.svg('mic',18)+'Talk';add({sys:1,text:muted?'Your mic is muted in this room'+(by?' by '+escT(by):'')+'.':'You were dotted (knocked off the mic) by '+escT(by)+'.'})});
+// ---- Room Admin Console (owner + admins; every action is re-checked on the server) ----
+const roleB=r=>r=='owner'?`<span class=rb title="Room owner">${YI.svg('star',12)}</span>`:r=='admin'?`<span class=rb title="Room admin">${YI.svg('shield',12)}</span>`:'';
+const myRole=()=>(ros.find(m=>m.id==S.id)||{}).role||'';
+function openMod(n){const w=$('modw');w.style.display='flex';if(n)modSel=n;drawMod()}let modSel='';
+function drawMod(){const r=myRole();if(!r){$('modw').style.display='none';return}const others=ros.filter(m=>m.id!=S.id&&m.role!='owner'&&(r=='owner'||m.role!='admin'));
+ if(!others.find(m=>m.name==modSel))modSel=others[0]?.name||'';
+ $('modu').innerHTML=others.map(m=>`<option ${m.name==modSel?'selected':''}>${escT(m.name)}</option>`).join('')||'<option value="">(nobody you can moderate)</option>';
+ const t=ros.find(m=>m.name==modSel)||{};$('modown').style.display=r=='owner'?'':'none';$('mAdm').textContent=t.role=='admin'?'Remove Admin':'Make Admin';
+ $('mMt').textContent=t.mt?'Unmute Text':'Mute Text';$('mMm').textContent=t.mm?'Unmute Mic':'Mute Mic';$('mMb').textContent=t.mt&&t.mm?'Unmute Both':'Mute Both';
+ S.emit('mod:list',l=>{if(l.error)return;$('modl').innerHTML=(l.muted.map(x=>`<div>${YI.svg('micoff',14)} <b>${escT(x.name)}</b> <small>${x.text&&x.mic?'text + mic':x.text?'text':'mic'}</small><a data-u="${escT(x.name)}" data-a=unmuteall>unmute</a></div>`).join('')
+  +l.kicked.map(x=>`<div>${YI.svg('out',14)} <b>${escT(x.name)}</b> <small>kicked, ${x.mins} min left</small><a data-u="${escT(x.name)}" data-a=unkick>lift</a></div>`).join(''))||'<div style="color:var(--muted)">Nobody is muted or kicked.</div>';
+  $('modadm').textContent=l.admins.length?'Admins: '+l.admins.join(', '):'No room admins yet.';
+  $('modl').querySelectorAll('a[data-a]').forEach(a=>a.onclick=()=>doMod(a.dataset.a,a.dataset.u))})}
+function doMod(action,who){who=who||modSel;if(!who)return;if(action=='kick'&&!confirm('Kick '+who+' from this room for 5 minutes?'))return;S.emit('mod',{action,who},r=>{if(r.error)alert(r.error);drawMod()})}
+
 $('mLeave').onclick=leave;$('wx').onclick=leave;$('mJoin').onclick=()=>{const r=prompt('Join which room?\n'+rooms.map(r=>r.name).join(', '),'');const f=r&&rooms.find(x=>x.name.toLowerCase()==r.trim().toLowerCase());if(f)joinR(f.name);else if(r)alert('No room named '+r)};
 $('mCopy').onclick=()=>navigator.clipboard?.writeText(String(getSelection()));$('mSelAll').onclick=()=>{const r=document.createRange();r.selectNodeContents($('log'));getSelection().removeAllRanges();getSelection().addRange(r)};
 $('mClearIn').onclick=()=>$('msg').value='';$('mClear').onclick=()=>$('log').innerHTML='';
@@ -204,11 +276,11 @@ function add(m){const L=$('log'),d=document.createElement('div'),atB=L.scrollHei
  const ts=`<span class=ts>[${tstr(m.t||Date.now())}]</span>`;
  if(m.name&&ignored.has(m.name.replace(/&#39;/g,"'")))return;
  if(m.buzz){d.className='buzz';d.innerHTML=ts+`${m.name}: BUZZ!!!`;const c=$('chat');c.classList.remove('buzzing');void c.offsetWidth;c.classList.add('buzzing')}
- else if(m.sys){d.className='sys'+(/has (joined|left) the room/.test(m.text)?' jl':'');d.innerHTML=ts+m.text}
+ else if(m.sys){d.className='sys'+(/has (joined|entered|left) the room/.test(m.text)?' jl':'');d.innerHTML=ts+m.text}
  else{let t=smile(m.text);const sty=`color:${m.color};font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
-  d.innerHTML=YAv.html(m.name,(ros.find(r=>r.name==m.name)||{}).av??m.av,'')+`<div class=tx>${ts}<span class=n style="color:${ncol(m.name)}">${m.name}:</span> <span style="${sty}">${t}</span></div>`}
+  d.innerHTML=YAv.html(m.name,(ros.find(r=>r.name==m.name)||{}).av??m.av,'')+`<div class=tx>${ts}<span class=n style="color:${ncol(m.name)}${m.role=='owner'?';font-weight:800':''}">${m.name}${roleB(m.role)}:</span> <span style="${sty}">${t}</span></div>`}
  L.appendChild(d);if(atB)L.scrollTop=L.scrollHeight}
-S.on('history',h=>{room=h.room;owner=h.owner;history.replaceState(null,'','?room='+encodeURIComponent(h.room));$('hdr').textContent=h.room+' -- '+APP_NAME.join('');$('topic').innerHTML=`You are in <b>"${escT(h.room)}"</b> <i>( ${escT(h.topic||'')} )</i>`+(h.owner?` <small style="color:#555">- owner: ${escT(h.owner)}</small>`:'');$('log').innerHTML='';h.msgs.forEach(add)});
+S.on('history',h=>{room=h.room;owner=h.owner;history.replaceState(null,'','?room='+encodeURIComponent(h.room));$('rname').innerHTML=escT(h.room)+YProf.badge(h.rating);$('rtopic').textContent=h.topic||'';$('rtile').innerHTML=YI.room(h.room,48);$('msg').placeholder='Type a message to '+h.room+'...';setHdr();$('topic').innerHTML=`You are in <b>"${escT(h.room)}"</b> <i>( ${escT(h.topic||'')} )</i>`+(h.owner?` <small style="color:#555">- owner: ${escT(h.owner)}</small>`:'');$('log').innerHTML='';h.msgs.forEach(add)});
 S.on('msg',add);
 let typers={};S.on('typing',({name})=>{if(ignored.has(name))return;typers[name]=Date.now()+3500;showTyping()});
 function showTyping(){const now=Date.now(),n=Object.keys(typers).filter(k=>typers[k]>now);$('typing').textContent=prefs.typ&&n.length?n.join(', ')+(n.length>1?' are':' is')+' typing...':''}
@@ -227,7 +299,7 @@ function openPm(n){if(pms[n]){pms[n].querySelector('input').focus();return pms[n
 function pmLine(n,html){const w=pms[n]||openPm(n),l=w.querySelector('.pl'),d=document.createElement('div');d.innerHTML=html;l.appendChild(d);l.scrollTop=l.scrollHeight}
 S.on('pm',({from,text})=>{if(ignored.has(from))return;pmLine(from,`<b style="color:#c0392b">${escT(from)}:</b> ${smile(text)}`)});
 // audio volume / mute / ignore
-function applyAudio(a,id){const r=ros.find(x=>x.id==id);a.muted=$('mute').checked||(r&&ignored.has(r.name));a.volume=+$('vol').value}
+function applyAudio(a,id){const r=ros.find(x=>x.id==id);a.muted=$('mute').checked||(r&&(ignored.has(r.name)||r.mm));a.volume=+$('vol').value}
 function applyAudioAll(){document.querySelectorAll('audio[id^=au]').forEach(a=>applyAudio(a,a.id.slice(2)))}
 $('mute').onchange=applyAudioAll;$('vol').oninput=applyAudioAll;
 // level meters
@@ -235,9 +307,9 @@ let actx=null;const lv={m1:0,m2:{}};
 function meter(stream,key,id){try{actx=actx||new AudioContext();actx.resume();const an=actx.createAnalyser();an.fftSize=256;actx.createMediaStreamSource(stream).connect(an);const buf=new Uint8Array(an.fftSize);
  const tick=()=>{if(!stream.active)return;an.getByteTimeDomainData(buf);let m=0;for(const v of buf)m=Math.max(m,Math.abs(v-128));if(key=='m1')lv.m1=m/128;else lv.m2[id]=m/128;requestAnimationFrame(tick)};tick()}catch(e){}}
 setInterval(()=>{$('m1').style.width=Math.min(100,(talking?lv.m1:0)*250)+'%';const r=Math.max(0,...Object.values(lv.m2));$('m2').style.width=Math.min(100,($('mute').checked?0:r)*250)+'%'},100);
-function renderRoster(){
- $('mem').innerHTML=ros.map(m=>{const ic=m.talk?'&#127908;':(m.cam?'':'');return `<div class="mem${m.talk?' talking':''}${m.name==selName?' sel':''}${ignored.has(m.name)?' ign':''}" data-n="${escT(m.name)}"><span class=mi>${YAv.html(m.name,m.av,'')}${m.talk?'<span class=tk>&#127908;</span>':''}</span><span class=nm>${escT(m.name)}</span>${m.guest?'<span class=gt>guest</span>':''}${m.cam?`<span class="ci" title="View Webcam" data-v="${m.id}" data-n="${escT(m.name)}">&#128247;</span>`:''}</div>`}).join('');
- $('mem').querySelectorAll('.mem').forEach(e=>{e.onclick=ev=>{if(ev.target.closest('.ci'))return;selName=e.dataset.n;renderRoster()};e.ondblclick=()=>{if(e.dataset.n!=me)openPm(e.dataset.n)}});
+function renderRoster(){const q=($('pq')?.value||'').toLowerCase();$('pcnt').textContent=ros.length;$('ucnt').textContent=ros.length;setHdr();
+ $('mem').innerHTML=ros.filter(m=>!q||m.name.toLowerCase().includes(q)).map(m=>{const ic=m.talk?'&#127908;':(m.cam?'':'');return `<div class="mem${m.talk?' talking':''}${m.name==selName?' sel':''}${ignored.has(m.name)?' ign':''}" data-n="${escT(m.name)}"><span class=sdot></span><span class=mi>${YAv.html(m.name,m.av,'')}${m.talk?'<span class=tk>&#127908;</span>':''}</span><span class=nm${m.role=='owner'?' style="font-weight:800"':''}>${escT(m.name)}</span>${roleB(m.role)}${m.mt||m.mm?`<span class=mutedb title="Muted (${m.mt&&m.mm?'text + mic':m.mt?'text':'mic'})">${YI.svg(m.mm?'micoff':'chat',13)}</span>`:''}${m.guest?'<span class=gt>guest</span>':''}${m.cam?`<span class="ci" title="View Webcam" data-v="${m.id}" data-n="${escT(m.name)}">&#128247;</span>`:''}</div>`}).join('');
+ $('mem').querySelectorAll('.mem').forEach(e=>{e.onclick=ev=>{if(ev.target.closest('.ci'))return;selName=e.dataset.n;renderRoster()};e.ondblclick=()=>{if(e.dataset.n!=me)openPm(e.dataset.n)};e.oncontextmenu=ev=>{ev.preventDefault();selName=e.dataset.n;renderRoster();ctxMenu(ev,e.dataset.n)}});
  $('mem').querySelectorAll('.ci').forEach(e=>e.onclick=()=>e.dataset.v==S.id?0:view(e.dataset.v,e.dataset.n));
  const t=ros.filter(m=>m.talk&&!ignored.has(m.name)).map(m=>escT(m.name));$('vstat').innerHTML=t.length?t.join(', ')+(t.length>1?' are':' is')+' talking':'';}
 // ===== Voice & webcam (WebRTC mesh, Socket.IO signaling) =====
@@ -275,12 +347,12 @@ tb.addEventListener('pointerdown',e=>{e.preventDefault();if(!$('hf').checked)set
 tb.addEventListener('click',()=>{if($('hf').checked)setTalk(!talking)});
 document.addEventListener('keydown',e=>{if(e.key=='Control'&&!e.repeat&&me&&!$('hf').checked)setTalk(true)});
 document.addEventListener('keyup',e=>{if(e.key=='Control'&&me&&!$('hf').checked)setTalk(false)});
-$('hf').onchange=async()=>{if($('hf').checked){await setTalk(true);tb.textContent='Talk (on)'}else{await setTalk(false);tb.textContent='Talk'}};
+$('hf').onchange=async()=>{if($('hf').checked){await setTalk(true);tb.innerHTML=YI.svg('mic',18)+'Talk (on)'}else{await setTalk(false);tb.innerHTML=YI.svg('mic',18)+'Talk'}};
 $('cam').onclick=async()=>{if(camS){stopCam();return}
  if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return camErr({name:'InsecureContext',message:'Camera API unavailable (page must be opened over https)'});
  try{camS=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:15}},audio:false})}catch(e){
   if(e.name=='OverconstrainedError'||e.name=='ConstraintNotSatisfiedError'||e.name=='TypeError'){try{camS=await navigator.mediaDevices.getUserMedia({video:true})}catch(e2){return camErr(e2)}}else return camErr(e)}
- $('cam').classList.add('on');$('cam').innerHTML='<span>&#128247;</span>Stop Cam';S.emit('cam',true);openWin(S.id,me+' (you)',camS)};
+ $('cam').classList.add('on');$('cam').innerHTML=YI.svg('video')+'<span>Stop Cam</span>';S.emit('cam',true);openWin(S.id,me+' (you)',camS)};
 function camErr(e){console.warn('[webcam]',e.name,e.message);const n=e.name||'Error';let m;
  if(n=='NotAllowedError'||n=='PermissionDeniedError'||n=='SecurityError')m='Camera permission was denied ('+n+').\n\nTo allow it: click the lock / site-settings icon left of the address bar \u2192 Camera \u2192 Allow, then reload the page.\nAlso check your OS privacy settings (macOS: System Settings \u2192 Privacy & Security \u2192 Camera; Windows: Settings \u2192 Privacy \u2192 Camera) allow your browser.';
  else if(n=='NotReadableError'||n=='TrackStartError'||n=='AbortError')m='Your camera is in use by another app ('+n+').\n\nClose Zoom/Teams/FaceTime/OBS or other tabs using the camera, then try again.';
@@ -289,7 +361,7 @@ function camErr(e){console.warn('[webcam]',e.name,e.message);const n=e.name||'Er
  else m='Webcam not available ('+n+': '+(e.message||'')+').';
  alert(m)}
 function stopCam(){camS&&camS.getTracks().forEach(t=>t.stop());camS=null;Object.keys(pcs).filter(x=>x[0]=='v').forEach(x=>closePc('v',x.slice(1)));
- $('cam').classList.remove('on');$('cam').innerHTML='<span>&#128247;</span>Webcam';$('viewers').textContent='';S.emit('cam',false);closeWin(S.id,true)}
+ $('cam').classList.remove('on');$('cam').innerHTML=YI.svg('video')+'<span>Webcam</span>';$('viewers').textContent='';S.emit('cam',false);closeWin(S.id,true)}
 S.on('view-req',({id})=>{if(!camS)return;closePc('v',id);const pc=pcFor('v',id,true);camS.getTracks().forEach(t=>pc.addTrack(t,camS))});
 S.on('unview',({id})=>closePc('v',id));
 S.on('cam-off',({id})=>closeWin(id,true));
@@ -305,12 +377,21 @@ function openWin(id,name,stream){const w=document.createElement('div');w.classNa
   p.style.cssText=`left:${Math.max(10,innerWidth/2-260+n*30)}px;top:${80+n*30}px;width:520px;height:430px`;
   p.innerHTML=`<div class=tbar>&#128247; ${name}<span class=sp></span><span class="b fs" title="Full screen">&#9974;</span><span class="b dk" title="Back to strip">&#8601;</span><span class=x title="Close">X</span></div><video autoplay playsinline muted></video>`;
   document.body.appendChild(p);w.pop=p;const pv=p.querySelector('video');pv.srcObject=v.srcObject;pv.play().catch(()=>{});
-  p.querySelector('.x').onclick=close;p.querySelector('.dk').onclick=()=>{p.remove();w.pop=null};p.querySelector('.fs').onclick=()=>fullCam(pv);drag(p)};
+  p.querySelector('.x').onclick=close;p.querySelector('.dk').onclick=()=>{p.remove();w.pop=null};p.querySelector('.fs').onclick=()=>fullCam(pv);drag(p);if(id==S.id){const mi=ros.find(m=>m.id==S.id);mi&&drawViewers(mi.viewers)}};
  if(!stream){const iv=setInterval(()=>{if(!wins[id])return clearInterval(iv);if(w.pop){const pv=w.pop.querySelector('video');if(pv.srcObject!==v.srcObject){pv.srcObject=v.srcObject;pv.play().catch(()=>{})}}},500)}}
 function fullCam(v){const f=v.requestFullscreen||v.webkitRequestFullscreen||v.webkitEnterFullscreen;if(f)f.call(v).catch?.(()=>{})}
 function closeWin(id,remote){const w=wins[id];if(!w)return;if(w.pop)w.pop.remove();w.remove();delete wins[id];$('camstrip').classList.toggle('has',!!$('camstrip').children.length);if(id!=S.id){closePc('w',id);if(!remote)S.emit('unview',id)}}
-S.on('roster',r=>{ros=r;renderRoster();
- const mine=r.find(m=>m.id==S.id);if(mine&&mine.cam)$('viewers').innerHTML='Viewing your cam: '+(mine.viewers.length?mine.viewers.map(escT).join(', '):'nobody yet');
+function ctxMenu(ev,n){document.querySelectorAll('.yctx').forEach(x=>x.remove());const m=document.createElement('div');m.className='yctx imenu open';m.style.cssText=`position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;display:block;z-index:300`;
+ m.innerHTML='<div data-c=p>View Profile</div>'+(n!=me?'<div data-c=im>Private Message</div>':'')+(myRole()&&n!=me?'<div data-c=mod>Room Admin Console...</div>':'');document.body.appendChild(m);
+ m.onclick=e=>{const c=e.target.dataset.c;m.remove();if(c=='p')YProf.show(n,{me:acct?me:''});else if(c=='im')openPm(n);else if(c=='mod')openMod(n)};setTimeout(()=>addEventListener('click',()=>m.remove(),{once:true}),0)}
+$('mProf').onclick=()=>{if(!selName)return alert('Select a user in the people list first.');YProf.show(selName,{me:acct?me:''})};$('mMyProf').onclick=()=>acct?YProf.edit():YProf.show(me);
+S.on('rating',d=>{if(d.room==room)$('rname').innerHTML=escT(room)+YProf.badge(d.rating)});
+S.on('cam-blocked',d=>{closeWin(d.id,true);alert(d.name+' stopped sharing their webcam with you.')});
+function drawViewers(list){for(const box of [wins[S.id],wins[S.id]?.pop].filter(Boolean)){let c=box.querySelector('.camvw');if(!c){c=document.createElement('div');c.className='camvw on';box.appendChild(c);if(box.classList.contains('camwin'))c.style.top='30px'}
+ c.innerHTML=`<b>&#128065; Who's watching (${list.length})</b>`+(list.length?list.map(n=>`<div class=vw>${escT(n)}<a data-b="${escT(n)}">block</a></div>`).join(''):'<div>Nobody yet</div>');
+ c.querySelectorAll('[data-b]').forEach(a=>a.onclick=()=>{if(confirm('Block '+a.dataset.b+' from viewing your webcam?'))S.emit('cam:block',a.dataset.b,x=>x&&x.error&&alert(x.error))})}}
+S.on('roster',r=>{ros=r;renderRoster();$('bMod').style.display=myRole()?'':'none';if($('modw').style.display!='none')drawMod();
+ const mine=r.find(m=>m.id==S.id);if(mine&&mine.cam)$('viewers').innerHTML='Viewing your cam: '+(mine.viewers.length?mine.viewers.map(escT).join(', '):'nobody yet');if(mine&&mine.cam)drawViewers(mine.viewers);
  Object.keys(wins).forEach(id=>{if(id!=S.id&&!r.find(m=>m.id==id&&m.cam))closeWin(id,true)});
  syncAudio()});
 S.on('history',()=>{Object.keys(wins).forEach(id=>id==S.id||closeWin(id,true));Object.keys(pcs).forEach(x=>closePc(x[0],x.slice(1)));
