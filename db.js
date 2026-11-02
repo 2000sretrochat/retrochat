@@ -13,7 +13,8 @@ create table if not exists requests(from_id int not null references users(id) on
 create table if not exists blocks(owner int not null references users(id) on delete cascade, blocked int not null references users(id) on delete cascade, primary key(owner, blocked));
 create table if not exists offline(id serial primary key, to_id int not null references users(id) on delete cascade, from_id int not null references users(id) on delete cascade,
   body jsonb not null, created timestamptz not null default now());
-create index if not exists offline_to on offline(to_id);`;
+create index if not exists offline_to on offline(to_id);
+create table if not exists avatars(user_id int primary key references users(id) on delete cascade, mime text not null, data bytea not null, updated timestamptz not null default now());`;
 async function init() {
   if (!process.env.DATABASE_URL) { error = 'DATABASE_URL is not set'; console.warn('[db] ' + error + ' - accounts disabled (maintenance mode)'); return; }
   const local = /localhost|127\.0\.0\.1|\/tmp/.test(process.env.DATABASE_URL);
