@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Yapp Chat</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html><head><meta charset="utf-8"><title>YappChat</title><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 /* palette from poplyglot.github.io/poplyglot-russian-test: #1877E8 brand, #176FCF blue, #2468D7 deep, #10234A/#12213F ink, #4AB7F2 bubbles, #F4F9FF bg */
 :root{--brand:#1877E8;--blue:#176FCF;--deep:#2468D7;--navy:#10234A;--bub:rgba(74,183,242,.58);--sys:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--sky:#4AB7F2;--ink:#12213F;--line:#E1ECF7;--bg:#F6FAFE;--pale:#DCEBFC;--mid:#BFDCFA;--acc:#FFCE00;--muted:#5A6E88}
@@ -68,7 +68,7 @@ button{font:12px Tahoma;background:linear-gradient(#fff,#e3ecf7);border:1px soli
 Screen name: <input type="text" id="nm" maxlength="20" autocomplete="off"> <button id="go">Enter Chat</button><div id="err"></div>
 <div style="margin-top:10px">Choose a room:</div><div id="rlist"></div></div></div>
 <div id="chat" class="win">
-<div class="tbar"><svg class="bub" viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg> <span id="hdr">Lobby -- Yapp Chat</span><span class="sp"></span><span class="wb">_</span><span class="wb">&#9633;</span><span class="wb x" id="wx" title="Leave chat">X</span></div>
+<div class="tbar"><svg class="bub" viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg> <span id="hdr">Lobby -- YappChat</span><span class="sp"></span><span class="wb">_</span><span class="wb">&#9633;</span><span class="wb x" id="wx" title="Leave chat">X</span></div>
 <div id="menu">
  <div>Chat<div class="dd"><div id="mJoin">Join Room...</div><div id="mRooms"></div><hr><div id="mLeave">Leave Room / Sign Out</div></div></div>
  <div>Edit<div class="dd"><div id="mCopy">Copy Selected Text</div><div id="mSelAll">Select All Chat Text</div><hr><div id="mClearIn">Clear Message Box</div></div></div>
@@ -93,7 +93,7 @@ Screen name: <input type="text" id="nm" maxlength="20" autocomplete="off"> <butt
 <div id="foot"><span class="appname-plain"></span> &middot; an original nostalgia project</div>
 <script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
-const APP_NAME=['Yapp',' Chat'];
+const APP_NAME=['Yapp','Chat'];
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
 document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('');
 const $=id=>document.getElementById(id), S=io();
