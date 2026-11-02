@@ -3,7 +3,7 @@ const { spawn } = require('child_process'), { io } = require('socket.io-client')
 const PORT = 3016, U = 'http://localhost:' + PORT, DB = process.env.TEST_DATABASE_URL, KEY = 'test-site-key-0123456789abcdef';
 const w = ms => new Promise(r => setTimeout(r, ms)); let pass = 0; const ok = (c, m) => { assert.ok(c, m); pass++; console.log('  ✓', m); };
 const E = (s, ev, d) => new Promise(r => d === undefined ? s.emit(ev, r) : s.emit(ev, d, r));
-async function acct(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: n, password: 'hunter22pw' }) });
+async function acct(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agree: true,  name: n, password: 'hunter22pw' }) });
   return (r.headers.get('set-cookie') || '').split(';')[0]; }
 const conn = cookie => io(U, { transports: ['websocket'], extraHeaders: cookie ? { cookie } : {} });
 (async () => {

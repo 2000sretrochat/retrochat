@@ -5,7 +5,7 @@ const w = ms => new Promise(r => setTimeout(r, ms)); let pass = 0; const ok = (c
 const E = (s, ev, d) => new Promise(r => d === undefined ? s.emit(ev, r) : s.emit(ev, d, r));
 const sfx = Date.now() % 100000, MN = 'mq' + sfx, A = 'aa' + sfx, B = 'bb' + sfx, C = 'cc' + sfx;
 const H = c => ({ 'Content-Type': 'application/json', ...(c ? { cookie: c } : {}) });
-async function signup(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: H(), body: JSON.stringify({ name: n, password: 'hunter22pw' }) }); return (r.headers.get('set-cookie') || '').split(';')[0]; }
+async function signup(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: H(), body: JSON.stringify({ agree: true,  name: n, password: 'hunter22pw' }) }); return (r.headers.get('set-cookie') || '').split(';')[0]; }
 const ck = (c, dev) => [c, dev && 'ydid=' + dev].filter(Boolean).join('; ');
 const conn = (cookie, ip) => io(U, { transports: ['websocket'], extraHeaders: { ...(cookie ? { cookie } : {}), 'x-forwarded-for': ip || '10.0.0.1' }, reconnection: false, forceNew: true });
 const up = s => new Promise(r => { s.on('connect', () => r(true)); s.on('connect_error', e => r(e.message)); });

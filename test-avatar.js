@@ -27,7 +27,7 @@ let pass = 0; const ok = (c, m) => { assert.ok(c, m); pass++; console.log('  ✓
     ok((await call(b, 'avatar:set', 'a3')).ok, 'preset avatar accepted');
     b.disconnect();
     if (DB) {
-      const n = 'Avt' + sfx; r = await fetch(U + '/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: n, password: 'hunter22pw' }) });
+      const n = 'Avt' + sfx; r = await fetch(U + '/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agree: true,  name: n, password: 'hunter22pw' }) });
       const ck = r.headers.get('set-cookie').split(';')[0]; ok(r.ok, 'account signup');
       const c = io(U, { transports: ['websocket'], extraHeaders: { cookie: ck } }); await new Promise(res => c.on('connect', res));
       const init = await call(c, 'm:init'); ok(init.me && init.me.name == n, 'messenger init');

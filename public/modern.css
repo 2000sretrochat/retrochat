@@ -31,3 +31,19 @@ img.av{display:block;background:#DCEBFC}
 #ad-slot{border-radius:12px;border-color:var(--line)!important}
 html.dark #log span[style*="color:#000000"],html.dark .bb span[style*="color:#000000"],html.dark .pl{color:#e6eefb!important}
 html.dark #topic{color:#5fd38a!important}html.dark .sw[data-c="#000000"]{outline:1px solid #8aa}
+
+/* Purple chat color: lighter in dark mode */
+html.dark #log span[style*="#8b5cf6" i],html.dark .bb span[style*="#8b5cf6" i],html.dark [style*="color:#8b5cf6" i],html.dark [style*="color: rgb(139, 92, 246)"]{color:#a78bfa!important}
+/* v11.7 mobile layout */
+@media (max-width:600px){
+ #main{flex-direction:column!important;height:auto!important}
+ #mpane{width:auto!important;max-height:34vh;border-left:0!important;border-top:1px solid var(--line)}
+ #log{height:46vh!important}
+ #vrow,#erow,.hb,#tbar,.tools{flex-wrap:wrap!important;gap:4px}
+ textarea,input[type=text],input[type=password],#msg{font-size:16px!important}
+ .yprof,#modw>div,#avp,.yset{left:2vw!important;right:2vw!important;width:96vw!important;max-width:96vw!important;transform:none!important;top:6vh!important}
+ #menu{overflow-x:auto;white-space:nowrap}
+ .im .tools button span{display:none}
+ #ad-slot{max-width:100%!important}
+ #pwaInstall{bottom:56px!important}
+}

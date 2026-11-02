@@ -16,6 +16,7 @@ create table if not exists offline(id serial primary key, to_id int not null ref
 create index if not exists offline_to on offline(to_id);
 create table if not exists avatars(user_id int primary key references users(id) on delete cascade, mime text not null, data bytea not null, updated timestamptz not null default now());
 alter table users add column if not exists last_ip text;
+alter table sessions add column if not exists display text;
 alter table users add column if not exists last_loc text;
 alter table users add column if not exists last_at timestamptz;
 create table if not exists login_history(id serial primary key, user_id int not null references users(id) on delete cascade, ip text, loc text, kind text, at timestamptz not null default now());
@@ -30,6 +31,9 @@ alter table users add column if not exists is_master boolean not null default fa
 alter table users add column if not exists m_incog boolean not null default false;
 alter table users add column if not exists m_announce boolean not null default false;
 alter table users add column if not exists email_norm text;
+alter table users add column if not exists verified boolean not null default false;
+alter table users add column if not exists receipts boolean not null default false;
+create table if not exists email_verify(token text primary key, user_id int not null, expires timestamptz not null);
 update users set email_norm = case when split_part(lower(trim(email)),'@',2) in ('gmail.com','googlemail.com') then replace(split_part(split_part(lower(trim(email)),'@',1),'+',1),'.','')||'@gmail.com' else lower(trim(email)) end where email is not null and email <> '' and email_norm is null;
 create index if not exists users_email_norm on users(email_norm);
 alter table users add column if not exists banned boolean not null default false;
@@ -42,9 +46,18 @@ create table if not exists room_meta(room text primary key, rating text);
 alter table room_meta add column if not exists mics int;
 alter table room_meta add column if not exists hq boolean;
 alter table room_meta add column if not exists mtimer int;
+create table if not exists im_archive(id serial primary key, owner int not null references users(id) on delete cascade, peer text not null, dir text not null, body jsonb not null, t timestamptz default now());
+create index if not exists im_archive_owner on im_archive(owner, id);
+create table if not exists imv(k text primary key, env text not null);
+create table if not exists room_ann(room text primary key, text text not null, by text, t timestamptz default now());
+create table if not exists stats_day(d date primary key, peak int not null default 0);
+create table if not exists user_rooms(name text primary key, cat text not null default 'User Rooms', owner text not null, rating text, mics int, topic text, created timestamptz not null default now());
+create table if not exists pw_resets(token text primary key, user_id int not null references users(id) on delete cascade, expires timestamptz not null);
+create table if not exists backups(d date primary key, data jsonb not null, created timestamptz not null default now());
 create table if not exists favorites(owner text not null, room text not null, primary key(owner, room));
 create table if not exists ignores(owner int not null references users(id) on delete cascade, name_lc text not null, primary key(owner, name_lc));
 alter table users add column if not exists pm_buddies boolean not null default false;
+alter table users add column if not exists archive boolean not null default false;
 create table if not exists guest_log(id serial primary key, name text not null, ip text, loc text, at timestamptz not null default now());`;
 async function init() {
   if (!process.env.DATABASE_URL) { error = 'DATABASE_URL is not set'; console.warn('[db] ' + error + ' - accounts disabled (maintenance mode)'); return; }

@@ -2,7 +2,9 @@
 const path = require('path');
 module.exports = function (C) {
   const { app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, upd, history, closeRoom, setRating, setTopic, modAct, esc, MICS, setMics, micsOf } = C;
-  const NAMES = String(process.env.MASTER_NAMES || 'zainy').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  const NAMES = [...new Set(String((process.env.MASTER_NAMES || 'zainy') + ',' + (process.env.MASTER_RESERVED || 'tony,zainyochka')).split(',').map(x => x.trim().toLowerCase()).filter(Boolean))];
+  const RESV = String(process.env.MASTER_RESERVED || 'tony,zainyochka').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  const reserved = n => RESV.includes(String(n || '').trim().toLowerCase()); // reserved hidden master names: nobody can sign up or chat as a guest with them
   const IPBAN = new Set();
   const ready = () => db.status().ready;
   const q = (...a) => ready() ? db.q(...a) : Promise.resolve([]);
@@ -77,8 +79,18 @@ module.exports = function (C) {
   app.post('/api/master/report', express.json(), guard(async (req, res, me) => { await q('update reports set resolved=$2, resolved_by=$3 where id=$1', [+req.body?.id, req.body?.resolved !== false, me.name]); res.json({ ok: true }); }));
   app.post('/api/master/broadcast', express.json(), guard((req, res) => { const t = String(req.body?.text || '').trim().slice(0, 300); if (!t) return res.status(400).json({ error: 'Message required.' });
     for (const r of Object.keys(ROOMS)) C.push(r, { sys: true, text: '[System] ' + esc(t) }); io.emit('m:broadcast', { text: t }); res.json({ ok: true }); }));
-  app.get('/api/master/bots', guard(async (req, res) => res.json({ on: C.getBots() })));
-  app.post('/api/master/bots', express.json(), guard(async (req, res) => res.json({ ok: true, on: C.setBots(!!req.body?.on) })));
+  require('./backup').routes(app, guard); require('./backup').schedule();
+  // pre-create a reserved owner account (only names on the master seed list); it becomes a hidden master on creation
+  app.post('/api/master/create-reserved', express.json(), guard(async (req, res) => { const n = String(req.body?.name || '').trim(), pw = req.body?.password;
+    if (!reserved(n)) return res.status(400).json({ error: 'Only names on the master seed list can be created here.' }); if (typeof pw !== 'string' || pw.length < 8 || pw.length > 100) return res.status(400).json({ error: 'Passwords must be 8-100 characters.' });
+    if ((await q('select 1 from users where name_lc=$1', [n.toLowerCase()])).length) return res.status(409).json({ error: 'That account already exists.' });
+    const r = await q('insert into users(name,name_lc,pw) values($1,$2,$3) returning id', [n, n.toLowerCase(), await require('bcryptjs').hash(pw, 12)]); await seedMaster(r[0].id, n); res.json({ ok: true, name: n }); }));
+  app.post('/api/master/reset-link', express.json(), guard(async (req, res) => { const u = (await q('select id,name from users where name_lc=$1', [String(req.body?.name || '').trim().toLowerCase()]))[0]; if (!u) return res.status(404).json({ error: 'No such user.' });
+    res.json({ name: u.name, link: await C.resetLink(req, u.id), expires: '1 hour' }); }));
+  app.get('/api/master/stats', guard(async (req, res) => { const st = C.stats(); let su = { d: 0, w: 0 }, pk = 0; try { su = (await q("select count(*) filter (where created >= date_trunc('day', now())) as d, count(*) filter (where created >= now() - interval '7 days') as w from users"))[0]; pk = (await q('select peak from stats_day where d=current_date'))[0]?.peak || 0; } catch { }
+    res.json({ ...st, peak: Math.max(st.peak, pk), signupsToday: +su.d, signupsWeek: +su.w }); }));
+  app.get('/api/master/bots', guard(async (req, res) => res.json(C.getBots())));
+  app.post('/api/master/bots', express.json(), guard(async (req, res) => res.json({ ok: true, on: C.setBots(!!req.body?.on, typeof req.body?.room === 'string' ? req.body.room : undefined), ...C.getBots() })));
   app.get('/api/master/unlimited', guard(async (req, res) => res.json({ emails: await require('./emails').list() })));
   app.post('/api/master/unlimited', express.json(), guard(async (req, res) => res.json({ ok: true, emails: await require('./emails').setList(req.body?.emails) })));
   // incognito + announce prefs (per master, persisted); applied live to the master's room sockets
@@ -99,5 +111,5 @@ module.exports = function (C) {
     const u = (await q('select id from users where name_lc=$1', [String(name || '').toLowerCase()]))[0]; if (!u) return res.status(404).json({ error: 'No such screen name.' });
     if (remove) await q('delete from watch where owner=$1 and target=$2', [me.id, u.id]); else await q('insert into watch(owner,target) values($1,$2) on conflict do nothing', [me.id, u.id]); res.json({ ok: true }); }));
 
-  return { ipBanned: ip => IPBAN.has(ip), seedMaster, load, saveRating, saveMics, saveMeta, saveMod, report };
+  return { reserved, ipBanned: ip => IPBAN.has(ip), seedMaster, load, saveRating, saveMics, saveMeta, saveMod, report };
 };
