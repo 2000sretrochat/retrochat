@@ -1,10 +1,10 @@
-// Yapp Chat server (repo: retrochat). Auth hook: replace `identify()` later for accounts; media hook: add /api/media-token for LiveKit.
+// YappChat server (repo: retrochat). Auth hook: replace `identify()` later for accounts; media hook: add /api/media-token for LiveKit.
 const express = require('express'), http = require('http'), { Server } = require('socket.io');
 const app = express(), server = http.createServer(app), io = new Server(server, { maxHttpBufferSize: 1e5 });
 const ROOMS = { 'Lobby':'General','Friends':'General','Chit Chat':'General','Late Night':'General' };
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033'];
-const users = new Map(); const VERSION = 'v3-classic'; // lower(name) -> socket.id
+const users = new Map(); const VERSION = 'v4-yappchat'; // lower(name) -> socket.id
 const history = Object.fromEntries(Object.keys(ROOMS).map(r => [r, []]));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 app.use(express.static(__dirname + '/public'));
