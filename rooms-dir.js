@@ -1,21 +1,34 @@
-// Classic Yahoo! Chat style directory: category -> rooms. Rooms in ADULT_ROOMS are rated R (18+).
+// Classic Yahoo! Chat directory (modeled on the original chat.yahoo.com category/room list): category -> rooms.
+// Rooms in ADULT_ROOMS are rated R (18+). Room names must be unique across the whole directory.
+const STATES = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'Washington, DC', 'West Virginia', 'Wisconsin', 'Wyoming'];
+const US_CITIES = ['Atlanta', 'Austin', 'Boston', 'Chicago', 'Dallas', 'Detroit', 'Houston', 'Las Vegas', 'Los Angeles', 'Miami', 'New York City', 'Philadelphia', 'Phoenix', 'Portland', 'San Diego', 'San Francisco Bay Area', 'Seattle', 'St Louis'];
+const COUNTRIES = ['Australia', 'Sydney', 'Bangladesh', 'Brazil', 'Brunei', 'Canada', 'Montreal', 'Toronto', 'Vancouver', 'China', 'Hong Kong', 'Denmark', 'East Timor', 'France', 'Germany', 'India', 'Calcutta', 'Chennai', 'Delhi', 'Goa', 'Gujarat', 'Hyderabad', 'Kerala', 'Mumbai', 'Punjab', 'Tamil Nadu', 'Indonesia', 'Bali', 'Jakarta', 'Surabaya', 'Ireland', 'Dublin', 'Italy', 'Japan', 'Tokyo', 'Korea', 'Seoul', 'Malaysia', 'Kuala Lumpur', 'Penang', 'Mexico', 'Nepal', 'New Zealand', 'Auckland', 'Norway', 'Pakistan', 'Philippines', 'Cebu Tambayan', 'Metro Manila Barkada', 'Mindanao', 'Overseas Filipino Workers Zone', 'Pinoy Chat', 'Russia', 'Singapore', 'Spain', 'Sri Lanka', 'Sweden', 'Taiwan', 'Thailand', 'Bangkok', 'United Kingdom', 'London', 'Glasgow', 'Belfast', 'Scotland', 'Vietnam', 'Hanoi', 'Saigon', 'Asia Global Chat', 'Europe', 'Middle East', 'Regional Lobby'];
 const DIR = {
-  'Business & Finance': ['Business', 'Investing', 'Stocks & Trading', 'Real Estate', 'Entrepreneurs', 'Jobs & Careers', 'Work From Home'],
-  'Computers & Internet': ['Computer Help', 'Programming', 'Linux', 'Mac Users', 'Windows', 'Web Design', 'Gaming PCs', 'Internet Chat'],
-  'Cultures & Community': ['Lobby', 'Friends', 'Chit Chat', 'Late Night', 'Teens', '20s', '30s', '40s', '50s & Over', 'Seniors', 'African American', 'Asian Pacific', 'Latino', 'LGBT Friends', 'Military Families', 'Native American'],
-  'Entertainment & Arts': ['Movies', 'TV Shows', 'Soap Operas', 'Reality TV', 'Celebrities', 'Books', 'Poetry', 'Anime & Manga', 'Comics', 'Writers'],
-  'Family & Home': ['Parenting', 'Moms', 'Dads', 'Single Parents', 'Pets', 'Cooking', 'Home & Garden', 'Weddings'],
-  'Government & Politics': ['Politics', 'Current Events', 'Debate', 'Military', 'Law'],
-  'Health & Wellness': ['Fitness', 'Weight Loss', 'Recovery', 'Support Groups', 'Diabetes', 'Mental Health', 'Nutrition'],
-  'Hobbies & Crafts': ['Crafts', 'Collecting', 'Photography', 'Cars & Trucks', 'Motorcycles', 'Genealogy', 'Gardening', 'Trivia', 'Games'],
-  'Music': ['Rock', 'Alternative', 'Hip Hop', 'R&B & Soul', 'Pop', 'Country', 'Jazz', 'Blues', 'Heavy Metal', 'Classical', 'Oldies', '80s Music', 'Dance & Electronic', 'Latin Music', 'Karaoke'],
-  'Recreation & Sports': ['Football', 'Baseball', 'Basketball', 'Hockey', 'Soccer', 'Wrestling', 'Boxing & MMA', 'Golf', 'Auto Racing', 'Fantasy Sports', 'Outdoors', 'Travel'],
-  'Regional': ['Arizona', 'California', 'Texas', 'New York', 'Florida', 'Midwest', 'Southern USA', 'Canada', 'United Kingdom', 'Australia', 'Philippines', 'India', 'Mexico', 'Europe', 'Russia', 'Middle East'],
-  'Religion & Beliefs': ['Christian', 'Bible Study', 'Catholic', 'Islam', 'Judaism', 'Spirituality', 'Paganism', 'Atheism & Agnosticism'],
-  'Romance': ['Romance', 'Singles', 'Love & Relationships', 'Single & Looking', 'Married & Flirting', 'Adult Romance'],
-  'Schools & Education': ['Homework Help', 'High School', 'College Life', 'Teachers', 'Languages', 'Study Hall'],
-  'Science': ['Astronomy', 'Biology', 'Physics', 'Chemistry', 'Paranormal', 'Space'],
+  'Business & Finance': ['Asian Markets', 'Biotechnology', 'Bond Market', 'Career Development', 'FinanceVision', 'Small & Medium Business', 'Stock Watch', 'Real Estate', 'Work From Home'],
+  'Computers & Internet': ['Computers Lobby', 'Electronics', "Hacker's Lounge", 'Linux, FreeBSD, Solaris', 'Macintosh', 'Programming', 'Surfing the Web', 'Web Design', 'Windows', 'Auctions Chat', 'Chat Help'],
+  'Cultures & Community': ['Lobby', 'Friends', 'Chit Chat', 'Late Night', 'Advice Central', 'Cultures and Community Lobby', 'Holiday Happenings', 'Chat Central', "Jerry's Diner", 'The Hot Tub', 'The Ranch', 'The Tiki Lounge',
+    'African-American Chat', 'Afro-Caribbean', 'Arab American Chat', 'Arab Chat', 'Asian American Chat', 'Asian Chat', 'Hispanic and Latino Chat', 'Indigenous Peoples', 'Korean Chat', 'Native American Chat', 'Persian Chat',
+    "30's", "40's", "50's", 'Disabled Chat', 'Expats Everywhere', 'Geek and Proud', 'Generation X', 'Older and Wiser', 'Ravers and Clubbers', 'Seniors 60+', 'Special Needs Families', 'The Graveyard', "Women's Room", 'LGB Lobby', 'Both Ways',
+    'Crime Fighters', 'Police and Fire', 'Beer Lovers', 'The Kitchen', 'Wine Lovers', 'Breaking News', 'Race Relations'],
+  'Entertainment & Arts': ['Actors & Actresses', 'Amusement & Theme Parks', 'Art Chat', 'Body Art', 'Books & Literature', 'Celebrity Scoop', 'Entertainment Lobby', 'Fashion', 'Japanese Anime', 'Models', 'Broadway', 'The Comic Shop', 'The Darkroom', 'Trivia Madness', 'Poetry Corner',
+    'Bollywood', 'Movies', 'Star Wars', 'Lord of the Rings', 'TV Lobby', 'American Idol', 'Sci-fi & Fantasy TV', 'The Simpsons', 'Soap Operas', 'Survivor', 'Reality TV', 'Late Night TV'],
+  'Family & Home': ['Adoption', 'Do-It-Yourself', 'Home & Gardening', 'Genealogy', 'Parenting', 'Moms', 'Dads', 'Weddings'],
+  'Games': ['Board Games', 'Card Games', 'Computer Games', 'Game Room', 'Multiplayer Net Games', 'PlayStation', 'Role Playing Games', 'Xbox', 'Nintendo', 'Fighter Arena'],
+  'Government & Politics': ['Politics Lobby', 'Washington Watch', 'Military Room', 'Current Events', 'The Death Penalty', 'The Abortion Debate', 'World Politics', 'Law & Courts'],
+  'Health & Wellness': ['ADD Support', 'Alternative Medicine', 'Back Chat', 'Cancer Chat', 'Depression Support', 'Diabetes', 'Friends of Bill W', 'Health Tips', 'HIV/AIDS', 'Infertility Support', 'NA Chat and Fellowship', 'Pregnancy', 'Scoliosis Chat', 'Quit Smoking', 'Support and Recovery', 'Weight Loss', 'Yoga'],
+  'Hobbies & Crafts': ["Collector's Corner", 'General Crafts', 'Hobby Lobby', 'Model Builders', 'Textiles', 'Photography', 'Car Audio', 'Automotive', 'Classic Cars', 'Import Cars', 'Lowriders', 'Motorcycles', 'Muscle Cars', 'RV Park', 'SUVs, Trucks, and Vans'],
+  'Languages': ['Auf Deutsch', 'En Español', 'En Français', 'In Italiano', 'Em Português', 'Русский (Russian)', '中文 Chinese (Mandarin)', '粵語 Cantonese', '日本語 Japanese', '한국어 Korean', 'Tagalog', 'Tiếng Việt (Vietnamese)', 'ภาษาไทย (Thai)', 'Bahasa Indonesia', 'Bahasa Melayu', 'हिन्दी Hindi', 'தமிழ் Tamil', 'తెలుగు Telugu', 'ਪੰਜਾਬੀ Punjabi', 'বাংলা Bengali', 'Gujarati', 'Marathi', 'Urdu', 'Nepali', 'العربية Arabic', 'Türkçe', 'Polski', 'Nederlands', 'Ελληνικά (Greek)', 'עברית (Hebrew)', 'Farsi'],
+  'Music': ['Boy Band Chat', 'Classical', 'Country', 'Electronica', 'Groovespace', 'Jazz', 'Metal', 'Music Lobby', 'Pop', "Punk'n Ska'n Thrash", 'Rap & Hip Hop', 'Rock', 'Soul and R&B', 'Alternative', 'Blues', 'Oldies', '80s Music', 'Latin Music', 'Karaoke'],
+  'Recreation & Sports': ['Recreation and Sports Lobby', 'Auto Racing', 'CFL', 'College Sports', 'Cricket', 'Curling', 'Extreme Sports', 'Hanging Ten', 'In The Ring', 'Runners Room', 'Sailing', 'Soccer', 'Sports Trivia', 'Tennis', 'Golf', 'The Casino', 'The Hangar', 'The Locker Room', 'The Olympic Games', 'The Toy Box', "Traveler's Room", 'UK Football',
+    'MLB', 'College Baseball', 'Fantasy Baseball', 'NFL Football', 'College Football', 'Fantasy Football', 'NBA', 'NHL', 'Minor League Hockey', 'Wrestling', 'Boxing & MMA'],
+  'Regional': [...COUNTRIES, ...US_CITIES, ...STATES],
+  'Religion & Beliefs': ['Astrology', 'Buddhism Chat', 'Catholic Chat', 'Christian Chat', 'Bible Study', 'Hinduism', 'Islam Chat', 'Jewish Chat', 'Paganism', 'Religion', 'Sikhism', 'Spirituality', 'Atheism & Agnosticism'],
+  'Romance': ['Romance', "20's Love", "30's Love", "40's Love", "50's Love", "60's Love", 'Asian Connections', 'BBW and Admirers', 'Disco Inferno', 'Flirting', "Gay Men's Lounge", 'Interracial Dating', "Lesbian Women's Lounge", 'Love Stinks', 'Moonlight Way', 'Pickup Bar', 'Singles', 'Single Parents', 'Married & Flirting', 'Adult Romance'],
+  'Schools & Education': ["Professors' Chat", 'Study Group', 'The University Years', 'Homework Help', 'High School', 'Teachers', 'Violence in Schools'],
+  'Science': ['Beyond Planet Earth', 'Biology', 'Physics', 'Chemistry', 'Astronomy', 'Extraterrestrial Life', 'Paranormal', 'Cat Chat', 'Dog Chat', 'Pets'],
+  'Teen': ['Teen Lobby', 'Teen Chat', 'Teen Music', 'Teen Advice', 'Teen Gamers'],
 };
 const ADULT_ROOMS = new Set(['Married & Flirting', 'Adult Romance']);
 const CAT_ORDER = [...Object.keys(DIR), 'User Rooms'];
+{ const all = Object.values(DIR).flat(); if (new Set(all).size !== all.length) throw new Error('duplicate room in rooms-dir: ' + all.filter((r, i) => all.indexOf(r) !== i)); }
 module.exports = { DIR, ADULT_ROOMS, CAT_ORDER };
