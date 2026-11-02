@@ -50,7 +50,7 @@ function http(app, express, hooks = {}) { H = hooks;
     if (limited('su:' + req.ip, +process.env.SIGNUP_LIMIT || 5, 3600e3)) return res.status(429).json({ error: 'Too many sign-ups from your network. Try again later.' });
     const { name, password, remember } = req.body || {}; let { email } = req.body || {}; if (typeof email === 'string') email = email.trim();
     if (typeof name !== 'string' || !NAME_RE.test(name)) return res.status(400).json({ error: 'Screen names are 3-20 characters, start with a letter, and use letters, numbers, _ or .' });
-    if (req.body.agree !== true) return res.status(400).json({ error: 'Please agree to the Terms and Rules (13 or older) to sign up.' });
+    if (req.body.agree !== true) return res.status(400).json({ error: 'Please agree to the Terms and Rules (18 or older) to sign up.' });
     if (RESERVED.test(name) || (H.reservedName && H.reservedName(name))) return res.status(400).json({ error: 'That screen name is not available.' });
     if (typeof password !== 'string' || password.length < 8 || password.length > 100) return res.status(400).json({ error: 'Passwords must be 8-100 characters.' });
     if (email && (typeof email !== 'string' || email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return res.status(400).json({ error: 'That email address does not look right.' });

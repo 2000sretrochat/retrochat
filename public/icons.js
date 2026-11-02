@@ -18,6 +18,7 @@ const P={
  image:'<rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M3.5 17l5.5-5 4 4 2.5-2.5 5 4.5"/>',
  clip:'<path d="M20 11.5l-7.8 7.8a5 5 0 01-7-7L13 4.5a3.3 3.3 0 014.7 4.7l-7.8 7.8a1.7 1.7 0 01-2.4-2.4L15 7.1"/>',
  font:'<path d="M3 18L8 5l5 13M5 13.5h6"/><path d="M15 12.5a3 3 0 016 0V18M21 15.5h-3.3a2 2 0 100 2.5H21"/>',
+ webcam:'<circle cx="12" cy="10" r="6.5"/><circle cx="12" cy="10" r="2.6"/><circle cx="12" cy="10" r=".6" fill="currentColor"/><path d="M8.5 16l-2 4.5h11l-2-4.5"/><circle cx="16.2" cy="6.3" r=".5" fill="currentColor"/>',
  plus:'<path d="M12 5v14M5 12h14"/>',
  refresh:'<path d="M20 11a8 8 0 00-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0014.5 4.5L20 16M20 20v-4h-4"/>',
  chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
@@ -36,9 +37,9 @@ const P={
 };
 const svg=(n,s)=>`<svg class="ic" viewBox="0 0 24 24" width="${s||20}" height="${s||20}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]||''}</svg>`;
 // Logo mark: three rising bubbles (our own SVG)
-const logo=(w=26,light)=>`<svg class="lg" viewBox="0 0 34 24" width="${w}" height="${Math.round(w*24/34)}" aria-hidden="true"><circle cx="5" cy="13" r="3" fill="${light?'#fff':'#4AB7F2'}" opacity="${light?1:.75}"/><circle cx="13" cy="19" r="4.2" fill="${light?'#fff':'#4AB7F2'}" opacity="${light?1:.75}"/><circle cx="26" cy="9" r="7.5" fill="${light?'#fff':'#1877E8'}" opacity="${light?1:.9}"/></svg>`;
-const RI={'lobby':['coffee','#8b5cf6','#6d3fd6'],'friends':['users','#ffb020','#f08a00'],'chit chat':['chat','#4AB7F2','#1877E8'],'late night':['moon','#3b4f8a','#10234A']};
-const POOL=[['star','#ec4899','#c0267a'],['music','#38bdf8','#1877E8'],['game','#a855f7','#7c3aed'],['heart','#f87171','#dc2626'],['headset','#14b8a6','#0f8a7d'],['chat','#60a5fa','#2468D7']];
+const logo=(w=26,light)=>`<svg class="lg" viewBox="0 0 34 24" width="${w}" height="${Math.round(w*24/34)}" aria-hidden="true"><circle cx="5" cy="13" r="3" fill="${light?'#fff':'#00A3E0'}" opacity="${light?1:.75}"/><circle cx="13" cy="19" r="4.2" fill="${light?'#fff':'#00A3E0'}" opacity="${light?1:.75}"/><circle cx="26" cy="9" r="7.5" fill="${light?'#fff':'#0033A0'}" opacity="${light?1:.9}"/></svg>`;
+const RI={'lobby':['coffee','#8b5cf6','#6d3fd6'],'friends':['users','#ffb020','#f08a00'],'chit chat':['chat','#00A3E0','#0033A0'],'late night':['moon','#3b4f8a','#00205B']};
+const POOL=[['star','#ec4899','#c0267a'],['music','#38bdf8','#0033A0'],['game','#a855f7','#7c3aed'],['heart','#f87171','#dc2626'],['headset','#14b8a6','#0f8a7d'],['chat','#60a5fa','#2468D7']];
 function room(name,size){const k=String(name).toLowerCase();const r=RI[k]||POOL[[...k].reduce((a,c)=>a+c.charCodeAt(0),0)%POOL.length];size=size||40;
  return `<span class="rtile" style="width:${size}px;height:${size}px;background:linear-gradient(135deg,${r[1]},${r[2]})">${svg(r[0],Math.round(size*.55))}</span>`}
 function fill(root){(root||document).querySelectorAll('i[data-i]').forEach(e=>{if(!e.firstChild)e.innerHTML=svg(e.dataset.i,+e.dataset.s||0)})}

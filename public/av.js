@@ -2,7 +2,7 @@
 (function () {
   const LS = k => { try { return JSON.parse(localStorage.getItem('yav') || '{}')[k]; } catch { return undefined; } };
   const set = (k, v) => { let o = {}; try { o = JSON.parse(localStorage.getItem('yav') || '{}'); } catch { } o[k] = v; localStorage.setItem('yav', JSON.stringify(o)); };
-  const cfg = () => ({ mode: LS('mode') || 'voice', dev: LS('dev') || '', sys: LS('sys') || 'off', camQ: LS('camQ') || 'low', ptt: LS('ptt') || 'hold' });
+  const cfg = () => ({ mode: LS('mode') || 'voice', dev: LS('dev') || '', sys: LS('sys') || 'off', camQ: LS('camQ') || 'hd', ptt: LS('ptt') || 'hold' });
   let sysStream = null, ctx = null;
   async function buildMic() {
     const c = cfg(), music = c.mode === 'music';

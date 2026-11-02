@@ -10,7 +10,7 @@ const cache={};
 // live update: replace every rendered avatar of that user
 function update(name,av){const lc=String(name).toLowerCase();cache[lc]=av;document.querySelectorAll(`.yav[data-avn="${CSS.escape(lc)}"]`).forEach(e=>{const cls=[...e.classList].filter(c=>!['av','yav'].includes(c)).join(' ');const t=document.createElement('template');t.innerHTML=html(name,av,cls);const n=t.content.firstChild;if(e.id)n.id=e.id;if(e.title)n.title=e.title;e.replaceWith(n)})}
 // ---------- original avatar maker (simple flat shapes) ----------
-const SKIN=['#FDE3CF','#F6C9A4','#E8B48A','#C98E62','#9A633F','#6B4329'],HAIRC=['#2B1B12','#5A3A22','#A0622D','#E3B04B','#D9472B','#9AA4B0','#1877E8','#E86AB0'],BG=['#DCEBFC','#4AB7F2','#1877E8','#10234A','#FFCE00','#B9F5A0','#FFD1DC','#E6E0FF'];
+const SKIN=['#FDE3CF','#F6C9A4','#E8B48A','#C98E62','#9A633F','#6B4329'],HAIRC=['#2B1B12','#5A3A22','#A0622D','#E3B04B','#D9472B','#9AA4B0','#0033A0','#E86AB0'],BG=['#DCEBFC','#4AB7F2','#0033A0','#10234A','#FFCE00','#B9F5A0','#FFD1DC','#E6E0FF'];
 const OPT={face:['round','oval','square'],hair:['short','long','spiky','bun','curly','bob','none'],eyes:['dots','happy','lashes','wink','big'],mouth:['smile','grin','open','tongue','flat'],acc:['none','glasses','shades','cap','bow','headphones']};
 function svg(o){const s=o.skin,h=o.hairc,ink='#2a1a12';let g=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96"><rect width="96" height="96" fill="${o.bg}"/>`;
  // hair behind
@@ -37,9 +37,9 @@ function svg(o){const s=o.skin,h=o.hairc,ink='#2a1a12';let g=`<svg xmlns="http:/
   flat:`<path d="M41 64 L55 64" stroke="${ink}" stroke-width="2.6" stroke-linecap="round"/>`};g+=M[o.mouth]||M.smile;
  const A={none:'',glasses:`<g stroke="#10234A" stroke-width="2" fill="rgba(255,255,255,.25)"><circle cx="39" cy="50" r="7.5"/><circle cx="57" cy="50" r="7.5"/><path d="M46.5 50 L49.5 50 M31.5 49 L24 46 M64.5 49 L72 46" fill="none"/></g>`,
   shades:`<g fill="#10234A"><path d="M30 45 L46 45 L45 54 Q38 58 31 54Z"/><path d="M50 45 L66 45 L65 54 Q58 58 51 54Z"/><rect x="45" y="46" width="6" height="2"/><path d="M33 47 L37 47" stroke="#4AB7F2" stroke-width="1.5"/><path d="M53 47 L57 47" stroke="#4AB7F2" stroke-width="1.5"/></g>`,
-  cap:`<path d="M22 38 Q22 16 48 16 Q74 16 74 38 Z" fill="#1877E8"/><path d="M48 36 L86 38 Q84 43 70 42 L48 40Z" fill="#176FCF"/><circle cx="48" cy="16" r="2.5" fill="#FFCE00"/>`,
+  cap:`<path d="M22 38 Q22 16 48 16 Q74 16 74 38 Z" fill="#0033A0"/><path d="M48 36 L86 38 Q84 43 70 42 L48 40Z" fill="#176FCF"/><circle cx="48" cy="16" r="2.5" fill="#FFCE00"/>`,
   bow:`<g fill="#E86AB0"><path d="M60 22 L72 15 L72 31Z"/><path d="M60 22 L48 15 L48 31Z"/><circle cx="60" cy="23" r="3.5" fill="#c94a90"/></g>`,
-  headphones:`<path d="M20 50 Q20 14 48 14 Q76 14 76 50" stroke="#10234A" stroke-width="5" fill="none"/><rect x="14" y="44" width="11" height="17" rx="5" fill="#1877E8"/><rect x="71" y="44" width="11" height="17" rx="5" fill="#1877E8"/>`};g+=A[o.acc]||'';
+  headphones:`<path d="M20 50 Q20 14 48 14 Q76 14 76 50" stroke="#10234A" stroke-width="5" fill="none"/><rect x="14" y="44" width="11" height="17" rx="5" fill="#0033A0"/><rect x="71" y="44" width="11" height="17" rx="5" fill="#0033A0"/>`};g+=A[o.acc]||'';
  return g+'</svg>'}
 // ---------- canvas helpers ----------
 function toData(cv){for(const [t,qs] of [['image/webp',[.9,.8,.7,.6,.5,.4]],['image/jpeg',[.9,.8,.7,.6,.5,.4,.3]]]){for(const q of qs){const d=cv.toDataURL(t,q);if(!d.startsWith('data:'+t))break;if(d.length*.75<30000)return d}}return null}
@@ -49,36 +49,39 @@ function loadImg(src){return new Promise((ok,no)=>{const i=new Image();i.onload=
 // ---------- editor modal ----------
 const CSS=`.yae{position:fixed;inset:0;background:rgba(16,35,74,.45);z-index:500;display:flex;align-items:center;justify-content:center;font:13px var(--sys,system-ui)}
 .yae .bx{background:var(--card,#fff);color:var(--ink,#12213F);width:min(440px,96vw);max-height:94vh;overflow:auto;border-radius:16px;box-shadow:0 20px 50px rgba(16,35,74,.35)}
-.yae .hd{display:flex;align-items:center;padding:12px 16px;background:linear-gradient(135deg,#4AB7F2,#1877E8);color:#fff;font-weight:700;font-size:15px}.yae .hd span{flex:1}.yae .hd b{cursor:pointer;font-size:18px}
-.yae .tabs{display:flex;gap:6px;padding:10px 16px 0}.yae .tabs div{padding:6px 14px;border-radius:999px;cursor:pointer;background:var(--soft,#eaf3fd)}.yae .tabs .on{background:#1877E8;color:#fff}
+.yae .hd{display:flex;align-items:center;padding:12px 16px;background:linear-gradient(135deg,#4AB7F2,#0033A0);color:#fff;font-weight:700;font-size:15px}.yae .hd span{flex:1}.yae .hd b{cursor:pointer;font-size:18px}
+.yae .tabs{display:flex;gap:6px;padding:10px 16px 0}.yae .tabs div{padding:6px 14px;border-radius:999px;cursor:pointer;background:var(--soft,#eaf3fd)}.yae .tabs .on{background:#0033A0;color:#fff}
 .yae .pn{padding:12px 16px;display:none}.yae .pn.on{display:block}.yae .prev{display:flex;justify-content:center;margin-bottom:10px}.yae .prev canvas,.yae .prev .sv{width:128px;height:128px;border-radius:50%;box-shadow:0 0 0 4px #DCEBFC,0 4px 14px rgba(0,0,0,.2);touch-action:none}
 .yae .row{display:flex;align-items:center;gap:6px;margin:6px 0;flex-wrap:wrap}.yae .row>label{width:84px;font-weight:600;color:var(--muted,#5b6b85)}
-.yae .ch{padding:3px 9px;border-radius:999px;border:1px solid var(--line,#d5e2f0);cursor:pointer;font-size:12px;background:var(--card,#fff);color:inherit}.yae .ch.on{background:#1877E8;color:#fff;border-color:#1877E8}
+.yae .ch{padding:3px 9px;border-radius:999px;border:1px solid var(--line,#d5e2f0);cursor:pointer;font-size:12px;background:var(--card,#fff);color:inherit}.yae .ch.on{background:#0033A0;color:#fff;border-color:#0033A0}
 .yae .cs{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #9ab}.yae .cs.on{box-shadow:0 0 0 3px #FFCE00}
 .yae .ft{display:flex;gap:8px;justify-content:flex-end;padding:0 16px 14px;align-items:center}.yae .ft .er{flex:1;color:#d33;font-size:12px}
-.yae button{border-radius:10px;padding:7px 16px;border:1px solid var(--line,#d5e2f0);background:var(--card,#fff);color:inherit;cursor:pointer;font:600 13px var(--sys,system-ui)}.yae button.pri{background:#1877E8;border-color:#1877E8;color:#fff}
+.yae button{border-radius:10px;padding:7px 16px;border:1px solid var(--line,#d5e2f0);background:var(--card,#fff);color:inherit;cursor:pointer;font:600 13px var(--sys,system-ui)}.yae button.pri{background:#0033A0;border-color:#0033A0;color:#fff}
 .yae .pres{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.yae .pres .av{cursor:pointer}`;
 function editor(socket,{onSaved,name}={}){
  if(!document.getElementById('yaecss')){const st=document.createElement('style');st.id='yaecss';st.textContent=CSS;document.head.appendChild(st)}
  const o={face:'round',skin:SKIN[1],hair:'short',hairc:HAIRC[1],eyes:'lashes',mouth:'smile',acc:'none',bg:BG[0]};
  const d=document.createElement('div');d.className='yae';
  d.innerHTML=`<div class=bx role=dialog aria-label="Change my avatar"><div class=hd><span>Change My Avatar</span><b class=cl>&times;</b></div>
- <div class=tabs><div data-t=make class=on>Avatar Maker</div><div data-t=up>Upload Photo</div><div data-t=bm>Snapchat / Bitmoji</div><div data-t=pre>Classic</div></div>
+ <div class=tabs><div data-t=make class=on>Avatar Maker</div><div data-t=up>Upload Photo</div><div data-t=bm>Snapchat / Bitmoji</div><div data-t=pre>Classic</div><div data-t=qr>&#128247; Phone Photo</div></div>
  <div class="pn on" data-p=make><div class=prev><div class=sv></div></div>
   ${['face','hair','eyes','mouth','acc'].map(k=>`<div class=row><label>${{face:'Face',hair:'Hair',eyes:'Eyes',mouth:'Mouth',acc:'Extras'}[k]}</label>${OPT[k].map(v=>`<span class="ch" data-k=${k} data-v=${v}>${v}</span>`).join('')}</div>`).join('')}
   ${[['skin','Skin',SKIN],['hairc','Hair color',HAIRC],['bg','Background',BG]].map(([k,l,a])=>`<div class=row><label>${l}</label>${a.map(c=>`<span class=cs data-k=${k} data-v="${c}" style="background:${c}"></span>`).join('')}</div>`).join('')}
   <div class=row><button class=rnd type=button>&#127922; Surprise me</button></div></div>
  <div class=pn data-p=up><div class=bmh style="display:none;font-size:12px;background:var(--soft,#eaf3fd);border-radius:10px;padding:8px;margin-bottom:8px"><b>Use a Snapchat / Bitmoji picture</b><br>1. In Snapchat, tap your Bitmoji, choose a sticker or selfie and tap <i>Save</i> (or long-press a Bitmoji sticker and save it). In the Bitmoji app, tap a sticker &rarr; <i>Save</i>.<br>2. Then choose that saved PNG, JPG or WEBP file below. Transparent backgrounds are kept; it becomes a round emoji-style picture.</div><div class=prev><canvas width=256 height=256 class=cv title="Drag to move"></canvas></div><div class=row><input type=file accept="image/jpeg,image/png,image/webp,image/gif" class=fi></div>
   <div class=row><label>Zoom</label><input type=range class=zm min=1 max=4 step=.05 value=1 style="flex:1"></div><small style="color:var(--muted,#5b6b85)">Drag the picture to position it. It is cropped to a square and shrunk to 96&times;96.</small></div>
+ <div class=pn data-p=qr><div style="text-align:center"><div class=qrb style="display:inline-block;padding:10px;background:#fff;border-radius:12px;min-height:180px;min-width:180px">Making your code...</div><p style="margin:8px 0 0;font-size:13px"><b>Scan with your phone camera</b>, snap a selfie, and it becomes your avatar here automatically.<br><small style="color:var(--muted,#5b6b85)">One-time link, expires in 10 minutes. Screen-name accounts only.</small></p></div></div>
  <div class=pn data-p=pre><div class=pres>${Object.keys(PRE).map(k=>`<span data-pre=${k}>${html(name||'x',k)}</span>`).join('')}</div></div>
  <div class=ft><span class=er></span><button class=cn type=button>Cancel</button><button class=pri type=button>Save Avatar</button></div></div>`;
  document.body.appendChild(d);const q=s=>d.querySelector(s),qa=s=>d.querySelectorAll(s);let tab='make',pre=null,img=null,zoom=1,ox=0,oy=0;
  const close=()=>d.remove();q('.cl').onclick=q('.cn').onclick=close;d.onclick=e=>{if(e.target==d)close()};
- qa('.tabs div').forEach(t=>t.onclick=()=>{tab=t.dataset.t;qa('.tabs div').forEach(x=>x.classList.toggle('on',x==t));const pt=tab=='bm'?'up':tab;qa('.pn').forEach(p=>p.classList.toggle('on',p.dataset.p==pt));q('.bmh').style.display=tab=='bm'?'':'none';redraw()});
+ qa('.tabs div').forEach(t=>t.onclick=()=>{tab=t.dataset.t;qa('.tabs div').forEach(x=>x.classList.toggle('on',x==t));const pt=tab=='bm'?'up':tab;qa('.pn').forEach(p=>p.classList.toggle('on',p.dataset.p==pt));q('.bmh').style.display=tab=='bm'?'':'none';q('.ft .pri').style.display=tab=='qr'?'none':'';if(tab=='qr')mkQr();redraw()});
  const sync=()=>{q('.sv').innerHTML=svg(o).replace('width="96" height="96"','width="128" height="128" style="border-radius:50%;display:block"');qa('[data-k]').forEach(e=>e.classList.toggle('on',o[e.dataset.k]==e.dataset.v))};
  qa('[data-k]').forEach(e=>e.onclick=()=>{o[e.dataset.k]=e.dataset.v;sync()});
  q('.rnd').onclick=()=>{const r=a=>a[Math.floor(Math.random()*a.length)];Object.assign(o,{face:r(OPT.face),hair:r(OPT.hair),eyes:r(OPT.eyes),mouth:r(OPT.mouth),acc:r(OPT.acc),skin:r(SKIN),hairc:r(HAIRC),bg:r(BG)});sync()};sync();
  qa('[data-pre]').forEach(e=>e.onclick=()=>{pre=e.dataset.pre;qa('[data-pre]').forEach(x=>x.style.outline=x==e?'3px solid #FFCE00':'');});
+ const mkQr=()=>{const b=q('.qrb');socket.emit('snap:token',async r=>{if(!r||r.error){b.textContent=(r&&r.error)||'Not available right now.';return}if(!window.qrcode)await new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='/qrcode.js';sc.onload=ok;sc.onerror=no;document.head.appendChild(sc)}).catch(()=>{});const url=location.origin+'/snap?t='+r.t;if(!window.qrcode){b.textContent=url;return}const qr=qrcode(0,'M');qr.addData(url);qr.make();b.innerHTML=qr.createSvgTag({cellSize:5,margin:2})})};
+ const onSnap=()=>{close();onSaved&&onSaved()};socket.on('snap:done',onSnap);const _cl=close;
  const cv=q('.cv'),cx=cv.getContext('2d');
  const draw=(c,ctx,S)=>{ctx.clearRect(0,0,S,S);ctx.save();if(tab=='bm'){ctx.beginPath();ctx.arc(S/2,S/2,S/2,0,Math.PI*2);ctx.clip()}else{ctx.fillStyle='#DCEBFC';ctx.fillRect(0,0,S,S)}if(!img){ctx.restore();return}const base=Math.min(img.width,img.height)/zoom,sx=Math.max(0,Math.min(img.width-base,(img.width-base)/2+ox)),sy=Math.max(0,Math.min(img.height-base,(img.height-base)/2+oy));ctx.drawImage(img,sx,sy,base,base,0,0,S,S);ctx.restore()};
  const redraw=()=>draw(cv,cx,256);redraw();

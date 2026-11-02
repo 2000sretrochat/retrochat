@@ -21,7 +21,7 @@ const P = {
 const B = (room, lang, names) => names.map(n => ({ name: n, room, lang }));
 const BOTS = [
   ...B('Late Night', 'en', ['sk8rboi_1987', 'xXmoonchildXx']),
-  ...B('Lobby', 'en', ['dreamgurl_04']), ...B('Chit Chat', 'en', ['surferdude_99', 'kewl_kat2001']), ...B('Music Lobby', 'en', ['punkrawk_kid']), ...B('Teen Chat', 'en', ['glitterbabe_03']),
+  ...B('Lobby', 'en', ['dreamgurl_04']), ...B('Chit Chat', 'en', ['surferdude_99', 'kewl_kat2001']), ...B('Music Lobby', 'en', ['punkrawk_kid']), ...B('Friends', 'en', ['glitterbabe_03', 'mixtape_mike']), ...B('Lobby', 'en', ['angelface_x0', 'dj_spinz2k']), ...B('Late Night', 'en', ['nightowl_jen']), ...B('Music Lobby', 'en', ['emo_kid_4ever']), ...B('Chit Chat', 'en', ['butterfly_kisses88']),
   ...B('中文 Chinese (Mandarin)', 'zh', ['xiaolong_88', 'meimei1999', 'tianshi_2002']), ...B('China', 'zh', ['beijing_boy01', 'panda_qq']),
   ...B('粵語 Cantonese', 'yue', ['hk_kitty97']), ...B('China', 'yue', ['mongkok_ah_ming']),
   ...B('日本語 Japanese', 'ja', ['sakura_chan_98', 'tokyo_ninja01', 'kawaii_yumi']), ...B('Japan', 'ja', ['ramen_otaku']),
@@ -35,5 +35,15 @@ const BOTS = [
   ...B('En Español', 'es', ['chica_loca_01']), ...B('Русский (Russian)', 'ru', ['masha_99']),
 ];
 for (const b of BOTS) b.av = '';
+const COLS = ['#000080', '#8b0000', '#006400', '#4b0082', '#b8860b', '#008080', '#c71585'], FNTS = ['Arial', 'Verdana', 'Comic Sans MS', 'Tahoma'];
+BOTS.forEach((b, i) => { b.color = COLS[i % COLS.length]; b.font = FNTS[(i * 3) % FNTS.length]; });
+// extra English variety: templates with fill-ins so lines don't repeat as often
+const EN2 = ['just got back from {place}', 'anyone here into {thing}?', 'omg {thing} is the best', 'listening to {song} rn', 'what is everyone eating tonight? im having {food}', 'rate my away msg: "{away}"', 'who else is from {city}?', '{greet} everyone', 'cant believe its already {time}', 'my mom keeps yelling at me to get off the computer lol', 'brb phone', 'a/s/l? jk jk', 'i need a new screen name ideas pls', 'its raining here, perfect chat weather', 'anyone want to trade buddy icons', 'lmao', 'hahaha same', 'ok im back', 'thats so random', 'i love this room', 'who has a webcam on?', 'turn up the music!!', 'whats the best movie ever? i say {movie}', 'gonna make some {food} brb', 'quiz time: favorite cereal?', 'sooo sleepy', 'this chat is my fav place on the internet', 'happy {day} everybody!'];
+const FILL = { place: ['the mall', 'school', 'work', 'the gym', 'blockbuster', 'my cousins house'], thing: ['tamagotchis', 'skateboarding', 'the sims', 'pokemon', 'harry potter', 'nsync', 'gel pens', 'myspace layouts'], song: ['Hey Ya', 'Mr. Brightside', 'Toxic', 'In Da Club', 'Complicated', 'Yellow', 'Bye Bye Bye'], food: ['pizza rolls', 'mac n cheese', 'tacos', 'ramen', 'hot pockets', 'cereal'], away: ['out livin la vida loca', 'brb, dont touch my stuff', 'gone to the movies ~*~', 'sleeping... or am i'], city: ['NYC', 'LA', 'Chicago', 'Texas', 'Florida', 'Phoenix', 'Seattle', 'Atlanta'], greet: ['heyyy', 'hi', 'sup', 'hello hello', 'yo'], time: ['this late', 'friday', 'november', 'the weekend'], movie: ['Mean Girls', 'The Matrix', 'Titanic', 'Napoleon Dynamite', 'Shrek'], day: ['monday', 'friday', 'weekend'] };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function line(b, room, last) { for (let k = 0; k < 4; k++) { const L = P[b.lang] || P.en; let t = b.lang === 'en' && Math.random() < 0.6 ? pick(EN2).replace(/\{(\w+)\}/g, (_, f) => pick(FILL[f] || [''])) : pick(L); if (t !== last) return t; } return pick(P[b.lang] || P.en); }
+const RE = { en: ['lol {n}', 'haha true', 'omg same {n}', 'no way!', 'for real?', 'agreed', '{n} ur funny', 'lmao', 'totally', 'hmm idk about that'], es: ['jaja {n}', 'sí, verdad', '¡qué bueno!'], ru: ['ха-ха {n}', 'точно'] };
+function reply(b, n) { const L = RE[b.lang]; return L ? pick(L).replace('{n}', n) : line(b); }
+function greet(b, n) { const G = { en: ['hey {n}!', 'hi {n} :)', 'welcome {n}', 'sup {n}', 'heyyy {n} whats up'], es: ['¡Hola {n}!'], ru: ['Привет, {n}!'], ja: ['{n}さん、こんにちは！'], ko: ['{n}님 안녕하세요!'], zh: ['{n} 你好！'] }; return pick(G[b.lang] || ['hi {n} :)']).replace('{n}', n); }
 const byRoom = {}; for (const b of BOTS) (byRoom[b.room] = byRoom[b.room] || []).push(b);
-module.exports = { BOTS, byRoom, P };
+module.exports = { BOTS, byRoom, P, line, reply, greet };

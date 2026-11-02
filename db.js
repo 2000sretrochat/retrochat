@@ -54,6 +54,10 @@ create table if not exists stats_day(d date primary key, peak int not null defau
 create table if not exists user_rooms(name text primary key, cat text not null default 'User Rooms', owner text not null, rating text, mics int, topic text, created timestamptz not null default now());
 create table if not exists pw_resets(token text primary key, user_id int not null references users(id) on delete cascade, expires timestamptz not null);
 create table if not exists backups(d date primary key, data jsonb not null, created timestamptz not null default now());
+alter table user_rooms add column if not exists icon text;
+alter table user_rooms add column if not exists last_used timestamptz;
+create table if not exists room_history(id bigserial primary key, room text not null, msg jsonb not null, at timestamptz not null default now());
+create index if not exists room_history_r on room_history(room, id);
 create table if not exists favorites(owner text not null, room text not null, primary key(owner, room));
 create table if not exists ignores(owner int not null references users(id) on delete cascade, name_lc text not null, primary key(owner, name_lc));
 alter table users add column if not exists pm_buddies boolean not null default false;

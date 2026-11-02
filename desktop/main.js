@@ -19,7 +19,7 @@ const SIZES = { browse: [760, 640], room: [1000, 700], im: [440, 560] };
 function kindOf(url, frame) { if (frame === 'ybrowse') return 'browse'; if (/^yim_/.test(frame || '')) return 'im'; if (/\/rooms\.html/.test(url)) return 'room'; return 'other'; }
 function popupOpts(url, frame) {
   const k = kindOf(url, frame), key = k === 'im' ? frame : k, b = ST[key] || {}, d = SIZES[k] || [900, 680];
-  return { key, o: { x: b.x, y: b.y, width: b.width || d[0], height: b.height || d[1], minWidth: k === 'im' ? 320 : 480, minHeight: 360, icon, title: 'YappChat', autoHideMenuBar: true, menuBarVisible: false, webPreferences: PRE } };
+  return { key, o: { x: b.x, y: b.y, width: b.width || d[0], height: b.height || d[1], minWidth: k === 'im' ? 320 : k === 'room' ? 760 : 480, minHeight: k === 'room' ? 600 : 360, icon, title: 'YappChat', autoHideMenuBar: true, menuBarVisible: false, webPreferences: PRE } };
 }
 function wire(wc) {
   wc.on('will-navigate', (e, url) => { if (!internal(url)) { e.preventDefault(); if (/^https?:/.test(url)) shell.openExternal(url); } });
