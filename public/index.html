@@ -228,8 +228,17 @@ document.addEventListener('keydown',e=>{if(e.key=='Control'&&!e.repeat&&me&&!$('
 document.addEventListener('keyup',e=>{if(e.key=='Control'&&me&&!$('hf').checked)setTalk(false)});
 $('hf').onchange=async()=>{if($('hf').checked){await setTalk(true);tb.textContent='Talk (on)'}else{await setTalk(false);tb.textContent='Talk'}};
 $('cam').onclick=async()=>{if(camS){stopCam();return}
- try{camS=await navigator.mediaDevices.getUserMedia({video:{width:320,height:240,frameRate:15}})}catch(e){return alert('Webcam not available: '+e.message)}
+ if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return camErr({name:'InsecureContext',message:'Camera API unavailable (page must be opened over https)'});
+ try{camS=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:15}},audio:false})}catch(e){
+  if(e.name=='OverconstrainedError'||e.name=='ConstraintNotSatisfiedError'||e.name=='TypeError'){try{camS=await navigator.mediaDevices.getUserMedia({video:true})}catch(e2){return camErr(e2)}}else return camErr(e)}
  $('cam').classList.add('on');$('cam').innerHTML='<span>&#128247;</span>Stop Cam';S.emit('cam',true);openWin(S.id,me+' (you)',camS)};
+function camErr(e){console.warn('[webcam]',e.name,e.message);const n=e.name||'Error';let m;
+ if(n=='NotAllowedError'||n=='PermissionDeniedError'||n=='SecurityError')m='Camera permission was denied ('+n+').\n\nTo allow it: click the lock / site-settings icon left of the address bar \u2192 Camera \u2192 Allow, then reload the page.\nAlso check your OS privacy settings (macOS: System Settings \u2192 Privacy & Security \u2192 Camera; Windows: Settings \u2192 Privacy \u2192 Camera) allow your browser.';
+ else if(n=='NotReadableError'||n=='TrackStartError'||n=='AbortError')m='Your camera is in use by another app ('+n+').\n\nClose Zoom/Teams/FaceTime/OBS or other tabs using the camera, then try again.';
+ else if(n=='NotFoundError'||n=='DevicesNotFoundError')m='No camera was found ('+n+').\n\nPlug in or enable a webcam, then try again.';
+ else if(n=='OverconstrainedError')m='Your camera does not support the requested video mode ('+n+').';
+ else m='Webcam not available ('+n+': '+(e.message||'')+').';
+ alert(m)}
 function stopCam(){camS&&camS.getTracks().forEach(t=>t.stop());camS=null;Object.keys(pcs).filter(x=>x[0]=='v').forEach(x=>closePc('v',x.slice(1)));
  $('cam').classList.remove('on');$('cam').innerHTML='<span>&#128247;</span>Webcam';$('viewers').textContent='';S.emit('cam',false);closeWin(S.id,true)}
 S.on('view-req',({id})=>{if(!camS)return;closePc('v',id);const pc=pcFor('v',id,true);camS.getTracks().forEach(t=>pc.addTrack(t,camS))});
