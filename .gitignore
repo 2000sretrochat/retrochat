@@ -15,3 +15,5 @@ shotm.js
 shotc.js
 shotv.js
 shotx.js
+desktop/node_modules/
+desktop/dist/
