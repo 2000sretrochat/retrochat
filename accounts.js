@@ -1,5 +1,5 @@
 // Accounts (HTTP) + Messenger (Socket.IO) for YappChat.
-const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db');
+const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db'), geo = require('./geo');
 const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{2,19}$/, STATUSES = ['available', 'busy', 'away', 'brb', 'invisible'];
 const AVATARS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -54,7 +54,7 @@ function http(app, express, hooks = {}) { H = hooks;
     try {
       const r = await db.q('insert into users(name,name_lc,pw,email) values($1,$2,$3,$4) returning id', [name, name.toLowerCase(), hash, email || null]);
       await db.q("insert into groups(owner,name) values($1,'Friends') on conflict do nothing", [r[0].id]);
-      await newSession(req, res, r[0].id, !!remember); res.json({ ok: true, name });
+      await newSession(req, res, r[0].id, !!remember); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'signup'); res.json({ ok: true, name });
     } catch (e) { if (e.code === '23505') return res.status(409).json({ error: 'That screen name is already taken.' }); console.error(e); res.status(500).json({ error: 'Sign up failed.' }); }
   });
   app.post('/api/login', async (req, res) => {
@@ -65,7 +65,7 @@ function http(app, express, hooks = {}) { H = hooks;
     const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw from users where name_lc=$1', [lc]) : [];
     const ok = await bcrypt.compare(String(password || ''), r[0] ? r[0].pw : DUMMY); // constant work either way
     if (!r[0] || !ok) return res.status(401).json({ error: 'Invalid screen name or password.' });
-    await newSession(req, res, r[0].id, !!remember); res.json({ ok: true, name: r[0].name });
+    await newSession(req, res, r[0].id, !!remember); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'login'); res.json({ ok: true, name: r[0].name });
   });
   app.post('/api/logout', async (req, res) => {
     const t = parseCookies(req.headers.cookie)[COOKIE]; if (t && db.status().ready) await db.q('delete from sessions where token=$1', [sha(t)]).catch(() => {});

@@ -89,10 +89,18 @@ html.dark .room{color:#8fc8ff!important}
 #smp{background:var(--card)!important;border-color:var(--line)!important;border-radius:12px}
 .gt{background:var(--soft)!important;border-color:var(--line)!important;color:var(--muted)!important}
 #log .n{white-space:nowrap}
+#camstrip{display:none;gap:10px;padding:10px 10px 0;overflow-x:auto}#camstrip.has{display:flex}
+.tile{position:relative;flex:none;width:200px;border-radius:12px;overflow:hidden;background:#000;box-shadow:var(--shadow,0 2px 8px rgba(0,0,0,.2))}
+.tile video{width:200px;height:150px;object-fit:cover;display:block;background:#000}
+.tile .lbl{position:absolute;left:0;right:0;bottom:0;padding:4px 8px;font:12px var(--sys,Arial);color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65));display:flex;gap:6px;align-items:center}
+.tile .lbl .sp{flex:1}.tile .st{opacity:.8;font-size:11px}
+.tb{position:absolute;top:6px;display:flex;gap:4px;right:6px}.tb span{cursor:pointer;background:rgba(0,0,0,.55);color:#fff;border-radius:8px;padding:2px 7px;font:13px Arial;line-height:18px}.tb span:hover{background:#1877E8}.tb .x2:hover{background:#d9534f}
+.camwin{resize:both;min-width:240px;min-height:200px;display:flex;flex-direction:column}.camwin video{flex:1;width:100%!important;height:auto!important;min-height:0;object-fit:contain;margin:0!important;border-radius:0 0 12px 12px}
+.camwin .tbar span.b{cursor:pointer;margin-left:4px;padding:0 5px;border:1px solid #fff;border-radius:3px}
 </style></head><body>
 <div id="brand"><div style="text-align:center"><div><svg class="bub" viewBox="0 0 34 24" width="46" height="32"><circle cx="5" cy="13" r="3" fill="rgba(74,183,242,.58)"/><circle cx="13" cy="19" r="4.2" fill="rgba(74,183,242,.58)"/><circle cx="26" cy="9" r="7.5" fill="rgba(74,183,242,.58)"/></svg></div><div class="logo appname"></div><div class="tag">Chat rooms, voice &amp; webcams &mdash; old school.</div></div></div>
 <div id="login" class="win"><div class="tbar"><span class=ico2><svg class="bub" viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg></span> Enter <span class="appname-plain"></span> Chat Rooms<span class="sp"></span></div><div class="in">
-<div id="who"></div><span id="nmw">Screen name: <input type="text" id="nm" maxlength="20" autocomplete="off"></span> <button id="go">Sign in as Guest</button> <button id="mk" title="Create your own room">Create Room</button><div id="err"></div>
+<div id="who"></div><span id="nmw">Screen name: <input type="text" id="nm" maxlength="20" autocomplete="off"></span> <button id="go">Sign in as Guest</button> <button id="mk" title="Create your own room">Create Room</button><div id="err"></div><div class="privacy" style="font-size:11px;color:var(--muted,#667);margin-top:8px">We log IP address and approximate location for safety and moderation.</div>
 <div style="margin-top:10px">Choose a room:</div><div id="rlist"></div></div></div>
 <div id="chat" class="win">
 <div class="tbar"><svg class="bub" viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg> <span id="hdr">Lobby -- YappChat</span><span class="sp"></span><span class="wb">_</span><span class="wb">&#9633;</span><span class="wb x" id="wx" title="Leave chat">X</span></div>
@@ -105,6 +113,7 @@ html.dark .room{color:#8fc8ff!important}
 </div>
 <div id="tools"><button class="tbtn" id="cam" title="Share My Webcam"><span>&#128247;</span>Webcam</button><button class="tbtn" id="vbtn" title="Show/hide voice controls"><span>&#127908;</span>Voice</button>
 <button class="tbtn" disabled title="Send File - coming soon"><span>&#128206;</span>Send File</button><button class="tbtn" id="cbtn" title="Rooms"><span>&#128172;</span>Chat</button><div id="viewers"></div></div>
+<div id="camstrip"></div>
 <div id="main"><div id="lpane"><div id="topic"></div><div id="log"></div><div id="typing"></div></div>
 <div id="mpane"><div id="mem"></div><div id="mbtns"><button id="bIm" title="Send a private message"><u>I</u>M</button><button id="bIgn"><u>I</u>gnore User</button></div></div></div>
 <div id="vrow"><label><input type="checkbox" id="hf"> Hands Free</label><button id="talk" title="Hold to talk (or hold Ctrl)">Talk</button>
@@ -207,7 +216,7 @@ function showTyping(){const now=Date.now(),n=Object.keys(typers).filter(k=>typer
 setInterval(showTyping,1000);S.on('msg',m=>{if(m.name)delete typers[m.name]});
 S.on('disconnect',()=>add({sys:1,text:'Disconnected from server. Reload to reconnect.'}));
 // draggable windows
-function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.target.closest('.x'))return;const ox=e.clientX-w.offsetLeft,oy=e.clientY-w.offsetTop;
+function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.target.closest('.x,.b'))return;const ox=e.clientX-w.offsetLeft,oy=e.clientY-w.offsetTop;
  const mv=e=>{w.style.left=Math.max(0,e.clientX-ox)+'px';w.style.top=Math.max(0,e.clientY-oy)+'px'},up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};addEventListener('pointermove',mv);addEventListener('pointerup',up)}}
 // private IM
 const pms={};
@@ -287,12 +296,20 @@ S.on('unview',({id})=>closePc('v',id));
 S.on('cam-off',({id})=>closeWin(id,true));
 S.on('media-gone',({id})=>{['a','v','w'].forEach(k=>closePc(k,id));closeWin(id,true)});
 function view(id,name){if(wins[id])return;S.emit('view',id,r=>{if(r.error)return alert(r.error);openWin(id,name)})}
-function openWin(id,name,stream){const w=document.createElement('div');w.className='camwin';const n=Object.keys(wins).length;w.style.left=(20+n*30)+'px';w.style.top=(120+n*30)+'px';
- w.innerHTML=`<div class=tbar>&#128247; ${name}<span class=sp></span><span class=x>X</span></div><video autoplay playsinline muted></video><div class=ft>${stream?'Your webcam':'Connecting...'}</div>`;
- document.body.appendChild(w);wins[id]=w;const v=w.querySelector('video');if(stream){v.srcObject=stream;v.play().catch(()=>{})}else v.onplaying=()=>w.querySelector('.ft').textContent='Live';
- w.querySelector('.x').onclick=()=>id==S.id?stopCam():closeWin(id);
- drag(w)}
-function closeWin(id,remote){const w=wins[id];if(!w)return;w.remove();delete wins[id];if(id!=S.id){closePc('w',id);if(!remote)S.emit('unview',id)}}
+// Cam strip: each open cam is a tile at the top of the room; pop-out opens a big draggable/resizable window
+function openWin(id,name,stream){const w=document.createElement('div');w.className='tile';w.dataset.id=id;
+ w.innerHTML=`<video autoplay playsinline muted></video><div class=tb><span class=po title="Pop out / make bigger">&#8599;</span><span class=fs title="Full screen">&#9974;</span><span class=x2 title="Close">&#10005;</span></div><div class=lbl>&#128247; <b>${name}</b><span class=sp></span><span class="st ft">${stream?'You':'Connecting...'}</span></div>`;
+ $('camstrip').appendChild(w);$('camstrip').classList.add('has');wins[id]=w;const v=w.querySelector('video');w.v=v;if(stream){v.srcObject=stream;v.play().catch(()=>{})}else v.onplaying=()=>w.querySelector('.ft').textContent='Live';
+ const close=()=>id==S.id?stopCam():closeWin(id);
+ w.querySelector('.x2').onclick=close;w.querySelector('.fs').onclick=()=>fullCam(w.pop?w.pop.querySelector('video'):v);
+ w.querySelector('.po').onclick=()=>{if(w.pop){w.pop.remove();w.pop=null;return}const p=document.createElement('div');p.className='camwin';const n=document.querySelectorAll('.camwin').length;
+  p.style.cssText=`left:${Math.max(10,innerWidth/2-260+n*30)}px;top:${80+n*30}px;width:520px;height:430px`;
+  p.innerHTML=`<div class=tbar>&#128247; ${name}<span class=sp></span><span class="b fs" title="Full screen">&#9974;</span><span class="b dk" title="Back to strip">&#8601;</span><span class=x title="Close">X</span></div><video autoplay playsinline muted></video>`;
+  document.body.appendChild(p);w.pop=p;const pv=p.querySelector('video');pv.srcObject=v.srcObject;pv.play().catch(()=>{});
+  p.querySelector('.x').onclick=close;p.querySelector('.dk').onclick=()=>{p.remove();w.pop=null};p.querySelector('.fs').onclick=()=>fullCam(pv);drag(p)};
+ if(!stream){const iv=setInterval(()=>{if(!wins[id])return clearInterval(iv);if(w.pop){const pv=w.pop.querySelector('video');if(pv.srcObject!==v.srcObject){pv.srcObject=v.srcObject;pv.play().catch(()=>{})}}},500)}}
+function fullCam(v){const f=v.requestFullscreen||v.webkitRequestFullscreen||v.webkitEnterFullscreen;if(f)f.call(v).catch?.(()=>{})}
+function closeWin(id,remote){const w=wins[id];if(!w)return;if(w.pop)w.pop.remove();w.remove();delete wins[id];$('camstrip').classList.toggle('has',!!$('camstrip').children.length);if(id!=S.id){closePc('w',id);if(!remote)S.emit('unview',id)}}
 S.on('roster',r=>{ros=r;renderRoster();
  const mine=r.find(m=>m.id==S.id);if(mine&&mine.cam)$('viewers').innerHTML='Viewing your cam: '+(mine.viewers.length?mine.viewers.map(escT).join(', '):'nobody yet');
  Object.keys(wins).forEach(id=>{if(id!=S.id&&!r.find(m=>m.id==id&&m.cam))closeWin(id,true)});
