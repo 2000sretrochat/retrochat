@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8"><title>RetroChat</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{margin:0;background:#c9c3d9;font:13px Verdana,Tahoma,Arial,sans-serif}
+#top{background:linear-gradient(#7b2fbe,#4b0f87);color:#fff;padding:6px 12px;font:bold 22px "Trebuchet MS",Arial;border-bottom:3px solid #ffcc00}
+#top small{font:11px Verdana;color:#e5d5ff;margin-left:10px}
+.win{background:#ece9f3;border:2px outset #fff;margin:14px auto;max-width:960px}
+.bar{background:linear-gradient(#9a6fd1,#6a38a8);color:#fff;font-weight:bold;padding:4px 8px}
+#login{max-width:520px;padding-bottom:12px}#login .in{padding:12px}
+.cat{font-weight:bold;color:#4b0f87;margin-top:8px}.room{display:inline-block;margin:3px 8px 3px 14px;color:#0000cc;cursor:pointer;text-decoration:underline}
+.room.sel{background:#ffcc00;color:#000}
+input[type=text]{font:13px Verdana;border:2px inset #ddd;padding:3px}
+button{font:bold 12px Tahoma;background:#ddd8e8;border:2px outset #fff;padding:3px 12px;cursor:pointer}button:active{border-style:inset}
+#err{color:#c00;margin-top:6px}
+#chat{display:none}#cols{display:flex;gap:6px;padding:6px}
+#log{flex:1;height:400px;overflow-y:auto;background:#fff;border:2px inset #ccc;padding:6px;font:13px Arial}
+#log .sys{color:#808080;font-style:italic}#log .n{font-weight:bold}
+#side{width:180px;display:flex;flex-direction:column;gap:6px}
+#mem{height:260px;overflow-y:auto;background:#fff;border:2px inset #ccc;padding:4px}#mem div{padding:1px 2px}#mem div:before{content:"\263A  ";color:#7b2fbe}
+#rooms2{font-size:12px}#tools{padding:0 6px 4px}#tools button{padding:1px 8px}#tools .on{border-style:inset;background:#c8bfe0}
+#form{display:flex;gap:6px;padding:0 6px 8px}#msg{flex:1}.sw{display:inline-block;width:14px;height:14px;border:1px solid #555;vertical-align:middle;cursor:pointer;margin-left:2px}.sw.on{outline:2px solid #ffcc00}
+#foot{text-align:center;font-size:10px;color:#555}
+</style></head><body>
+<div id="top">RetroChat<small>chat like it's 2003</small></div>
+<div id="login" class="win"><div class="bar">Sign In to RetroChat</div><div class="in">
+Screen name: <input type="text" id="nm" maxlength="20"> <button id="go">Enter Chat</button><div id="err"></div>
+<div style="margin-top:10px">Choose a room:</div><div id="rlist"></div></div></div>
+<div id="chat" class="win"><div class="bar" id="hdr">Room</div>
+<div id="cols"><div id="log"></div><div id="side"><div><b>In this room (<span id="cnt">0</span>)</b><div id="mem"></div></div>
+<div id="rooms2">Change room: <select id="sel"></select></div><button id="out">Sign Out</button></div></div>
+<div id="tools"><button id="bB"><b>B</b></button> <button id="bI"><i>I</i></button> Color: <span id="sws"></span>
+&nbsp; Smileys: <span id="smi"></span></div>
+<div id="form"><input type="text" id="msg" maxlength="300" autocomplete="off"><button id="send">Send</button></div></div>
+<div id="foot">RetroChat &middot; an original nostalgia project</div>
+<script src="/socket.io/socket.io.js"></script><script>
+const $=id=>document.getElementById(id), S=io(), SM={':)':'🙂',':-)':'🙂',';)':'😉',':D':'😀',':(':'🙁',':P':'😛',':O':'😮','B)':'😎',':x':'😍',":'(":'😢','>:)':'😈',':">':'😊'};
+let room='Lobby', st={b:false,i:false,color:'#000000'};
+const smile=t=>Object.keys(SM).sort((a,b)=>b.length-a.length).reduce((s,k)=>s.split(k.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;')).join(SM[k]),t);
+fetch('/api/rooms').then(r=>r.json()).then(rs=>{let cats={};rs.forEach(r=>(cats[r.cat]=cats[r.cat]||[]).push(r));
+ $('rlist').innerHTML=Object.entries(cats).map(([c,l])=>`<div class=cat>${c}</div>`+l.map(r=>`<span class="room${r.name==room?' sel':''}" data-r="${r.name}">${r.name} (${r.count})</span>`).join('')).join('');
+ $('sel').innerHTML=rs.map(r=>`<option>${r.name}</option>`).join('');
+ document.querySelectorAll('.room').forEach(e=>e.onclick=()=>{room=e.dataset.r;document.querySelectorAll('.room').forEach(x=>x.classList.toggle('sel',x==e))});});
+function login(){S.emit('login',{name:$('nm').value,room},r=>{if(r.error)return $('err').textContent=r.error;
+ $('login').style.display='none';$('chat').style.display='block';
+ $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" style="background:${c}"></span>`).join('');
+ document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
+ $('msg').focus();});}
+$('go').onclick=login;$('nm').onkeydown=e=>e.key=='Enter'&&login();
+$('smi').innerHTML=[':)',';)',':D',':(',':P','B)',':x',":'("].map(k=>`<span style="cursor:pointer;font-size:16px" title="${k}" data-k="${k}">${SM[k]}</span>`).join(' ');
+document.querySelectorAll('#smi span').forEach(e=>e.onclick=()=>{$('msg').value+=' '+e.dataset.k+' ';$('msg').focus()});
+$('bB').onclick=()=>{st.b=!st.b;$('bB').classList.toggle('on',st.b)};$('bI').onclick=()=>{st.i=!st.i;$('bI').classList.toggle('on',st.i)};
+function send(){const t=$('msg').value.trim();if(!t)return;S.emit('say',{text:t,...st});$('msg').value=''}
+$('send').onclick=send;$('msg').onkeydown=e=>e.key=='Enter'&&send();
+$('sel').onchange=()=>S.emit('join',$('sel').value);$('out').onclick=()=>location.reload();
+function add(m){const d=document.createElement('div'),L=$('log'),atB=L.scrollHeight-L.scrollTop-L.clientHeight<40;
+ if(m.sys){d.className='sys';d.innerHTML=m.text}else{let t=smile(m.text);if(m.b)t='<b>'+t+'</b>';if(m.i)t='<i>'+t+'</i>';
+ d.innerHTML=`<span class=n style="color:#4b0f87">${m.name}:</span> <span style="color:${m.color}">${t}</span>`}
+ L.appendChild(d);if(atB)L.scrollTop=L.scrollHeight}
+S.on('history',h=>{room=h.room;$('hdr').textContent='RetroChat: '+h.room;$('sel').value=h.room;$('log').innerHTML='';h.msgs.forEach(add)});
+S.on('msg',add);S.on('members',m=>{$('cnt').textContent=m.length;$('mem').innerHTML=m.map(n=>`<div>${n}</div>`).join('')});
+S.on('disconnect',()=>add({sys:1,text:'Disconnected from server. Reload to reconnect.'}));
+</script></body></html>
