@@ -8,6 +8,18 @@ window.YBrowse=(function(){
   rs.forEach(r=>(cats[r.cat]=cats[r.cat]||[]).push(r));if(!cats['User Rooms'])cats['User Rooms']=[];
   const g=[];if(mine.length)g.push(['My Rooms (owner/admin)',mine,1]);if(fav.length)g.push(['\u2605 Favorites',fav,1]);
   const uc=cats['User Rooms'];delete cats['User Rooms'];return g.concat(Object.entries(cats),[['User Rooms',uc]])}
+ // nested Yahoo-style tree: category -> subfolders (r.path) -> rooms; open folders survive refreshes
+ const OK='ycOpen';let open;try{open=new Set(JSON.parse(sessionStorage.getItem(OK)||'[]'))}catch{open=new Set()}
+ document.addEventListener('toggle',e=>{const d=e.target;if(!d.dataset||d.dataset.yk==null)return;d.open?open.add(d.dataset.yk):open.delete(d.dataset.yk);try{sessionStorage.setItem(OK,JSON.stringify([...open]))}catch{}},true);
+ function tree(rs,meLc,row,q,sep){const E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));sep=sep||'';
+  const cnt=l=>l.reduce((a,r)=>a+(r.count||0),0),sty='cursor:pointer;padding:4px 8px;font-weight:700;list-style-position:inside';
+  const fold=(k,t,l,inner,d)=>`<details data-yk="${E(k)}"${q||open.has(k)?' open':''} style="margin-left:${d?14:0}px"><summary style="${sty};${d?'font-weight:600':'background:var(--soft,#eaf3fd)'}">${E(t)} <small style="font-weight:400;color:#888">(${l.length} room${l.length==1?'':'s'}, ${cnt(l)} online)</small></summary>${inner}</details>`;
+  function node(l,key,depth){const here=[],subs={};l.forEach(r=>{const p=r.path||[];p.length>depth?(subs[p[depth]]=subs[p[depth]]||[]).push(r):here.push(r)});
+   const sk=Object.keys(subs);if(depth==0)sk.sort((a,b)=>a=='General'?-1:b=='General'?1:0);
+   return (here.length?`<div style="margin-left:${depth?14:4}px">${here.map(row).join(sep)}</div>`:'')+sk.map(k=>{const kk=key+'/'+k;
+    if(subs[k].length==1&&!(subs[k][0].path||[])[depth+1]&&subs[k][0].name==k)return `<div style="margin-left:14px">${row(subs[k][0])}</div>`;return fold(kk,k,subs[k],node(subs[k],kk,depth+1),1)}).join('')}
+  const g=groups(rs,meLc);return g.filter(x=>x[1].length||x[0]=='User Rooms').map(([t,l,flag])=>flag?`<div style="${sty};background:var(--soft,#eaf3fd)">${E(t)}</div><div style="margin-left:4px">${l.map(row).join(sep)}</div>`:
+   (q&&!l.length)?'':fold(t,t,l,l.length?node(l,t,0):'<div style="padding:4px 18px;color:#888">No user rooms yet - create one!</div>',0)).join('')}
  const top=rs=>rs.filter(r=>r.count>0).sort((a,b)=>b.count-a.count||b.cams-a.cams||a.name.localeCompare(b.name)).slice(0,10);
  const star=r=>`<span class=ystar data-fav="${String(r.name).replace(/"/g,'&quot;')}" title="${r.fav?'Remove from':'Add to'} favorites" style="cursor:pointer;color:${r.fav?'#f5a623':'#bbb'};font-size:15px">${r.fav?'\u2605':'\u2606'}</span>`;
  // room preview on hover / long-press
@@ -23,4 +35,4 @@ window.YBrowse=(function(){
  // "N people online" (includes bots)
  let onl=null;const fillOn=()=>{if(onl!=null)document.querySelectorAll('.yonline').forEach(e=>{const t=onl+' '+(onl==1?'person':'people')+' online';if(e.textContent!=t)e.textContent=t})};
  const getOn=()=>fetch('/api/online').then(r=>r.json()).then(j=>{onl=j.n;fillOn()}).catch(()=>{});getOn();setInterval(getOn,30e3);setInterval(fillOn,1500);
- return{favs,toggle,groups,top,star}})();
+ return{favs,toggle,groups,top,star,tree}})();

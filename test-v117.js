@@ -16,7 +16,7 @@ let srv; const start = () => { srv = spawn('node', ['server.js'], { env: { ...pr
   await start(); const S = []; const mk = async (c, d, ip) => { const s = conn(c, d, ip); S.push(s); await up(s); return s; };
   const J = async (p, o) => (await fetch(U + p, o)).json();
   try {
-    ok(/^v11\.7/.test((await J('/api/version')).version), 'version v11.7');
+    ok(/^v11\.[78]/.test((await J('/api/version')).version), 'version v11.7+');
     const ice = await J('/api/ice'); ok(Array.isArray(ice.iceServers || ice) , '/api/ice serves ICE list');
     for (const p of ['/privacy', '/terms', '/manifest.webmanifest', '/sw.js']) { const r = await fetch(U + p); ok(r.ok, p + ' served'); if (p[1] != 's' || p == '/sw.js') { } }
     const pv = await (await fetch(U + '/privacy')).text(); ok(/YappChat/.test(pv) && /IP/.test(pv), 'privacy names YappChat, mentions IP');

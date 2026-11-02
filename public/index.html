@@ -306,7 +306,7 @@ function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLo
  const hd=t=>`<div style="padding:6px 10px;font-weight:700;background:var(--soft,#eaf3fd)">${escT(t)}</div>`;let h='';
  if(brTab=='top'){const t=YBrowse.top(brRooms.filter(mt));h=hd('Top 10 busiest rooms (live)')+t.map(row).join('')}
  else if(brTab=='mine')h=brRooms.filter(r=>(r.mine||(r.owner&&r.owner.toLowerCase()==me))&&mt(r)).map(row).join('');
- else h=YBrowse.groups(brRooms.filter(mt),me).filter(g=>g[1].length).map(([c,l])=>hd(c)+l.map(row).join('')).join('');
+ else h=YBrowse.tree(brRooms.filter(mt),me,row,q);
  $('brl').innerHTML=h||`<div style="padding:22px;text-align:center;color:var(--muted)">${brTab=='mine'?'You have not created any rooms yet. Click <b>Create Room</b>.':brTab=='top'?'Nobody is chatting right now.':'No rooms match.'}</div>`;
  $('brl').querySelectorAll('[data-fav]').forEach(e=>e.onclick=async()=>{const r=brRooms.find(x=>x.name==e.dataset.fav);if(await YBrowse.toggle(r.name,!r.fav,true))loadBr();else toast('Could not save favorite.')});
  if(brTab=='all'&&!brRooms.some(r=>r.rating=='R'))$('brl').insertAdjacentHTML('beforeend','<div style="padding:10px;text-align:center"><a href="#" id=br18 style="color:#e67e22">Show R-rated rooms (18+)...</a></div>');
