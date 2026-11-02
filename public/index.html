@@ -221,7 +221,7 @@ fetch('/api/status').then(r=>r.json()).then(s=>{if(!s.accounts){$('maint').style
 let MW=null,watchL=[];
 async function loadWatch(){try{const r=await fetch('/api/master/watch');if(r.ok){watchL=await r.json();render()}}catch{}}
 function masterInit(){MW=1;const dd=document.querySelector('#menu>div .dd');if(dd)dd.insertAdjacentHTML('afterbegin','<div id=mcon>Master Console</div><div id=mwadd>Watch a Screen Name...</div><hr>');
- $('mcon')&&($('mcon').onclick=()=>window.open('/master','_blank'));$('mwadd')&&($('mwadd').onclick=async()=>{const n=prompt('Screen name to watch silently (they are not notified):');if(!n)return;const r=await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})});if(!r.ok)alert((await r.json().catch(()=>({}))).error||'Failed');loadWatch()});
+ const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);$('mcon')&&($('mcon').onclick=()=>window.openMasterConsole&&openMasterConsole());$('mwadd')&&($('mwadd').onclick=async()=>{const n=prompt('Screen name to watch silently (they are not notified):');if(!n)return;const r=await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})});if(!r.ok)alert((await r.json().catch(()=>({}))).error||'Failed');loadWatch()});
  loadWatch();setInterval(loadWatch,15000)}
 fetch('/api/me').then(r=>r.json()).then(m=>{if(m.name){start();if(m.m)masterInit()}});
 $('toUp').onclick=()=>{$('fIn').style.display='none';$('fUp').style.display='flex';$('uName').focus()};$('toIn').onclick=()=>{$('fUp').style.display='none';$('fIn').style.display='contents'};

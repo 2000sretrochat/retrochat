@@ -4,11 +4,12 @@ nav{display:flex;gap:4px;padding:8px 16px;background:#dfe6f0;border-bottom:1px s
 main{padding:12px 16px}table{border-collapse:collapse;width:100%;background:#fff}td,th{border-bottom:1px solid #e3e8ef;padding:5px 7px;text-align:left;vertical-align:top}th{background:#f4f6fa;position:sticky;top:0}
 .on{color:#0a0}.b{font-size:11px;padding:2px 6px;margin:1px;border:1px solid #aab;border-radius:3px;background:#fafbfc;cursor:pointer}.b.r{color:#b00;border-color:#d99}.tag{background:#ffd54f;border-radius:3px;padding:0 4px;font-size:11px}
 input,select{padding:4px;font:inherit}.box{background:#fff;padding:12px;border:1px solid #d5dce6;border-radius:4px;margin-bottom:10px}#msg{position:fixed;right:12px;bottom:12px;background:#1c2430;color:#fff;padding:8px 12px;border-radius:4px;display:none}</style></head><body>
-<header>&#9881; Master Console</header><nav id=tabs></nav><main id=main>Loading...</main><div id=msg></div>
+<header id=hdr>&#9881; Master Console</header><nav id=tabs></nav><main id=main>Loading...</main><div id=msg></div>
 <script>
 const $=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api=async(u,b)=>{const r=await fetch('/api/master/'+u,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});const j=await r.json().catch(()=>({}));if(!r.ok){toast(j.error||'Error '+r.status);throw j}return j};
 const toast=t=>{$('msg').textContent=t;$('msg').style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>$('msg').style.display='none',2500)};
+if(new URLSearchParams(location.search).get('embed'))$('hdr').remove();
 const T={Users,Rooms,Reports,'IP Bans':Ipb,Broadcast,Watching};let cur='Users';
 $('tabs').innerHTML=Object.keys(T).map(k=>`<button data-t="${k}">${k}</button>`).join('');document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{cur=b.dataset.t;show()});
 function show(){document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t==cur));T[cur]()}
