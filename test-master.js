@@ -40,7 +40,8 @@ let srv; const start = async () => { srv = spawn('node', ['server.js'], { env: {
     const vEvents = []; v.onAny((ev) => vEvents.push(ev));
     ok((await post('/api/master/watch', { name: 'mv' + sfx }, mc)).j.ok, 'master adds silent watch');
     const wl = await (await get('/api/master/watch', mc)).json(); const wv = wl.find(x => x.name === 'mv' + sfx);
-    ok(wv && wv.room === 'Late Night', 'watch list shows current room');
+    ok(wv && wv.room === 'Late Night', 'watch list shows current room'); ok(wv.ip && 'loc' in wv, 'watch list shows IP and location: ' + wv.ip + ' / ' + wv.loc);
+    ok((await get('/api/master/watch', uc)).status === 404, 'watch IP data is master-only (404)');
     await w(300); ok(!vEvents.some(e => /request|contact|watch|presence/.test(e)), 'watched user receives no request/notification');
     // broadcast
     let bc = null; u.on('m:broadcast', d => bc = d); const before = ulog.length;
@@ -48,7 +49,9 @@ let srv; const start = async () => { srv = spawn('node', ['server.js'], { env: {
     // data includes ip/location for masters
     const d = await (await get('/api/master/data', mc)).json(); ok(d.accounts.find(a => a.name === 'mu' + sfx && 'last_ip' in a), 'master data shows IP/location');
     // grant / revoke / last master
-    ok((await post('/api/master/account', { name: MN, action: 'revoke' }, mc)).status === 400 || (await (await get('/api/me', mc)).json()).m, 'cannot revoke when it would leave no masters (or others exist)');
+    for (const a of (await (await get('/api/master/data', mc)).json()).accounts) if (a.master && a.name !== MN) await post('/api/master/account', { name: a.name, action: 'revoke' }, mc);
+    ok((await post('/api/master/account', { name: MN, action: 'revoke' }, mc)).status === 400, 'cannot revoke the last master');
+    ok((await post('/api/master/account', { name: MN, action: 'delete' }, mc)).status === 400, 'cannot delete the last master');
     ok((await post('/api/master/account', { name: 'mv' + sfx, action: 'grant' }, mc)).j.ok, 'master grants master');
     ok((await (await get('/api/me', vc)).json()).m === true, 'granted user is master');
     ok((await post('/api/master/account', { name: 'mv' + sfx, action: 'revoke' }, mc)).j.ok, 'master revokes master');

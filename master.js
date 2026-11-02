@@ -78,9 +78,9 @@ module.exports = function (C) {
     for (const r of Object.keys(ROOMS)) C.push(r, { sys: true, text: '[System] ' + esc(t) }); io.emit('m:broadcast', { text: t }); res.json({ ok: true }); }));
   // silent watch list: nothing is ever sent to the watched user
   app.get('/api/master/watch', guard(async (req, res, me) => {
-    const rows = await q('select u.id,u.name,u.status_msg from watch w join users u on u.id=w.target where w.owner=$1 order by u.name_lc', [me.id]);
+    const rows = await q('select u.id,u.name,u.status_msg,u.last_ip,u.last_loc from watch w join users u on u.id=w.target where w.owner=$1 order by u.name_lc', [me.id]);
     res.json(rows.map(r => { const p = acc.presence ? acc.presence(r.id) : { online: acc.isOnline(r.name) }; const s = sockOf(r.name);
-      return { name: r.name, online: p.online || !!s, status: p.status, msg: p.msg || r.status_msg || '', room: s && !s.data.guest ? s.data.room : null }; })); }));
+      return { name: r.name, online: p.online || !!s, status: p.status, msg: p.msg || r.status_msg || '', room: s && !s.data.guest ? s.data.room : null, ip: (s && geo.clientIp(s.handshake.headers, s.handshake.address)) || r.last_ip || '', loc: r.last_loc || '' }; })); }));
   app.post('/api/master/watch', express.json(), guard(async (req, res, me) => { const { name, remove } = req.body || {};
     const u = (await q('select id from users where name_lc=$1', [String(name || '').toLowerCase()]))[0]; if (!u) return res.status(404).json({ error: 'No such screen name.' });
     if (remove) await q('delete from watch where owner=$1 and target=$2', [me.id, u.id]); else await q('insert into watch(owner,target) values($1,$2) on conflict do nothing', [me.id, u.id]); res.json({ ok: true }); }));
