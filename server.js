@@ -26,7 +26,7 @@ const ROOMS = {}; for (const [c, rs] of Object.entries(DIR)) for (const r of rs)
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
 for (const r of Object.keys(ROOMS)) if (!TOPICS[r]) TOPICS[r] = ADULT_ROOMS.has(r) ? r + ' - adults only (18+)' : 'Welcome to ' + r + ' - chat about ' + r.toLowerCase();
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033','#8b5cf6'];
-const users = new Map(); const VERSION = 'v11.9-imv-regional-countries'; // lower(name) -> socket.id
+const users = new Map(); const VERSION = 'v12.0-desktop-windows-clear-history'; // lower(name) -> socket.id
 const history = Object.fromEntries(Object.keys(ROOMS).map(r => [r, []]));
 // ---- user-created rooms (public, in memory; removed after ~10 min empty) ----
 const UROOMS = new Map(); // name -> { owner, ownerLc, emptySince }
@@ -282,6 +282,8 @@ io.on('connection', s => {
     if (!keyOk(k)) return cb({ error: 'Wrong admin key.' }); s.data.site = true; upd(s.data.room); cb({ ok: true }); });
   s.on('mod:list', cb => { if (typeof cb !== 'function') return; if (!roleOf(s, s.data.room)) return cb({ error: 'Only the room owner and admins can do that.' }); cb(modList(s.data.room)); });
   s.on('mod', (d, cb) => doMod(d || {}, cb));
+  s.on('mod:clearhist', cb => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room; if (!room || !roleOf(s, room)) return cb({ error: 'Only the room owner and admins can do that.' });
+    history[room] = []; io.to(room).emit('clear-history', { by: s.data.master ? 'a moderator' : s.data.name }); push(room, { sys: true, mod: true, text: 'Room history was cleared by ' + (s.data.master ? 'a moderator' : esc(s.data.name)) + '.' }); cb({ ok: true }); });
   function doMod(d, cb) { modAct(s, s.data.room, d, cb); }
   s.data.rejoin = r => join(r);
   s.on('rooms', async cb => typeof cb === 'function' && cb(await decorate(roomList(!!s.data.adult || !!s.data.master, !!s.data.master), s.data.acct)));

@@ -6,31 +6,41 @@ app.setAppUserModelId('app.yappchat.desktop');
 if (!app.requestSingleInstanceLock()) { app.quit(); return; }
 let win, tray, quitting = false;
 const icon = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
-const stF = () => path.join(app.getPath('userData'), 'window.json');
-const loadSt = () => { try { return JSON.parse(fs.readFileSync(stF(), 'utf8')); } catch { return { width: 1100, height: 760 }; } };
-const saveSt = () => { if (!win || win.isMinimized()) return; try { fs.writeFileSync(stF(), JSON.stringify({ ...win.getNormalBounds(), max: win.isMaximized() })); } catch {} };
+const PRE = { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false };
+// remembered positions per window kind (messenger, browse, room, im_<name>)
+const stF = () => path.join(app.getPath('userData'), 'windows.json');
+let ST = {}; try { ST = JSON.parse(fs.readFileSync(stF(), 'utf8')) || {}; } catch {}
+let saveT; const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { fs.writeFileSync(stF(), JSON.stringify(ST)); } catch {} }, 400); };
+function track(w, key) { const sv = () => { if (w.isDestroyed() || w.isMinimized()) return; ST[key] = w.getNormalBounds(); persist(); }; for (const ev of ['resize', 'move']) w.on(ev, sv); w.on('close', sv); }
 const show = () => { if (!win) return; if (win.isMinimized()) win.restore(); win.show(); win.focus(); };
 app.on('second-instance', show);
 const internal = u => { try { return new URL(u).origin === ORIGIN; } catch { return false; } };
-function create() {
-  const s = loadSt();
-  win = new BrowserWindow({ x: s.x, y: s.y, width: s.width, height: s.height, minWidth: 640, minHeight: 480, title: 'YappChat', icon, autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false } });
-  if (s.max) win.maximize();
-  win.loadURL(URL0);
-  win.on('page-title-updated', e => { e.preventDefault(); win.setTitle('YappChat'); });
-  for (const ev of ['resize', 'move', 'maximize', 'unmaximize']) win.on(ev, saveSt);
-  win.on('close', e => { saveSt(); if (!quitting) { e.preventDefault(); win.hide(); } });
-  // popups from the site (e.g. the rooms window) stay in-app; everything else opens in the default browser
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (internal(url)) return { action: 'allow', overrideBrowserWindowOptions: { icon, title: 'YappChat', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false } } };
+const SIZES = { browse: [760, 640], room: [1000, 700], im: [440, 560] };
+function kindOf(url, frame) { if (frame === 'ybrowse') return 'browse'; if (/^yim_/.test(frame || '')) return 'im'; if (/\/rooms\.html/.test(url)) return 'room'; return 'other'; }
+function popupOpts(url, frame) {
+  const k = kindOf(url, frame), key = k === 'im' ? frame : k, b = ST[key] || {}, d = SIZES[k] || [900, 680];
+  return { key, o: { x: b.x, y: b.y, width: b.width || d[0], height: b.height || d[1], minWidth: k === 'im' ? 320 : 480, minHeight: 360, icon, title: 'YappChat', autoHideMenuBar: true, menuBarVisible: false, webPreferences: PRE } };
+}
+function wire(wc) {
+  wc.on('will-navigate', (e, url) => { if (!internal(url)) { e.preventDefault(); if (/^https?:/.test(url)) shell.openExternal(url); } });
+  wc.setWindowOpenHandler(({ url, frameName }) => {
+    // about:blank popups are the messenger's own IM / Browse windows (same page, same connection)
+    if (url === 'about:blank' || internal(url)) return { action: 'allow', overrideBrowserWindowOptions: popupOpts(url, frameName).o };
     if (/^(https?|mailto):/.test(url)) shell.openExternal(url); return { action: 'deny' };
   });
-  app.on('web-contents-created', (_, wc) => {
-    wc.on('will-navigate', (e, url) => { if (!internal(url)) { e.preventDefault(); if (/^https?:/.test(url)) shell.openExternal(url); } });
-    wc.setWindowOpenHandler(({ url }) => { if (internal(url)) return { action: 'allow', overrideBrowserWindowOptions: { icon, autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false } } }; if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
-  });
+  wc.on('did-create-window', (w, { url, frameName }) => { w.setMenuBarVisibility(false); track(w, popupOpts(url, frameName).key);
+    if (kindOf(url, frameName) === 'room') w.on('page-title-updated', (e, t) => { e.preventDefault(); w.setTitle(/YappChat/.test(t) ? t : 'YappChat - Chat Room'); }); });
 }
+function create() {
+  const s = ST.messenger || {};
+  win = new BrowserWindow({ x: s.x, y: s.y, width: s.width || 320, height: s.height || 640, minWidth: 280, minHeight: 420, title: 'YappChat Messenger', icon, autoHideMenuBar: true, menuBarVisible: false, webPreferences: PRE });
+  win.setMenuBarVisibility(false);
+  win.loadURL(URL0);
+  win.on('page-title-updated', e => { e.preventDefault(); win.setTitle('YappChat Messenger'); });
+  track(win, 'messenger');
+  win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
+}
+app.on('web-contents-created', (_, wc) => wire(wc));
 app.whenReady().then(() => {
   const ses = session.defaultSession;
   const okP = ['media', 'notifications', 'display-capture', 'mediaKeySystem', 'clipboard-sanitized-write', 'fullscreen'];
