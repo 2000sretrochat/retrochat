@@ -27,6 +27,8 @@ alter table users add column if not exists location text not null default '';
 alter table users add column if not exists bio text not null default '';
 alter table users add column if not exists interests text not null default '';
 alter table users add column if not exists is_master boolean not null default false;
+alter table users add column if not exists m_incog boolean not null default false;
+alter table users add column if not exists m_announce boolean not null default false;
 alter table users add column if not exists banned boolean not null default false;
 create table if not exists ip_bans(ip text primary key, reason text not null default '', at timestamptz not null default now());
 create table if not exists kv(k text primary key, v text);

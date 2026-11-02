@@ -77,6 +77,15 @@ module.exports = function (C) {
   app.post('/api/master/report', express.json(), guard(async (req, res, me) => { await q('update reports set resolved=$2, resolved_by=$3 where id=$1', [+req.body?.id, req.body?.resolved !== false, me.name]); res.json({ ok: true }); }));
   app.post('/api/master/broadcast', express.json(), guard((req, res) => { const t = String(req.body?.text || '').trim().slice(0, 300); if (!t) return res.status(400).json({ error: 'Message required.' });
     for (const r of Object.keys(ROOMS)) C.push(r, { sys: true, text: '[System] ' + esc(t) }); io.emit('m:broadcast', { text: t }); res.json({ ok: true }); }));
+  // incognito + announce prefs (per master, persisted); applied live to the master's room sockets
+  app.get('/api/master/prefs', guard(async (req, res, me) => { const r = (await q('select m_incog,m_announce from users where id=$1', [me.id]))[0] || {}; res.set('Cache-Control', 'no-store'); res.json({ incognito: !!r.m_incog, announce: !!r.m_announce }); }));
+  app.post('/api/master/prefs', express.json(), guard(async (req, res, me) => { const b = req.body || {}, sets = [], vals = [me.id];
+    if (typeof b.incognito === 'boolean') { vals.push(b.incognito); sets.push('m_incog=$' + vals.length); } if (typeof b.announce === 'boolean') { vals.push(b.announce); sets.push('m_announce=$' + vals.length); }
+    if (sets.length) await q('update users set ' + sets.join(',') + ' where id=$1', vals);
+    const rooms = new Set(); for (const s of io.sockets.sockets.values()) if (s.data.acct?.id === me.id && s.data.master) {
+      if (typeof b.incognito === 'boolean') { s.data.incPref = b.incognito; if (s.data.room) { s.data.inc = b.incognito; if (b.incognito) { s.data.cam = false; s.data.talk = false; } rooms.add(s.data.room); } }
+      if (typeof b.announce === 'boolean') s.data.announce = b.announce; if (s.data.room) s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce }); }
+    rooms.forEach(r => C.upd(r)); const r = (await q('select m_incog,m_announce from users where id=$1', [me.id]))[0] || {}; res.json({ ok: true, incognito: !!r.m_incog, announce: !!r.m_announce }); }));
   // silent watch list: nothing is ever sent to the watched user
   app.get('/api/master/watch', guard(async (req, res, me) => {
     const rows = await q('select u.id,u.name,u.status_msg,u.last_ip,u.last_loc from watch w join users u on u.id=w.target where w.owner=$1 order by u.name_lc', [me.id]);
