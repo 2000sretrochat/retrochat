@@ -42,6 +42,7 @@ create table if not exists room_meta(room text primary key, rating text);
 alter table room_meta add column if not exists mics int;
 alter table room_meta add column if not exists hq boolean;
 alter table room_meta add column if not exists mtimer int;
+create table if not exists favorites(owner text not null, room text not null, primary key(owner, room));
 create table if not exists ignores(owner int not null references users(id) on delete cascade, name_lc text not null, primary key(owner, name_lc));
 alter table users add column if not exists pm_buddies boolean not null default false;
 create table if not exists guest_log(id serial primary key, name text not null, ip text, loc text, at timestamptz not null default now());`;

@@ -43,6 +43,8 @@ function svg(o){const s=o.skin,h=o.hairc,ink='#2a1a12';let g=`<svg xmlns="http:/
  return g+'</svg>'}
 // ---------- canvas helpers ----------
 function toData(cv){for(const [t,qs] of [['image/webp',[.9,.8,.7,.6,.5,.4]],['image/jpeg',[.9,.8,.7,.6,.5,.4,.3]]]){for(const q of qs){const d=cv.toDataURL(t,q);if(!d.startsWith('data:'+t))break;if(d.length*.75<30000)return d}}return null}
+// keep transparency: WebP (alpha) first, then PNG; never JPEG
+function toDataA(cv){for(const q of [.92,.85,.75,.65,.5,.4]){const d=cv.toDataURL('image/webp',q);if(!d.startsWith('data:image/webp'))break;if(d.length*.75<30000)return d}const p=cv.toDataURL('image/png');return p.length*.75<30000?p:toData(cv)}
 function loadImg(src){return new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=src})}
 // ---------- editor modal ----------
 const CSS=`.yae{position:fixed;inset:0;background:rgba(16,35,74,.45);z-index:500;display:flex;align-items:center;justify-content:center;font:13px var(--sys,system-ui)}
@@ -61,24 +63,24 @@ function editor(socket,{onSaved,name}={}){
  const o={face:'round',skin:SKIN[1],hair:'short',hairc:HAIRC[1],eyes:'lashes',mouth:'smile',acc:'none',bg:BG[0]};
  const d=document.createElement('div');d.className='yae';
  d.innerHTML=`<div class=bx role=dialog aria-label="Change my avatar"><div class=hd><span>Change My Avatar</span><b class=cl>&times;</b></div>
- <div class=tabs><div data-t=make class=on>Avatar Maker</div><div data-t=up>Upload Photo</div><div data-t=pre>Classic</div></div>
+ <div class=tabs><div data-t=make class=on>Avatar Maker</div><div data-t=up>Upload Photo</div><div data-t=bm>Snapchat / Bitmoji</div><div data-t=pre>Classic</div></div>
  <div class="pn on" data-p=make><div class=prev><div class=sv></div></div>
   ${['face','hair','eyes','mouth','acc'].map(k=>`<div class=row><label>${{face:'Face',hair:'Hair',eyes:'Eyes',mouth:'Mouth',acc:'Extras'}[k]}</label>${OPT[k].map(v=>`<span class="ch" data-k=${k} data-v=${v}>${v}</span>`).join('')}</div>`).join('')}
   ${[['skin','Skin',SKIN],['hairc','Hair color',HAIRC],['bg','Background',BG]].map(([k,l,a])=>`<div class=row><label>${l}</label>${a.map(c=>`<span class=cs data-k=${k} data-v="${c}" style="background:${c}"></span>`).join('')}</div>`).join('')}
   <div class=row><button class=rnd type=button>&#127922; Surprise me</button></div></div>
- <div class=pn data-p=up><div class=prev><canvas width=256 height=256 class=cv title="Drag to move"></canvas></div><div class=row><input type=file accept="image/jpeg,image/png,image/webp,image/gif" class=fi></div>
+ <div class=pn data-p=up><div class=bmh style="display:none;font-size:12px;background:var(--soft,#eaf3fd);border-radius:10px;padding:8px;margin-bottom:8px"><b>Use a Snapchat / Bitmoji picture</b><br>1. In Snapchat, tap your Bitmoji, choose a sticker or selfie and tap <i>Save</i> (or long-press a Bitmoji sticker and save it). In the Bitmoji app, tap a sticker &rarr; <i>Save</i>.<br>2. Then choose that saved PNG, JPG or WEBP file below. Transparent backgrounds are kept; it becomes a round emoji-style picture.</div><div class=prev><canvas width=256 height=256 class=cv title="Drag to move"></canvas></div><div class=row><input type=file accept="image/jpeg,image/png,image/webp,image/gif" class=fi></div>
   <div class=row><label>Zoom</label><input type=range class=zm min=1 max=4 step=.05 value=1 style="flex:1"></div><small style="color:var(--muted,#5b6b85)">Drag the picture to position it. It is cropped to a square and shrunk to 96&times;96.</small></div>
  <div class=pn data-p=pre><div class=pres>${Object.keys(PRE).map(k=>`<span data-pre=${k}>${html(name||'x',k)}</span>`).join('')}</div></div>
  <div class=ft><span class=er></span><button class=cn type=button>Cancel</button><button class=pri type=button>Save Avatar</button></div></div>`;
  document.body.appendChild(d);const q=s=>d.querySelector(s),qa=s=>d.querySelectorAll(s);let tab='make',pre=null,img=null,zoom=1,ox=0,oy=0;
  const close=()=>d.remove();q('.cl').onclick=q('.cn').onclick=close;d.onclick=e=>{if(e.target==d)close()};
- qa('.tabs div').forEach(t=>t.onclick=()=>{tab=t.dataset.t;qa('.tabs div').forEach(x=>x.classList.toggle('on',x==t));qa('.pn').forEach(p=>p.classList.toggle('on',p.dataset.p==tab))});
+ qa('.tabs div').forEach(t=>t.onclick=()=>{tab=t.dataset.t;qa('.tabs div').forEach(x=>x.classList.toggle('on',x==t));const pt=tab=='bm'?'up':tab;qa('.pn').forEach(p=>p.classList.toggle('on',p.dataset.p==pt));q('.bmh').style.display=tab=='bm'?'':'none';redraw()});
  const sync=()=>{q('.sv').innerHTML=svg(o).replace('width="96" height="96"','width="128" height="128" style="border-radius:50%;display:block"');qa('[data-k]').forEach(e=>e.classList.toggle('on',o[e.dataset.k]==e.dataset.v))};
  qa('[data-k]').forEach(e=>e.onclick=()=>{o[e.dataset.k]=e.dataset.v;sync()});
  q('.rnd').onclick=()=>{const r=a=>a[Math.floor(Math.random()*a.length)];Object.assign(o,{face:r(OPT.face),hair:r(OPT.hair),eyes:r(OPT.eyes),mouth:r(OPT.mouth),acc:r(OPT.acc),skin:r(SKIN),hairc:r(HAIRC),bg:r(BG)});sync()};sync();
  qa('[data-pre]').forEach(e=>e.onclick=()=>{pre=e.dataset.pre;qa('[data-pre]').forEach(x=>x.style.outline=x==e?'3px solid #FFCE00':'');});
  const cv=q('.cv'),cx=cv.getContext('2d');
- const draw=(c,ctx,S)=>{ctx.fillStyle='#DCEBFC';ctx.fillRect(0,0,S,S);if(!img)return;const base=Math.min(img.width,img.height)/zoom,sx=Math.max(0,Math.min(img.width-base,(img.width-base)/2+ox)),sy=Math.max(0,Math.min(img.height-base,(img.height-base)/2+oy));ctx.drawImage(img,sx,sy,base,base,0,0,S,S)};
+ const draw=(c,ctx,S)=>{ctx.clearRect(0,0,S,S);ctx.save();if(tab=='bm'){ctx.beginPath();ctx.arc(S/2,S/2,S/2,0,Math.PI*2);ctx.clip()}else{ctx.fillStyle='#DCEBFC';ctx.fillRect(0,0,S,S)}if(!img){ctx.restore();return}const base=Math.min(img.width,img.height)/zoom,sx=Math.max(0,Math.min(img.width-base,(img.width-base)/2+ox)),sy=Math.max(0,Math.min(img.height-base,(img.height-base)/2+oy));ctx.drawImage(img,sx,sy,base,base,0,0,S,S);ctx.restore()};
  const redraw=()=>draw(cv,cx,256);redraw();
  q('.fi').onchange=async e=>{const f=e.target.files[0];q('.er').textContent='';if(!f)return;if(!/^image\/(jpeg|png|webp|gif)$/.test(f.type))return q('.er').textContent='Please choose a JPEG, PNG, WebP or GIF picture.';if(f.size>15e6)return q('.er').textContent='That picture is too large (max 15 MB).';
   const u=URL.createObjectURL(f);try{img=await loadImg(u)}catch{return q('.er').textContent='Could not read that picture.'}finally{URL.revokeObjectURL(u)}zoom=1;ox=oy=0;q('.zm').value=1;redraw()};
@@ -89,9 +91,9 @@ function editor(socket,{onSaved,name}={}){
  q('.pri').onclick=async()=>{q('.er').textContent='';let data;
   if(tab=='pre'){if(!pre)return q('.er').textContent='Pick one of the classic avatars.';data=pre}
   else{const c=document.createElement('canvas');c.width=c.height=96;const ctx=c.getContext('2d');
-   if(tab=='up'){if(!img)return q('.er').textContent='Choose a picture first.';draw(c,ctx,96)}
+   if(tab=='up'||tab=='bm'){if(!img)return q('.er').textContent='Choose a picture first.';draw(c,ctx,96)}
    else{const i=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg(o)));ctx.drawImage(i,0,0,96,96)}
-   data=toData(c);if(!data)return q('.er').textContent='Could not shrink that picture enough. Try another.'}
+   data=tab=='bm'?toDataA(c):toData(c);if(!data)return q('.er').textContent='Could not shrink that picture enough. Try another.'}
   q('.pri').disabled=true;socket.emit('avatar:set',data,r=>{q('.pri').disabled=false;if(!r||r.error)return q('.er').textContent=(r&&r.error)||'Could not save.';close();onSaved&&onSaved(r.av)})};
  return d}
 window.YAv={html,update,editor,svg,OPT,cache,listen(socket,fn){socket.on('avatar',({name,av})=>{update(name,av);fn&&fn(name,av)})}};

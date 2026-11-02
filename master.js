@@ -77,6 +77,8 @@ module.exports = function (C) {
   app.post('/api/master/report', express.json(), guard(async (req, res, me) => { await q('update reports set resolved=$2, resolved_by=$3 where id=$1', [+req.body?.id, req.body?.resolved !== false, me.name]); res.json({ ok: true }); }));
   app.post('/api/master/broadcast', express.json(), guard((req, res) => { const t = String(req.body?.text || '').trim().slice(0, 300); if (!t) return res.status(400).json({ error: 'Message required.' });
     for (const r of Object.keys(ROOMS)) C.push(r, { sys: true, text: '[System] ' + esc(t) }); io.emit('m:broadcast', { text: t }); res.json({ ok: true }); }));
+  app.get('/api/master/bots', guard(async (req, res) => res.json({ on: C.getBots() })));
+  app.post('/api/master/bots', express.json(), guard(async (req, res) => res.json({ ok: true, on: C.setBots(!!req.body?.on) })));
   app.get('/api/master/unlimited', guard(async (req, res) => res.json({ emails: await require('./emails').list() })));
   app.post('/api/master/unlimited', express.json(), guard(async (req, res) => res.json({ ok: true, emails: await require('./emails').setList(req.body?.emails) })));
   // incognito + announce prefs (per master, persisted); applied live to the master's room sockets

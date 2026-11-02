@@ -20,15 +20,18 @@ const blockedBy = async (owner, who) => { try { return (await db.q('select 1 fro
 const mutualC = async (a, b) => { try { return (await db.q('select 1 from contacts where owner=$1 and contact=$2', [a, b])).length > 0; } catch { return false; } };
 const masterNames = () => new Set([...io.sockets.sockets.values()].filter(x => x.data.master && x.data.acct).map(x => x.data.acct.name.toLowerCase()));
 async function masterLc() { try { return new Set((await db.q('select name_lc from users where is_master')).map(r => r.name_lc)); } catch { return masterNames(); } }
-const ROOMS = { 'Lobby':'General','Friends':'General','Chit Chat':'General','Late Night':'General' };
+const { DIR, ADULT_ROOMS, CAT_ORDER } = require('./rooms-dir');
+const ROOMS = {}; for (const [c, rs] of Object.entries(DIR)) for (const r of rs) ROOMS[r] = c;
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
+for (const r of Object.keys(ROOMS)) if (!TOPICS[r]) TOPICS[r] = ADULT_ROOMS.has(r) ? r + ' - adults only (18+)' : 'Welcome to ' + r + ' - chat about ' + r.toLowerCase();
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033'];
-const users = new Map(); const VERSION = 'v11.5-ignore-block-privacy-sessions'; // lower(name) -> socket.id
+const users = new Map(); const VERSION = 'v11.6-classic-rooms-bots-favorites'; // lower(name) -> socket.id
 const history = Object.fromEntries(Object.keys(ROOMS).map(r => [r, []]));
 // ---- user-created rooms (public, in memory; removed after ~10 min empty) ----
 const UROOMS = new Map(); // name -> { owner, ownerLc, emptySince }
 const RATINGS = ['PG-13', 'R'], RATE = {}; const adultR = r => RATE[r] === 'R'; // official rooms default PG-13
 const rateOf = r => RATE[r] || 'PG-13';
+for (const r of ADULT_ROOMS) RATE[r] = 'R';
 const OFFICIAL = new Set(Object.keys(ROOMS)), MAXU = 2, EMPTY_MS = 10 * 60e3;
 const BAD = /(fuck|shit|bitch|cunt|nigg|fag|dick|cock|pussy|whore|slut|rape|nazi|porn|sex|penis|vagina|asshole|retard)/i;
 const roomKey = n => String(n).toLowerCase().replace(/\s+/g, ' ').trim();
@@ -66,9 +69,28 @@ app.get('/av/:name', async (req, res) => {
 });
 geo.admin(app, n => acc.isOnline(n) || users.has(String(n).toLowerCase())); // admin-key only
 app.get('/healthz', (q, r) => r.send('ok')); app.get('/api/version', (q, r) => r.json({ version: VERSION }));
-const roomList = (adult, vm) => Object.entries(ROOMS).filter(([n]) => adult || !adultR(n)).map(([name, cat]) => ({ name, cat, topic: TOPICS[name], rating: rateOf(name), mics: micsOf(name), count: members(name, vm).length, owner: UROOMS.get(name)?.owner || null }));
+const roomList = (adult, vm) => Object.entries(ROOMS).filter(([n]) => adult || !adultR(n)).map(([name, cat]) => { const ss = seen(name, vm); return { name, cat, topic: TOPICS[name], rating: rateOf(name), mics: micsOf(name), count: ss.length + botsIn(name).length, cams: ss.filter(x => x.data.cam).length, owner: UROOMS.get(name)?.owner || null }; });
+// favorites + "mine" (owner/admin) decoration for a signed-in account
+const userFromReq = req => acc.userFromCookie(req.headers.cookie);
+async function decorate(list, acct) { if (!acct) return list; const lc = acct.name.toLowerCase(); let f = new Set();
+  try { f = new Set((await db.q('select room from favorites where owner=$1', [lc])).map(r => r.room)); } catch {}
+  return list.map(r => ({ ...r, fav: f.has(r.name), mine: UROOMS.get(r.name)?.ownerLc === lc ? 'owner' : (MOD[r.name]?.admins?.has?.(lc) ? 'admin' : '') })); }
+app.post('/api/fav', express.json(), async (req, res) => { const a = await userFromReq(req).catch(() => null); if (!a) return res.status(401).json({ error: 'Sign in to save favorites.' });
+  const room = String(req.body?.room || ''); if (!ROOMS[room]) return res.status(404).json({ error: 'No such room.' }); const lc = a.name.toLowerCase();
+  try { await db.q(req.body?.on ? 'insert into favorites(owner,room) values($1,$2) on conflict do nothing' : 'delete from favorites where owner=$1 and room=$2', [lc, room]); res.json({ ok: true }); } catch { res.status(503).json({ error: 'Favorites are unavailable right now.' }); } });
+// ---- idle chat bots (Late Night), toggled by masters; not sockets, so they never count toward IP/session limits ----
+const BOTS = [{ name: 'sk8rboi_1987', av: '' }, { name: 'xXmoonchildXx', av: '' }], BOT_ROOM = 'Late Night'; let botsOn = true;
+const BOT_LINES = ['anyone else still up?', 'lol', 'brb getting a snack', 'this song on winamp is stuck in my head', 'a/s/l? jk jk', 'so bored rn', 'my dial-up keeps disconnecting ugh', 'who likes blink-182', 'cant sleep again', 'haha nice', 'its so quiet in here tonight', 'back', 'hey all :)', 'anyone watch TRL today', 'gonna update my away message brb'];
+const botsIn = room => botsOn && room === BOT_ROOM ? BOTS : [];
+const isBot = n => BOTS.some(b => b.name.toLowerCase() === String(n || '').toLowerCase());
+function setBots(on) { botsOn = !!on; Promise.resolve().then(() => db.q("insert into kv(k,v) values('bots',$1) on conflict(k) do update set v=$1", [botsOn ? 'on' : 'off'])).catch(() => {}); upd(BOT_ROOM); return botsOn; }
+(function loadBots(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadBots(n + 1), 2000).unref?.(); Promise.resolve().then(() => db.q("select v from kv where k='bots'")).then(r => { if (r[0]) botsOn = r[0].v !== 'off'; upd(BOT_ROOM); }).catch(() => {}); })(0);
+function botTick() { setTimeout(botTick, (150 + Math.random() * 150) * 1000).unref?.();
+  if (!botsOn || !socks(BOT_ROOM).length) return; const b = BOTS[Math.floor(Math.random() * BOTS.length)];
+  push(BOT_ROOM, { name: b.name, av: '', role: '', text: BOT_LINES[Math.floor(Math.random() * BOT_LINES.length)], color: '#000080', b: false, i: false, u: false, f: 'Arial', t: Date.now() }); }
+setTimeout(botTick, 60e3).unref?.();
 async function isAdultReq(req) { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return false; try { return !!(await db.q('select adult from users where id=$1', [u.id]))[0]?.adult; } catch { return false; } }
-app.get('/api/rooms', async (q, r) => r.json(roomList(await isAdultReq(q))));
+app.get('/api/rooms', async (q, r) => r.json(await decorate(roomList(await isAdultReq(q)), await userFromReq(q).catch(() => null))));
 app.post('/api/adult', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in first.' });
   if (req.body?.confirm !== true) return res.status(400).json({ error: 'Confirmation required.' }); await db.q('update users set adult=true where id=$1', [u.id]);
   for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === u.id) x.data.adult = true; res.json({ ok: true }); });
@@ -101,8 +123,8 @@ app.post('/api/admin/room', express.json(), (req, res) => { if (!keyOk(req.get('
 function socks(room) { return [...io.sockets.adapter.rooms.get(room) || []].map(id => io.sockets.sockets.get(id)).filter(x => x && x.data.name); }
 // incognito masters are visible only to other masters (vm = viewer is master)
 function seen(room, vm) { return socks(room).filter(x => vm || !x.data.inc); }
-function members(room, vm) { return seen(room, vm).map(x => x.data.name).sort((a,b)=>a.localeCompare(b)); }
-function roster(room, vm) { return seen(room, vm).map(x => ({ ...(vm && x.data.inc ? { inc: true } : {}), name: x.data.name, av: x.data.av || '', id: x.id, guest: !!x.data.guest, cam: !!x.data.cam, talk: !!x.data.talk, tl: x.data.talk && x.data.talkUntil ? Math.max(0, Math.ceil((x.data.talkUntil - Date.now()) / 1000)) : 0, role: x.data.master ? '' : roleOf(x, room), dot: dotLeft(room, x.data.name.toLowerCase()) !== null, dl: Math.ceil((dotLeft(room, x.data.name.toLowerCase()) || 0) / 1000), mt: mod(room).mt.has(x.data.name.toLowerCase()), mm: mod(room).mm.has(x.data.name.toLowerCase()), voice: !!x.data.voice, viewers: x.data.cam ? [...(x.data.viewers||[])].map(v => io.sockets.sockets.get(v)?.data.name).filter(Boolean) : [] })).sort((a,b)=>a.name.localeCompare(b.name)); }
+function members(room, vm) { return [...seen(room, vm).map(x => x.data.name), ...botsIn(room).map(b => b.name)].sort((a,b)=>a.localeCompare(b)); }
+function roster(room, vm) { return seen(room, vm).map(x => ({ ...(vm && x.data.inc ? { inc: true } : {}), name: x.data.name, av: x.data.av || '', id: x.id, guest: !!x.data.guest, cam: !!x.data.cam, talk: !!x.data.talk, tl: x.data.talk && x.data.talkUntil ? Math.max(0, Math.ceil((x.data.talkUntil - Date.now()) / 1000)) : 0, role: x.data.master ? '' : roleOf(x, room), dot: dotLeft(room, x.data.name.toLowerCase()) !== null, dl: Math.ceil((dotLeft(room, x.data.name.toLowerCase()) || 0) / 1000), mt: mod(room).mt.has(x.data.name.toLowerCase()), mm: mod(room).mm.has(x.data.name.toLowerCase()), voice: !!x.data.voice, viewers: x.data.cam ? [...(x.data.viewers||[])].map(v => io.sockets.sockets.get(v)?.data.name).filter(Boolean) : [] })).concat(botsIn(room).map((b, i) => ({ name: b.name, av: b.av, id: 'bot-' + i, guest: true, bot: true, cam: false, talk: false, tl: 0, role: '', dot: false, dl: 0, mt: false, mm: false, voice: false, viewers: [] }))).sort((a,b)=>a.name.localeCompare(b.name)); }
 const MICS = {}; const MIC_DEFAULT_OFFICIAL = 3;
 const micsOf = r => MICS[r] || (UROOMS.has(r) ? 1 : MIC_DEFAULT_OFFICIAL);
 const micsUsed = r => socks(r).filter(x => x.data.talk).length;
@@ -126,7 +148,10 @@ function advance(room) { if (!room || !ROOMS[room]) return false; let ch = false
 setInterval(() => { for (const r of Object.keys(ROOMS)) { let ch = advance(r); const d = MOD[r]?.dot;
   if (d) for (const [n, u] of d) if (u < DOTFOREVER && u <= Date.now()) { d.delete(n); ch = true; const x = socks(r).find(y => y.data.name.toLowerCase() === n); if (x) x.emit('undotted', { auto: true }); MASTER.saveMod(r); }
   if (ch) upd(r); } }, 1000).unref();
-function lists(room) { if (!room) return; const R = {}; for (const x of socks(room)) { const k = x.data.master ? 1 : 0; R[k] = R[k] || [roster(room, !!k), members(room, !!k)]; x.emit('roster', R[k][0]); x.emit('members', R[k][1]); } }
+const AH = { roomExists: r => !!ROOMS[r], roomRating: r => rateOf(r), rawRoomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && ROOMS[x.data.room] ? x.data.room : null; },
+  bannedFrom: (r, n) => { const e = MOD[r]?.kicked?.get?.(String(n).toLowerCase()); return !!e && e > Date.now(); },
+  toRoomUser: (n, ev, d) => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); x && x.emit(ev, d); }, roomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && !x.data.inc && ROOMS[x.data.room] ? x.data.room : null; } };
+function lists(room) { if (!room) return; setImmediate(() => { for (const x of socks(room)) if (x.data.acct) AH.roomChanged?.(x.data.name); }); const R = {}; for (const x of socks(room)) { const k = x.data.master ? 1 : 0; R[k] = R[k] || [roster(room, !!k), members(room, !!k)]; x.emit('roster', R[k][0]); x.emit('members', R[k][1]); } }
 function upd(room) { if (room) { lists(room); io.to(room).emit('micq', micq(room)); } }
 const MAXVIEW = 6;
 // ---- room moderation: owner (or site admin via ADMIN_KEY) > room admins > users. All checks are server-side. ----
@@ -174,7 +199,7 @@ io.on('connection', s => {
     name = s.data.acct ? s.data.acct.name : String(name || '').trim();
     if (!s.data.acct) {
       if (!/^[A-Za-z][A-Za-z0-9_.]{2,19}$/.test(name)) return cb({ error: 'Guest names are 3-20 characters, start with a letter, and use letters, numbers, _ or .' });
-      if (/^(admin|administrator|moderator|mod|support|system|yappchat|staff|root)/i.test(name)) return cb({ error: 'That screen name is not available.' });
+      if (/^(admin|administrator|moderator|mod|support|system|yappchat|staff|root)/i.test(name) || isBot(name)) return cb({ error: 'That screen name is not available.' });
       if (db.status().ready) { try { if ((await db.q('select 1 from users where name_lc=$1', [name.toLowerCase()])).length) return cb({ error: 'That screen name belongs to a registered user. Pick another guest name or sign in.' }); } catch { } }
       s.data.guest = true;
     }
@@ -222,7 +247,7 @@ io.on('connection', s => {
   s.on('mod', (d, cb) => doMod(d || {}, cb));
   function doMod(d, cb) { modAct(s, s.data.room, d, cb); }
   s.data.rejoin = r => join(r);
-  s.on('rooms', cb => typeof cb === 'function' && cb(roomList(!!s.data.adult || !!s.data.master, !!s.data.master)));
+  s.on('rooms', async cb => typeof cb === 'function' && cb(await decorate(roomList(!!s.data.adult || !!s.data.master, !!s.data.master), s.data.acct)));
   s.on('adult', async (yes, cb) => { if (yes !== true) return; s.data.adult = true; if (s.data.acct && db.status().ready) { try { await db.q('update users set adult=true where id=$1', [s.data.acct.id]); } catch { } } typeof cb === 'function' && cb({ ok: true }); });
   s.on('join', (room, cb) => { if (!s.data.name || !ROOMS[room] || room === s.data.room) return cb && cb({ error: ROOMS[room] ? 'Already here' : 'That room no longer exists.' });
     if (adultR(room) && !s.data.adult && !s.data.master) return cb && cb({ error: room + ' is rated ' + rateOf(room) + '. Confirm you are 18 or older to join.', adult: true });
@@ -284,7 +309,11 @@ io.on('connection', s => {
   s.on('buzz', () => { if (!s.data.name) return; if (s.data.inc) return s.emit('msg', { sys: true, text: 'You are incognito.' }); if (mod(s.data.room).mt.has(s.data.name.toLowerCase())) return; const now = Date.now(); if (now - lastBuzz < 15000) return s.emit('msg', { sys: true, text: 'Please wait a bit before buzzing again.' }); lastBuzz = now;
     push(s.data.room, { buzz: true, name: esc(s.data.name), t: now }); });
   s.on('typing', () => { if (!s.data.name || s.data.inc) return; const now = Date.now(); if (now - lastTyping < 2000) return; lastTyping = now; s.to(s.data.room).emit('typing', { name: s.data.name }); });
-  s.on('pm', async ({ to, text } = {}, cb) => { if (!s.data.name) return; const id = users.get(String(to || '').toLowerCase()); const t0 = id && io.sockets.sockets.get(id), t = t0 && (!t0.data.inc || s.data.master) ? t0 : null;
+  s.on('room:invite', async ({ to } = {}, cb) => { if (typeof cb !== 'function') return; if (!s.data.name || !s.data.room) return cb({ error: 'Join a room first.' });
+    if (!s.data.acct) return cb({ error: 'Sign in to invite people to rooms.' }); if (isBot(to)) return cb({ error: String(to) + " isn't available for invites." });
+    try { cb(await AH.invite({ uid: s.data.acct.id, name: s.data.acct.name, master: !!s.data.master, room: s.data.room }, to)); } catch (e) { cb({ error: 'Could not send invite.' }); } });
+  s.on('room:invite-decline', ({ from } = {}) => { if (!s.data.name) return; AH.toRoomUser(String(from || ''), 'invite-declined', { name: s.data.name }); });
+  s.on('pm', async ({ to, text } = {}, cb) => { if (!s.data.name) return; if (isBot(to)) return cb && cb({ ok: true }); const id = users.get(String(to || '').toLowerCase()); const t0 = id && io.sockets.sockets.get(id), t = t0 && (!t0.data.inc || s.data.master) ? t0 : null;
     text = String(text || '').trim().slice(0, MAXLEN); if (!text) return; if (!t) return cb && cb({ error: to + ' is not online.' });
     const now = Date.now(); stamps = stamps.filter(x => now - x < 10000); if (stamps.length >= 5) return cb && cb({ error: 'You are sending messages too fast.' }); stamps.push(now);
     if (!s.data.master && t.data.acct && ((s.data.acct && t.data.blk?.has(s.data.acct.id)) || (t.data.pmb && !(s.data.acct && await mutualC(t.data.acct.id, s.data.acct.id))))) return cb && cb({ error: "This user isn't accepting messages." });
@@ -334,9 +363,9 @@ io.on('connection', s => {
     io.emit('avatar', { name, av }); cb({ ok: true, av });
   }
   s.on('report', ({ who, why } = {}) => { if (!s.data.name) return; MASTER.report(s.data.name, s.data.room, String(who || '').slice(0, 30), String(why || '').slice(0, 300)); console.log('[REPORT ABUSE]', new Date().toISOString(), 'by', s.data.name, 'in', s.data.room, 'against', String(who || '').slice(0, 30), '-', String(why || '').slice(0, 300)); });
-  s.on('disconnect', () => { if (!s.data.name) return; if (users.get(s.data.name.toLowerCase()) === s.id) users.delete(s.data.name.toLowerCase()); if (s.data.guest) { AVMEM.delete(s.data.name.toLowerCase()); geo.guestOff(s.data.name); } const r0 = s.data.room; mediaReset(); s.leave(r0); upd(r0);
+  s.on('disconnect', () => { if (!s.data.name) return; if (users.get(s.data.name.toLowerCase()) === s.id) users.delete(s.data.name.toLowerCase()); if (s.data.guest) { AVMEM.delete(s.data.name.toLowerCase()); geo.guestOff(s.data.name); } const r0 = s.data.room; mediaReset(); s.leave(r0); upd(r0); if (s.data.acct) setImmediate(() => AH.roomChanged?.(s.data.name));
     if (s.data.room && noticeOk()) push(s.data.room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has left the room.` }); });
 });
-acc.sockets(io, { roomExists: r => !!ROOMS[r] });
-const MASTER = require('./master')({ app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, setMicOpts, RATINGS, KICK_MS });
+acc.sockets(io, AH);
+const MASTER = require('./master')({ app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots: () => botsOn, lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, setMicOpts, RATINGS, KICK_MS });
 db.init().then(() => MASTER.load()).catch(e => console.error('[master load]', e.message)).finally(() => server.listen(process.env.PORT || 3000, () => console.log('YappChat on', process.env.PORT || 3000)));
