@@ -14,7 +14,13 @@ create table if not exists blocks(owner int not null references users(id) on del
 create table if not exists offline(id serial primary key, to_id int not null references users(id) on delete cascade, from_id int not null references users(id) on delete cascade,
   body jsonb not null, created timestamptz not null default now());
 create index if not exists offline_to on offline(to_id);
-create table if not exists avatars(user_id int primary key references users(id) on delete cascade, mime text not null, data bytea not null, updated timestamptz not null default now());`;
+create table if not exists avatars(user_id int primary key references users(id) on delete cascade, mime text not null, data bytea not null, updated timestamptz not null default now());
+alter table users add column if not exists last_ip text;
+alter table users add column if not exists last_loc text;
+alter table users add column if not exists last_at timestamptz;
+create table if not exists login_history(id serial primary key, user_id int not null references users(id) on delete cascade, ip text, loc text, kind text, at timestamptz not null default now());
+create index if not exists login_history_u on login_history(user_id, id);
+create table if not exists guest_log(id serial primary key, name text not null, ip text, loc text, at timestamptz not null default now());`;
 async function init() {
   if (!process.env.DATABASE_URL) { error = 'DATABASE_URL is not set'; console.warn('[db] ' + error + ' - accounts disabled (maintenance mode)'); return; }
   const local = /localhost|127\.0\.0\.1|\/tmp/.test(process.env.DATABASE_URL);

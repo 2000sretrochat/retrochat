@@ -1,6 +1,6 @@
 // YappChat server (repo: retrochat). Auth hook: replace `identify()` later for accounts; media hook: add /api/media-token for LiveKit.
 const express = require('express'), http = require('http'), { Server } = require('socket.io');
-const acc = require('./accounts'), db = require('./db');
+const acc = require('./accounts'), db = require('./db'), geo = require('./geo');
 const app = express(), server = http.createServer(app);
 app.set('trust proxy', 1);
 const io = new Server(server, { maxHttpBufferSize: 1e5, allowRequest: (req, cb) => { const o = req.headers.origin; try { cb(null, !o || new URL(o).host === req.headers.host); } catch { cb(null, false); } } });
@@ -8,7 +8,7 @@ io.use(async (s, next) => { s.data.acct = await acc.userFromCookie(s.handshake.h
 const ROOMS = { 'Lobby':'General','Friends':'General','Chit Chat':'General','Late Night':'General' };
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033'];
-const users = new Map(); const VERSION = 'v7-modern-avatars'; // lower(name) -> socket.id
+const users = new Map(); const VERSION = 'v8-admin-cams'; // lower(name) -> socket.id
 const history = Object.fromEntries(Object.keys(ROOMS).map(r => [r, []]));
 // ---- user-created rooms (public, in memory; removed after ~10 min empty) ----
 const UROOMS = new Map(); // name -> { owner, ownerLc, emptySince }
@@ -47,6 +47,7 @@ app.get('/av/:name', async (req, res) => {
   if (a) return res.type(a.mime).send(a.buf);
   res.type('image/svg+xml').send(defaultAv(n));
 });
+geo.admin(app, n => acc.isOnline(n) || users.has(String(n).toLowerCase()));
 app.get('/healthz', (q, r) => r.send('ok')); app.get('/api/version', (q, r) => r.json({ version: VERSION }));
 app.get('/api/rooms', (q, r) => r.json(Object.entries(ROOMS).map(([name, cat]) => ({ name, cat, topic: TOPICS[name], count: members(name).length, owner: UROOMS.get(name)?.owner || null }))));
 function socks(room) { return [...io.sockets.adapter.rooms.get(room) || []].map(id => io.sockets.sockets.get(id)).filter(x => x && x.data.name); }
@@ -71,6 +72,7 @@ io.on('connection', s => {
     if (users.has(name.toLowerCase()) || (s.data.guest && acc.isOnline(name))) return cb({ error: 'That screen name is in use right now. Try another.' });
     users.set(name.toLowerCase(), s.id); s.data.name = name;
     if (s.data.acct && db.status().ready) { try { s.data.av = (await db.q('select avatar from users where id=$1', [s.data.acct.id]))[0]?.avatar || ''; } catch { } }
+    { const ip = geo.clientIp(s.handshake.headers, s.handshake.address); if (s.data.guest) geo.recordGuest(name, ip).catch(() => {}); else if (s.data.acct) geo.recordAccount(s.data.acct.id, ip, 'room'); }
     join(room); cb({ ok: true, name, colors: COLORS, account: !!s.data.acct });
   });
   function join(room) {
@@ -146,7 +148,7 @@ io.on('connection', s => {
     io.emit('avatar', { name, av }); cb({ ok: true, av });
   }
   s.on('report', ({ who, why }) => { if (!s.data.name) return; console.log('[REPORT ABUSE]', new Date().toISOString(), 'by', s.data.name, 'in', s.data.room, 'against', String(who || '').slice(0, 30), '-', String(why || '').slice(0, 300)); });
-  s.on('disconnect', () => { if (!s.data.name) return; users.delete(s.data.name.toLowerCase()); if (s.data.guest) AVMEM.delete(s.data.name.toLowerCase()); const r0 = s.data.room; mediaReset(); s.leave(r0); upd(r0);
+  s.on('disconnect', () => { if (!s.data.name) return; users.delete(s.data.name.toLowerCase()); if (s.data.guest) { AVMEM.delete(s.data.name.toLowerCase()); geo.guestOff(s.data.name); } const r0 = s.data.room; mediaReset(); s.leave(r0); upd(r0);
     if (s.data.room) { push(s.data.room, { sys: true, text: `${esc(s.data.name)} has left the room.` }); io.to(s.data.room).emit('members', members(s.data.room)); } });
 });
 acc.sockets(io, { roomExists: r => !!ROOMS[r] });
