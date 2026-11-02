@@ -26,6 +26,17 @@ alter table users add column if not exists age int;
 alter table users add column if not exists location text not null default '';
 alter table users add column if not exists bio text not null default '';
 alter table users add column if not exists interests text not null default '';
+alter table users add column if not exists is_master boolean not null default false;
+alter table users add column if not exists banned boolean not null default false;
+create table if not exists ip_bans(ip text primary key, reason text not null default '', at timestamptz not null default now());
+create table if not exists kv(k text primary key, v text);
+create table if not exists watch(owner int not null references users(id) on delete cascade, target int not null references users(id) on delete cascade, primary key(owner, target));
+create table if not exists reports(id serial primary key, by_name text not null, room text, who text, why text, at timestamptz not null default now(), resolved boolean not null default false, resolved_by text);
+create table if not exists room_mod(room text not null, name_lc text not null, kind text not null, until bigint, primary key(room, name_lc, kind));
+create table if not exists room_meta(room text primary key, rating text);
+alter table room_meta add column if not exists mics int;
+alter table room_meta add column if not exists hq boolean;
+alter table room_meta add column if not exists mtimer int;
 create table if not exists guest_log(id serial primary key, name text not null, ip text, loc text, at timestamptz not null default now());`;
 async function init() {
   if (!process.env.DATABASE_URL) { error = 'DATABASE_URL is not set'; console.warn('[db] ' + error + ' - accounts disabled (maintenance mode)'); return; }
