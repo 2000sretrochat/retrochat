@@ -39,6 +39,17 @@ async function recordGuest(name, ip) {
 }
 const guestOff = n => { const g = GUESTS.get(String(n).toLowerCase()); if (g) { g.online = false; g.left = Date.now(); } };
 function keyOk(k) { const K = process.env.ADMIN_KEY; if (!K || K.length < 16 || typeof k !== 'string') return false; const a = crypto.createHash('sha256').update(k).digest(), b = crypto.createHash('sha256').update(K).digest(); return crypto.timingSafeEqual(a, b); }
+async function adminData(isOnline) {
+    let accounts = [], guestLog = [];
+    if (db.status().ready) {
+      accounts = await db.q(`select u.id,u.name,u.email,u.created,u.last_ip,u.last_loc,u.last_at,
+        coalesce((select json_agg(h order by h.id desc) from (select ip,loc,kind,at,id from login_history where user_id=u.id order by id desc limit 10) h),'[]') hist
+        from users u order by u.last_at desc nulls last, u.created desc limit 1000`);
+      accounts.forEach(a => a.online = isOnline(a.name));
+      guestLog = await db.q('select name,ip,loc,at from guest_log order by id desc limit 500');
+    }
+    return ({ db: db.status().ready, accounts, guests: [...GUESTS.values()].sort((a, b) => b.at - a.at), guestLog });
+}
 function admin(app, isOnline) {
   const fails = new Map();
   app.get('/admin', (req, res) => { res.set({ 'X-Robots-Tag': 'noindex', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY' }); res.sendFile(__dirname + '/admin.html'); });
@@ -48,15 +59,7 @@ function admin(app, isOnline) {
     if (f.n >= 10) return res.status(429).json({ error: 'Too many attempts' });
     if (!process.env.ADMIN_KEY) return res.status(503).json({ error: 'ADMIN_KEY not configured' });
     if (!keyOk(req.get('x-admin-key'))) { f.n++; fails.set(ip, f); return res.status(401).json({ error: 'Bad key' }); }
-    let accounts = [], guestLog = [];
-    if (db.status().ready) {
-      accounts = await db.q(`select u.id,u.name,u.email,u.created,u.last_ip,u.last_loc,u.last_at,
-        coalesce((select json_agg(h order by h.id desc) from (select ip,loc,kind,at,id from login_history where user_id=u.id order by id desc limit 10) h),'[]') hist
-        from users u order by u.last_at desc nulls last, u.created desc limit 1000`);
-      accounts.forEach(a => a.online = isOnline(a.name));
-      guestLog = await db.q('select name,ip,loc,at from guest_log order by id desc limit 500');
-    }
-    res.json({ db: db.status().ready, accounts, guests: [...GUESTS.values()].sort((a, b) => b.at - a.at), guestLog });
+    res.json(await adminData(isOnline));
   });
 }
-module.exports = { clientIp, lookup, recordAccount, recordGuest, guestOff, admin, keyOk };
+module.exports = { adminData, clientIp, lookup, recordAccount, recordGuest, guestOff, admin, keyOk };

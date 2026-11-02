@@ -218,7 +218,12 @@ document.querySelectorAll('#menu>div').forEach(m=>m.addEventListener('click',e=>
 document.addEventListener('click',e=>{if(!e.target.closest('#menu'))document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!e.target.closest('.smp,.smb'))document.querySelectorAll('.smp').forEach(x=>x.classList.remove('open'));if(!e.target.closest('#avpick,#myav'))$('avpick').style.display='none'});
 // ---------- sign in / sign up ----------
 fetch('/api/status').then(r=>r.json()).then(s=>{if(!s.accounts){$('maint').style.display='block';$('maint').innerHTML='<b>Maintenance:</b> '+escT(s.message);['bIn','bUp'].forEach(i=>$(i).disabled=true)}});
-fetch('/api/me').then(r=>r.json()).then(m=>{if(m.name)start()});
+let MW=null,watchL=[];
+async function loadWatch(){try{const r=await fetch('/api/master/watch');if(r.ok){watchL=await r.json();render()}}catch{}}
+function masterInit(){MW=1;const dd=document.querySelector('#menu>div .dd');if(dd)dd.insertAdjacentHTML('afterbegin','<div id=mcon>Master Console</div><div id=mwadd>Watch a Screen Name...</div><hr>');
+ $('mcon')&&($('mcon').onclick=()=>window.open('/master','_blank'));$('mwadd')&&($('mwadd').onclick=async()=>{const n=prompt('Screen name to watch silently (they are not notified):');if(!n)return;const r=await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})});if(!r.ok)alert((await r.json().catch(()=>({}))).error||'Failed');loadWatch()});
+ loadWatch();setInterval(loadWatch,15000)}
+fetch('/api/me').then(r=>r.json()).then(m=>{if(m.name){start();if(m.m)masterInit()}});
 $('toUp').onclick=()=>{$('fIn').style.display='none';$('fUp').style.display='flex';$('uName').focus()};$('toIn').onclick=()=>{$('fUp').style.display='none';$('fIn').style.display='contents'};
 async function doIn(){$('eIn').textContent='';const r=await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;$('iPw').value='';start()}
 $('bIn').onclick=doIn;['iName','iPw'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doIn()}}));
@@ -242,7 +247,7 @@ function start(){$('signin').style.display='none';$('main').style.display='flex'
   const w=ims[k];w&&peerInfo(w,p.name)});
  S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();$('stsel').value=x.status;$('smsg').value=dec(x.msg)});
  S.on('m:request',showReq);S.on('m:contact',c=>{contacts[c.name.toLowerCase()]=c;if(!groups.includes(c.group))groups.push(c.group);render();document.querySelector(`.rq[data-n="${CSS.escape(c.name.toLowerCase())}"]`)?.remove()});
- S.on('m:gone',({name})=>{delete contacts[name.toLowerCase()];render()});S.on('m:toast',({text})=>{SND.im();toast(text)});
+ S.on('m:broadcast',({text})=>{SND.im();alert('System message:\n\n'+text)});S.on('m:signedout',()=>location.reload());S.on('m:gone',({name})=>{delete contacts[name.toLowerCase()];render()});S.on('m:toast',({text})=>{SND.im();toast(text)});
  S.on('m:im',m=>{const w=openIm(m.from);line(w,m.from,m);clearTyp(w);SND.im();if(document.hidden)document.title='* '+m.from+' says...'});
  S.on('m:im-echo',m=>{const w=openIm(m.to);line(w,ME.name,m)});
  S.on('m:typing',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;w.querySelector('.typ').textContent=from+' is typing...';clearTimeout(w._tt);w._tt=setTimeout(()=>clearTyp(w),4000)});
@@ -268,9 +273,11 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=Object.values(con
  $('tree').innerHTML=gs.map(g=>{const l=cs.filter(c=>(g=='Online')==!!c.online).sort((a,b)=>(b.online-a.online)||a.name.localeCompare(b.name));const on=l.filter(c=>c.online).length;
   return `<div class="grp${closedG.has(g)?' closed':''}" data-g="${escT(g)}">${escT(g)} (${l.length})</div>`+(closedG.has(g)?'':l.map(c=>{const st=c.online?(c.idle?'idle':c.status):'offline';
    return `<div class="ct${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${STL[st]}"><span class=avw>${avHtml(c.avatar,'sm',c.name)}<span class="sdot ${st}"></span></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${c.msg?RCSmileys.replace(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
-  +(cs.length||q?'':'<div style="padding:10px;color:var(--muted)">No contacts yet. Click <b>Add a Contact</b> to send a buddy request.</div>');
+  +(MW?`<div class="grp${closedG.has('Watching')?' closed':''}" data-g="Watching">Watching (${watchL.length})</div>`+(closedG.has('Watching')?'':watchL.map(w=>`<div class="ct wct${w.online?'':' off'}" data-w="${escT(w.name)}" title="${escT(w.name)}${w.room?' - in '+escT(w.room):''}"><span class=avw>${avHtml('a1','sm',w.name)}<span class="sdot ${w.online?escT(w.status||'available'):'offline'}"></span></span><div class=t><div class=n>${escT(w.name)}</div><div class=sm>${w.online?(w.room?'In room: '+escT(w.room)+' &middot; ':'')+(w.msg?RCSmileys.replace(w.msg):STL[w.status]||'Online'):'Offline'}</div></div></div>`).join('')):'')
+  +(cs.length||q||MW?'':'<div style="padding:10px;color:var(--muted)">No contacts yet. Click <b>Add a Contact</b> to send a buddy request.</div>');
  document.querySelectorAll('.grp').forEach(e=>e.onclick=()=>{const g=e.dataset.g;closedG.has(g)?closedG.delete(g):closedG.add(g);localStorage.ycClosed=JSON.stringify([...closedG]);render()});
- document.querySelectorAll('.ct').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>openIm(e.dataset.n).querySelector('textarea').focus();
+ document.querySelectorAll('.wct').forEach(e=>e.oncontextmenu=async ev=>{ev.preventDefault();if(confirm('Stop watching '+e.dataset.w+'?')){await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:e.dataset.w,remove:true})});loadWatch()}});
+ document.querySelectorAll('.ct:not(.wct)').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>openIm(e.dataset.n).querySelector('textarea').focus();
   e.oncontextmenu=ev=>{ev.preventDefault();sel=e.dataset.n;render();document.querySelectorAll('#menu>div')[1].classList.add('open')}})}
 function showReq(r){$('reqs').insertAdjacentHTML('beforeend',`<div class=rq data-n="${escT(r.name.toLowerCase())}"><b>${escT(r.name)}</b> wants to add you as a contact.${r.msg?'<br><i>"'+r.msg+'"</i>':''}<div style="margin-top:4px"><button class=pri data-y=1>Accept</button><button data-y=0>Decline</button></div></div>`);
  const d=$('reqs').lastElementChild;d.querySelectorAll('button').forEach(b=>b.onclick=async()=>{const x=await emit('m:respond',{name:r.name,accept:b.dataset.y=='1'});if(x.error)alert(x.error);d.remove()});SND.im();toast('<b>'+escT(r.name)+'</b> sent you a contact request.')}

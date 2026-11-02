@@ -8,7 +8,7 @@ const RESERVED = /^(admin|administrator|moderator|mod|support|system|yappchat|st
 function parseCookies(h) { const o = {}; String(h || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim()); }); return o; }
 async function userFromCookie(h) {
   const t = parseCookies(h)[COOKIE]; if (!t || !db.status().ready) return null;
-  try { const r = await db.q('select u.id,u.name from sessions s join users u on u.id=s.user_id where s.token=$1 and s.expires>now()', [sha(t)]); return r[0] || null; } catch { return null; }
+  try { const r = await db.q('select u.id,u.name from sessions s join users u on u.id=s.user_id where s.token=$1 and s.expires>now() and not u.banned', [sha(t)]); return r[0] || null; } catch { return null; }
 }
 // simple fixed-window rate limiter
 const hits = new Map();
@@ -34,7 +34,7 @@ function http(app, express, hooks = {}) { H = hooks;
     setCookie(req, res, t, remember);
   }
   app.get('/api/status', (q, r) => r.json({ accounts: db.status().ready, message: db.status().ready ? null : 'Accounts are temporarily unavailable while we finish setting up the database. Chat rooms still work as a guest.' }));
-  app.get('/api/me', async (req, res) => { const u = await userFromCookie(req.headers.cookie); res.json(u ? { name: u.name } : { name: null }); });
+  app.get('/api/me', async (req, res) => { const u = await userFromCookie(req.headers.cookie); let m = false; if (u) { try { m = !!(await db.q('select is_master from users where id=$1', [u.id]))[0]?.is_master; } catch { } } res.set('Cache-Control', 'no-store'); res.json(u ? (m ? { name: u.name, m: true } : { name: u.name }) : { name: null }); });
   app.get('/api/available', async (req, res) => {
     if (!db.status().ready) return maint(res);
     if (limited('av:' + req.ip, 60, 60e3)) return res.status(429).json({ error: 'Too many requests' });
@@ -43,6 +43,7 @@ function http(app, express, hooks = {}) { H = hooks;
   });
   app.post('/api/signup', async (req, res) => {
     if (!db.status().ready) return maint(res);
+    if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return res.status(403).json({ error: 'Sign-ups from your network are not allowed.' });
     if (limited('su:' + req.ip, 5, 3600e3)) return res.status(429).json({ error: 'Too many sign-ups from your network. Try again later.' });
     const { name, password, email, remember } = req.body || {};
     if (typeof name !== 'string' || !NAME_RE.test(name)) return res.status(400).json({ error: 'Screen names are 3-20 characters, start with a letter, and use letters, numbers, _ or .' });
@@ -54,18 +55,20 @@ function http(app, express, hooks = {}) { H = hooks;
     try {
       const r = await db.q('insert into users(name,name_lc,pw,email) values($1,$2,$3,$4) returning id', [name, name.toLowerCase(), hash, email || null]);
       await db.q("insert into groups(owner,name) values($1,'Friends') on conflict do nothing", [r[0].id]);
-      await newSession(req, res, r[0].id, !!remember); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'signup'); res.json({ ok: true, name });
+      await newSession(req, res, r[0].id, !!remember); H.seedMaster && await H.seedMaster(r[0].id, name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'signup'); res.json({ ok: true, name });
     } catch (e) { if (e.code === '23505') return res.status(409).json({ error: 'That screen name is already taken.' }); console.error(e); res.status(500).json({ error: 'Sign up failed.' }); }
   });
   app.post('/api/login', async (req, res) => {
     if (!db.status().ready) return maint(res);
+    if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return res.status(403).json({ error: 'Sign-ins from your network are not allowed.' });
     const { name, password, remember } = req.body || {};
     const lc = String(name || '').toLowerCase().slice(0, 40);
     if (limited('li:' + req.ip, 20, 900e3) || limited('ln:' + lc, 8, 900e3)) return res.status(429).json({ error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
-    const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw from users where name_lc=$1', [lc]) : [];
+    const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw,banned from users where name_lc=$1', [lc]) : [];
     const ok = await bcrypt.compare(String(password || ''), r[0] ? r[0].pw : DUMMY); // constant work either way
     if (!r[0] || !ok) return res.status(401).json({ error: 'Invalid screen name or password.' });
-    await newSession(req, res, r[0].id, !!remember); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'login'); res.json({ ok: true, name: r[0].name });
+    if (r[0].banned) return res.status(403).json({ error: 'This screen name has been banned.' });
+    await newSession(req, res, r[0].id, !!remember); H.seedMaster && await H.seedMaster(r[0].id, r[0].name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'login'); res.json({ ok: true, name: r[0].name });
   });
   app.post('/api/logout', async (req, res) => {
     const t = parseCookies(req.headers.cookie)[COOKIE]; if (t && db.status().ready) await db.q('delete from sessions where token=$1', [sha(t)]).catch(() => {});
@@ -88,6 +91,7 @@ function sockets(io, hooks) {
   const FONTS = ['Arial', 'Verdana', 'Tahoma', 'Comic Sans MS', 'Times New Roman', 'Courier New'], COLORS = ['#000000', '#ff0000', '#0000ff', '#008000', '#800080', '#ff6600', '#008080', '#990033'];
   const fmt = m => ({ b: !!m.b, i: !!m.i, u: !!m.u, color: COLORS.includes(m.color) ? m.color : '#000000', f: FONTS.includes(m.f) ? m.f : 'Arial' });
   hooks.onlineName = n => { for (const [uid, st] of state) if (st.name.toLowerCase() === String(n).toLowerCase() && online.has(uid)) return uid; return null; };
+  presFn = hooks.presence = uid => online.has(uid) ? { online: true, status: state.get(uid)?.status || 'online', msg: state.get(uid)?.msg || '' } : { online: false, status: 'offline', msg: '' };
   hooks.toUser = toUser; isOnlineFn = n => !!hooks.onlineName(n);
 
   io.on('connection', async s => {
@@ -176,4 +180,5 @@ function sockets(io, hooks) {
   });
 }
 let isOnlineFn = () => false, setAvFn = async () => {};
-module.exports = { http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), setAvatar: (uid, av) => setAvFn(uid, av) };
+let presFn = null;
+module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), setAvatar: (uid, av) => setAvFn(uid, av) };
