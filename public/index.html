@@ -63,11 +63,36 @@ a{color:var(--blue);cursor:pointer}
 #modal{display:none;position:fixed;inset:0;background:rgba(16,35,74,.35);z-index:200;align-items:center;justify-content:center}#modal.on{display:flex}
 #modal .win{width:320px}#modal .in{padding:12px;display:flex;flex-direction:column;gap:6px;background:#fff}
 @media (max-width:760px){#mwin{left:0;top:0;width:100%;height:100vh;max-height:none}.im{left:0!important;top:0!important;width:100%;height:100vh}.im .log{flex:1;height:auto}}
+</style><link rel="stylesheet" href="/modern.css"><script src="/theme.js"></script>
+<style>
+#mwin{left:20px;top:20px;width:310px;height:calc(100vh - 40px);max-height:720px}
+#signin{background:var(--card)!important;padding:28px 22px!important;gap:10px!important}#signin label{color:var(--ink)!important;font-weight:600!important}
+#me{background:linear-gradient(135deg,rgba(74,183,242,.14),rgba(24,119,232,.06))!important;border-bottom:1px solid var(--line)!important;padding:14px 12px!important;gap:12px!important;align-items:center}
+#me .nm{font-size:15px!important;color:var(--ink)!important}#myav{width:56px!important;height:56px!important;cursor:pointer}
+#search{margin:10px 12px 6px!important}#tabs{display:none!important}
+#list{border:0!important;background:transparent!important;margin:0 6px!important}
+.grp{background:transparent!important;border:0!important;color:var(--muted)!important;font-size:11px;text-transform:uppercase;letter-spacing:.6px;padding:10px 8px 4px!important}
+.ct{padding:6px 8px!important;border-radius:12px;margin:1px 2px;gap:10px!important}.ct:hover{background:var(--soft)!important}.ct.sel{background:var(--mid)!important}
+.ct .av.sm{width:34px!important;height:34px!important}.ct .dot{display:none}.ct .n{font-weight:600!important}
+#bottom{border-top:1px solid var(--line)!important;padding:10px!important;gap:8px!important}
+#reqs .rq{background:rgba(255,206,0,.15)!important;border:1px solid rgba(255,206,0,.6)!important;border-radius:12px;margin:6px}
+.im{width:420px!important;border-radius:16px!important}
+.im .tools{background:var(--card)!important;border-bottom:1px solid var(--line)!important;padding:6px 8px!important;gap:4px!important}
+.tb{border-radius:10px!important;border:0!important;padding:4px 8px!important;font-size:11px!important}.tb:hover{background:var(--soft)!important}
+.im .peer{padding:8px 12px!important;gap:10px!important;color:var(--muted)!important}.im .peer .av{width:36px!important;height:36px!important}.im .peer .dot{display:none}
+.im .log{background:var(--surface)!important;border:0!important;border-radius:12px;margin:0 10px!important;padding:10px!important;height:240px;font-family:var(--sys)!important;display:flex;flex-direction:column;gap:6px}
+.msg{display:flex;align-items:flex-end;gap:6px;max-width:85%}.msg .av{width:24px!important;height:24px!important;flex:none}
+.msg .bb{background:var(--card);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:7px 11px;box-shadow:0 1px 2px rgba(16,35,74,.06);word-wrap:break-word;min-width:0}
+.msg.me{align-self:flex-end;flex-direction:row-reverse}.msg.me .bb{background:#1877E8;border-color:#1877E8;border-radius:16px 16px 4px 16px}.msg.me .bb,.msg.me .bb span{color:#fff!important}
+.msg .tm{font-size:10px;color:var(--muted);margin-top:2px}.msg.me .tm{color:rgba(255,255,255,.8);text-align:right}
+.im .log .sys,.im .log .bz{align-self:center;font-size:11px;background:var(--soft);border-radius:999px;padding:3px 10px}
+.im .fmt{padding:6px 10px!important}.im form{padding:6px 10px 10px!important;gap:8px!important}.im textarea{height:44px}
+html.dark #menu .dd div:hover{color:#fff!important}html.dark .ct.off .n{color:#7f8fae!important}
 </style></head><body>
 <div id="mwin" class="win">
  <div class="tbar"><svg viewBox="0 0 34 24" width="20" height="14"><circle cx="5" cy="13" r="3" fill="#fff"/><circle cx="13" cy="19" r="4.2" fill="#fff"/><circle cx="26" cy="9" r="7.5" fill="#fff"/></svg><span class="appname-plain"></span>&nbsp;Messenger<span class="sp"></span><span class="wb">_</span><span class="wb x" id="wx" title="Sign out">X</span></div>
  <div id="menu">
-  <div>Messenger<div class="dd"><div id="mStatus">Change My Status...</div><div id="mAvatar">Change My Display Image...</div><div id="mSound">Sounds: On</div><hr><div id="mOut">Sign Out</div></div></div>
+  <div>Messenger<div class="dd"><div id="mStatus">Change My Status...</div><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><hr><div id="mOut">Sign Out</div></div></div>
   <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mGroup">Add a Group...</div><div id="mMove">Move Selected to Group...</div><hr><div id="mRem">Remove Selected Contact</div><div id="mBlock">Block Selected Contact</div><div id="mBlocked">Blocked List...</div></div></div>
   <div>Actions<div class="dd"><div id="mIm">Send an IM to Selected</div><div id="mBuzz">Buzz Selected</div><div id="mInv">Invite Selected to a Chat Room...</div><hr><div id="mRooms">Chat Rooms</div></div></div>
   <div>Help<div class="dd"><div id="mHelp">Getting Started</div><div id="mAbout">About</div></div></div>
@@ -108,7 +133,7 @@ a{color:var(--blue);cursor:pointer}
 </div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script>
+<script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/avatar.js"></script>
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Yapp','Chat'];
@@ -116,8 +141,8 @@ document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${AP
 document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('')+' Messenger';
 const $=id=>document.getElementById(id);
 const escT=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const AV={a1:[':)','#cfe8ff'],a2:['B-)','#ffe0b3'],a3:[';)','#d9f7c8'],a4:[':D','#ffd1dc'],a5:['<):)','#efe0c4'],a6:['O:-)','#e6e0ff'],a7:['>:)','#ffd6cc'],a8:[':ar!','#d4f1f4']};
-const avHtml=(a,cls='')=>{const v=AV[a]||AV.a1;return `<div class="av ${cls}" style="background:radial-gradient(circle at 40% 30%,#fff,${v[1]})">${RCSmileys.html(v[0])}</div>`};
+const avHtml=(a,cls='',name)=>YAv.html(name||'x',a,cls);
+function setMyAv(){const st=ME.status=='invisible'?'invisible':ME.status;$('myav').outerHTML=avHtml(ME.avatar,'ring r-'+st,ME.name).replace('class="av ','id="myav" title="Change my avatar" class="av ');$('myav').onclick=pickAv}
 const STL={available:'Available',busy:'Busy',away:'Away',brb:'Be Right Back',invisible:'Invisible',offline:'Offline',idle:'Idle'};
 const api=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{}),credentials:'same-origin'}).then(async r=>({status:r.status,...await r.json().catch(()=>({error:'Server error'}))}));
 let S=null,ME=null,contacts={},groups=['Friends'],blockedL=[],sel=null,closedG=new Set(JSON.parse(localStorage.ycClosed||'[]'));
@@ -127,7 +152,7 @@ let AC=null;function tone(seq){if(!sound)return;try{AC=AC||new (window.AudioCont
  for(const [f,d,type] of seq){const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.8}}catch{}}
 const SND={on:()=>tone([[660,.12],[880,.12],[1175,.22]]),off:()=>tone([[880,.12],[660,.12],[440,.25]]),im:()=>tone([[988,.08],[1319,.14]]),buzz:()=>tone([[110,.12,'square'],[95,.12,'square'],[110,.12,'square'],[95,.18,'square']]),ring:()=>tone([[784,.18],[988,.18],[784,.18],[988,.3]])};
 $('mSound').onclick=()=>{sound=!sound;localStorage.ycSound=sound?'on':'off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')};$('mSound').textContent='Sounds: '+(sound?'On':'Off');
-function toast(html,av){const d=document.createElement('div');d.className='toast';d.innerHTML=(av?avHtml(av,'sm'):'')+'<div>'+html+'</div>';$('toasts').appendChild(d);setTimeout(()=>d.remove(),5000);d.onclick=()=>d.remove()}
+function toast(html,av,name){const d=document.createElement('div');d.className='toast';d.innerHTML=(av!==undefined&&name?avHtml(av,'sm',name):'')+'<div>'+html+'</div>';$('toasts').appendChild(d);setTimeout(()=>d.remove(),5000);d.onclick=()=>d.remove()}
 // ---------- modal ----------
 function modal(title,html,onok,okText='OK'){$('mdT').textContent=title;$('mdB').innerHTML=html+`<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px"><button class=pri id=mdOk>${okText}</button><button id=mdC>Cancel</button></div><div class=err id=mdE></div>`;
  $('modal').classList.add('on');const close=()=>$('modal').classList.remove('on');$('mdX').onclick=$('mdC').onclick=close;
@@ -153,14 +178,15 @@ $('mOut').onclick=$('wx').onclick=signOut;
 // ---------- connect ----------
 function start(){$('signin').style.display='none';$('main').style.display='flex';S=io();
  S.on('connect',async()=>{const r=await emit('m:init');if(r.error)return alert(r.error);ME=r.me;groups=r.groups;blockedL=r.blocked;contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
-  $('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);$('myav').outerHTML=avHtml(ME.avatar).replace('class="av ','id="myav" title="Change display image" class="av ');$('myav').onclick=pickAv;
+  $('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);setMyAv();
   $('reqs').innerHTML='';r.requests.forEach(showReq);render();
   if(r.offline.length){const by={};r.offline.forEach(m=>(by[m.from]=by[m.from]||[]).push(m));for(const f in by){const w=openIm(f);sys(w,'Offline messages received while you were away:');by[f].forEach(m=>line(w,f,m,true))}SND.im();toast('You have <b>'+r.offline.length+'</b> offline message(s).')}});
+ YAv.listen(S,(n,av)=>{const k=n.toLowerCase();if(contacts[k]){contacts[k].avatar=av;render();ims[k]&&peerInfo(ims[k],n)}if(ME&&k==ME.name.toLowerCase()){ME.avatar=av;setMyAv()}});
  S.on('disconnect',()=>toast('Disconnected from '+APP_NAME.join('')+'. Reconnecting...'));
  S.on('m:presence',p=>{const k=p.name.toLowerCase(),c=contacts[k];if(!c)return;const was=c.online;Object.assign(c,p);render();
-  if(!was&&p.online){SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar)}else if(was&&!p.online){SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar)}
+  if(!was&&p.online){SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar,p.name)}else if(was&&!p.online){SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar,p.name)}
   const w=ims[k];w&&peerInfo(w,p.name)});
- S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;$('stsel').value=x.status;$('smsg').value=dec(x.msg)});
+ S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();$('stsel').value=x.status;$('smsg').value=dec(x.msg)});
  S.on('m:request',showReq);S.on('m:contact',c=>{contacts[c.name.toLowerCase()]=c;if(!groups.includes(c.group))groups.push(c.group);render();document.querySelector(`.rq[data-n="${CSS.escape(c.name.toLowerCase())}"]`)?.remove()});
  S.on('m:gone',({name})=>{delete contacts[name.toLowerCase()];render()});S.on('m:toast',({text})=>{SND.im();toast(text)});
  S.on('m:im',m=>{const w=openIm(m.from);line(w,m.from,m);clearTyp(w);SND.im();if(document.hidden)document.title='* '+m.from+' says...'});
@@ -173,12 +199,11 @@ function start(){$('signin').style.display='none';$('main').style.display='flex'
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=APP_NAME.join('')+' Messenger'});
 const dec=s=>{const t=document.createElement('textarea');t.innerHTML=s||'';return t.value};
 // ---------- status / avatar / idle ----------
-$('stsel').onchange=async()=>{const r=await emit('m:status',{status:$('stsel').value});if(r.status)ME.status=r.status};
+$('stsel').onchange=async()=>{const r=await emit('m:status',{status:$('stsel').value});if(r.status){ME.status=r.status;setMyAv()}};
 $('smsg').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();$('smsg').blur()}});$('smsg').onchange=()=>emit('m:status',{msg:$('smsg').value});
 $('mStatus').onclick=()=>modal('Change My Status',`<select id=xs>${Object.keys(STL).slice(0,5).map(k=>`<option value=${k}${k==ME.status?' selected':''}>${STL[k]}</option>`).join('')}</select><input type=text id=xm maxlength=60 placeholder="Custom status message" value="${escT(dec(ME.msg))}">`,
  async()=>{const r=await emit('m:status',{status:$('xs').value,msg:$('xm').value});if(r.status){ME.status=r.status;ME.msg=r.msg;$('stsel').value=r.status;$('smsg').value=dec(r.msg)}return r});
-function pickAv(){const p=$('avpick');p.innerHTML='<div style="margin-bottom:4px;font-weight:bold">Choose a display image</div>'+Object.keys(AV).map(k=>avHtml(k).replace('class="av','data-a="'+k+'" class="av')).join('');p.style.display='block';
- p.querySelectorAll('[data-a]').forEach(e=>e.onclick=async()=>{await emit('m:avatar',e.dataset.a);ME.avatar=e.dataset.a;$('myav').outerHTML=avHtml(ME.avatar).replace('class="av ','id="myav" title="Change display image" class="av ');$('myav').onclick=pickAv;p.style.display='none'})}
+function pickAv(){YAv.editor(S,{name:ME.name,onSaved:av=>{ME.avatar=av;setMyAv()}})}
 $('mAvatar').onclick=e=>{e.stopPropagation();pickAv()};
 let lastAct=Date.now(),idle=false;['mousemove','keydown','pointerdown'].forEach(ev=>addEventListener(ev,()=>{lastAct=Date.now();if(idle&&S){idle=false;S.emit('m:idle',false)}},{passive:true}));
 setInterval(()=>{if(S&&!idle&&Date.now()-lastAct>10*60e3){idle=true;S.emit('m:idle',true)}},30e3);
@@ -188,7 +213,7 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=Object.values(con
  const gs=[...new Set(['Friends',...groups,...cs.map(c=>c.group)])];
  $('tree').innerHTML=gs.map(g=>{const l=cs.filter(c=>c.group==g).sort((a,b)=>(b.online-a.online)||a.name.localeCompare(b.name));const on=l.filter(c=>c.online).length;
   return `<div class="grp${closedG.has(g)?' closed':''}" data-g="${escT(g)}">${escT(g)} (${on}/${l.length})</div>`+(closedG.has(g)?'':l.map(c=>{const st=c.online?(c.idle?'idle':c.status):'offline';
-   return `<div class="ct${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${STL[st]}">${avHtml(c.avatar,'sm')}<span class="dot d-${st}"></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${c.msg?RCSmileys.replace(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
+   return `<div class="ct${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${STL[st]}">${avHtml(c.avatar,'sm ring r-'+st,c.name)}<span class="dot d-${st}"></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${c.msg?RCSmileys.replace(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
   +(cs.length||q?'':'<div style="padding:10px;color:var(--muted)">No contacts yet. Click <b>Add a Contact</b> to send a buddy request.</div>');
  document.querySelectorAll('.grp').forEach(e=>e.onclick=()=>{const g=e.dataset.g;closedG.has(g)?closedG.delete(g):closedG.add(g);localStorage.ycClosed=JSON.stringify([...closedG]);render()});
  document.querySelectorAll('.ct').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>openIm(e.dataset.n).querySelector('textarea').focus();
@@ -215,10 +240,12 @@ const ts=t=>`<span class=ts>[${new Date(t||Date.now()).toLocaleTimeString([],{ho
 const scroll=w=>{const l=w.querySelector('.log');l.scrollTop=l.scrollHeight};
 const sys=(w,t)=>{w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=sys>${ts()}${escT(t)}</div>`);scroll(w)};
 const clearTyp=w=>{w.querySelector('.typ').textContent=''};
-function line(w,from,m,old){const sty=`color:${m.color};font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
- const mine=ME&&from.toLowerCase()==ME.name.toLowerCase();w.querySelector('.log').insertAdjacentHTML('beforeend',`<div>${ts(m.t)}<b style="color:${mine?'#1877E8':'#c0392b'}">${escT(from)}:</b> <span style="${sty}">${RCSmileys.replace(m.text)}</span>${m.offline?' <i class=sys>(will be delivered when they sign in)</i>':''}</div>`);scroll(w)}
+function line(w,from,m,old){const mine=ME&&from.toLowerCase()==ME.name.toLowerCase();const col=mine||!m.color||m.color=='#000000'?'':`color:${m.color};`;
+ const sty=`${col}font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;const c=contacts[from.toLowerCase()],av=mine?ME.avatar:(c?c.avatar:'');
+ const tm=new Date(m.t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+ w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg${mine?' me':''}" title="${escT(from)}">${avHtml(av,'',from)}<div class=bb><span style="${sty}">${RCSmileys.replace(m.text)}</span><div class=tm>${tm}${m.offline?' &middot; delivered when they sign in':''}</div></div></div>`);scroll(w)}
 function peerInfo(w,n){const c=contacts[n.toLowerCase()],st=c?(c.online?(c.idle?'idle':c.status):'offline'):'offline';
- w.querySelector('.peer').innerHTML=avHtml(c?c.avatar:'a1','sm')+`<span class="dot d-${st}"></span><b>${escT(c?c.name:n)}</b> &mdash; ${STL[st]}${c&&c.msg?' &middot; '+RCSmileys.replace(c.msg):''}`}
+ w.querySelector('.peer').innerHTML=avHtml(c?c.avatar:'','sm ring r-'+st,c?c.name:n)+`<span class="dot d-${st}"></span><b>${escT(c?c.name:n)}</b> &mdash; ${STL[st]}${c&&c.msg?' &middot; '+RCSmileys.replace(c.msg):''}`}
 let zTop=20;
 function openIm(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTop;return ims[k]}const name=(contacts[k]||{}).name||n;
  const w=document.createElement('div');w.className='im win';const i=Object.keys(ims).length;w.style.left=(330+i*28)+'px';w.style.top=(30+i*28)+'px';w.style.zIndex=++zTop;w.dataset.n=name;

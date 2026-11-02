@@ -78,6 +78,7 @@ function sockets(io, hooks) {
   const online = new Map(); // uid -> Set(socket)
   const state = new Map(); // uid -> {status,msg,idle,avatar,name}
   const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; return { online: !!on, status: on ? st.status : 'offline', msg: on ? st.msg : '', idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
+  setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
   const toUser = (uid, ev, data) => { for (const s of online.get(uid) || []) s.emit(ev, data); };
   async function watchers(uid) { return (await db.q('select owner from contacts where contact=$1', [uid])).map(r => r.owner); }
   async function broadcast(uid, name) { const p = { name, ...pres(uid) }; for (const w of await watchers(uid)) toUser(w, 'm:presence', p); }
@@ -174,5 +175,5 @@ function sockets(io, hooks) {
       try { await broadcast(uid, me); } catch {} if (st && st.idle) st.idle = false; } });
   });
 }
-let isOnlineFn = () => false;
-module.exports = { http, sockets, userFromCookie, isOnline: n => isOnlineFn(n) };
+let isOnlineFn = () => false, setAvFn = async () => {};
+module.exports = { http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), setAvatar: (uid, av) => setAvFn(uid, av) };
