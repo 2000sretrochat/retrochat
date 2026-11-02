@@ -81,12 +81,13 @@ function http(app, express, hooks = {}) { H = hooks;
 // ---------- Messenger sockets ----------
 function sockets(io, hooks) {
   const online = new Map(); // uid -> Set(socket)
-  const state = new Map(); // uid -> {status,msg,idle,avatar,name}
-  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; return { online: !!on, status: on ? st.status : 'offline', msg: on ? st.msg : '', idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
+  const ROOM_TAG = '[room]'; const state = new Map(); // uid -> {status,msg,idle,avatar,name}
+  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = sr ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In chat: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
+  const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || st.msg !== ROOM_TAG) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
   setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
   const toUser = (uid, ev, data) => { for (const s of online.get(uid) || []) s.emit(ev, data); };
   async function watchers(uid) { return (await db.q('select owner from contacts where contact=$1', [uid])).map(r => r.owner); }
-  async function broadcast(uid, name) { const p = { name, ...pres(uid) }; for (const w of await watchers(uid)) toUser(w, 'm:presence', p); }
+  async function broadcast(uid, name) { const p = { name, ...pres(uid) }; const bl = new Set((await db.q('select blocked from blocks where owner=$1', [uid]).catch(() => [])).map(r => r.blocked)); for (const w of await watchers(uid)) toUser(w, 'm:presence', bl.has(w) ? { name, online: false, status: 'offline', msg: '', room: null, idle: false, avatar: p.avatar } : p); }
   const idOf = async n => { const r = await db.q('select id,name from users where name_lc=$1', [String(n || '').toLowerCase().slice(0, 40)]); return r[0]; };
   const mutual = async (a, b) => (await db.q('select 1 from contacts where owner=$1 and contact=$2', [a, b])).length > 0;
   const blocked = async (by, who) => (await db.q('select 1 from blocks where owner=$1 and blocked=$2', [by, who])).length > 0;
@@ -94,6 +95,28 @@ function sockets(io, hooks) {
   const fmt = m => ({ b: !!m.b, i: !!m.i, u: !!m.u, color: COLORS.includes(m.color) ? m.color : '#000000', f: FONTS.includes(m.f) ? m.f : 'Arial' });
   hooks.onlineName = n => { for (const [uid, st] of state) if (st.name.toLowerCase() === String(n).toLowerCase() && online.has(uid)) return uid; return null; };
   presFn = hooks.presence = uid => online.has(uid) ? { online: true, status: state.get(uid)?.status || 'online', msg: state.get(uid)?.msg || '' } : { online: false, status: 'offline', msg: '' };
+  // ---- room invites: target must be online + Available; block/ignore/privacy/18+/ban enforced; rate limited ----
+  const invRate = new Map();
+  hooks.invite = async (from, toName) => {
+    const nm = String(toName || '').slice(0, 40), na = { error: nm + " isn't available for invites." };
+    const now = Date.now(), k = 'i:' + from.name.toLowerCase(), arr = (invRate.get(k) || []).filter(t => now - t < 60e3);
+    if (!from.master && arr.length >= 6) return { error: 'You are sending invites too fast. Please wait a minute.' };
+    const pk = k + '>' + nm.toLowerCase(); if (!from.master && invRate.get(pk) > now) return { error: 'You already invited ' + nm + '. Please wait a bit before inviting again.' };
+    const room = (hooks.rawRoomOf && hooks.rawRoomOf(from.name)) || (hooks.roomExists(from.room) ? from.room : null);
+    if (!room) return { error: 'Join a chat room first, then invite people to it.' };
+    const t = await idOf(nm); if (!t || t.id === from.uid) return na; const st = state.get(t.id);
+    if (!online.has(t.id) || !st || st.status !== 'available') return { error: t.name + " isn't available for invites." };
+    if (!from.master) {
+      if (await blocked(t.id, from.uid) || await blocked(from.uid, t.id)) return { error: t.name + " isn't available for invites." };
+      if ((await db.q('select 1 from ignores where owner=$1 and name_lc=$2', [t.id, from.name.toLowerCase()])).length) return { error: t.name + " isn't available for invites." };
+      const [u] = await db.q('select pm_buddies, adult from users where id=$1', [t.id]);
+      if (u?.pm_buddies && !(await mutual(t.id, from.uid))) return { error: t.name + " isn't available for invites." };
+      if (hooks.roomRating && hooks.roomRating(room) === 'R' && !u?.adult) return { error: t.name + " can't be invited to an 18+ room." };
+      if (hooks.bannedFrom && hooks.bannedFrom(room, t.name)) return { error: t.name + " can't be invited to " + room + '.' };
+    }
+    arr.push(now); invRate.set(k, arr); invRate.set(pk, now + 30e3);
+    const pl = { from: from.name, room, rating: hooks.roomRating ? hooks.roomRating(room) : 'PG-13' }; toUser(t.id, 'm:invite', pl); hooks.toRoomUser && hooks.toRoomUser(t.name, 'room-invite', pl);
+    return { ok: true, room, name: t.name }; };
   hooks.toUser = toUser; toUserFn = toUser; isOnlineFn = n => !!hooks.onlineName(n);
 
   io.on('connection', async s => {
@@ -174,8 +197,8 @@ function sockets(io, hooks) {
     let lastBuzz = 0;
     s.on('m:buzz', safe(async ({ to }) => { if (!ready) return; if (Date.now() - lastBuzz < 10000) return { error: 'Please wait before buzzing again.' }; const t = await peer(to); if (!t) return { error: 'Not a contact.' };
       lastBuzz = Date.now(); if (!online.has(t.id)) return { error: esc(t.name) + ' is offline.' }; toUser(t.id, 'm:buzz', { from: me }); return { ok: true }; }));
-    s.on('m:invite', safe(async ({ to, room }) => { if (!ready) return; const t = await peer(to); if (!t || !online.has(t.id)) return { error: 'They need to be an online contact.' };
-      if (!hooks.roomExists(room)) return { error: 'That room does not exist.' }; toUser(t.id, 'm:invite', { from: me, room }); return { ok: true }; }));
+    s.on('m:invite', safe(async ({ to, room }) => { if (!ready) return; return hooks.invite({ uid, name: me, master: !!s.data.master, room }, to); }));
+    s.on('m:invite-decline', safe(async ({ from }) => { const f = await idOf(from); if (f && online.has(f.id)) toUser(f.id, 'm:invite-declined', { name: me }); hooks.toRoomUser && hooks.toRoomUser(String(from), 'invite-declined', { name: me }); return { ok: true }; }));
     // 1:1 calls (voice / webcam) – signaling relay
     for (const ev of ['m:call', 'm:callans', 'm:sig', 'm:hang']) s.on(ev, safe(async d => { if (!ready || !d) return; const t = await peer(d.to); if (!t || !online.has(t.id)) return { error: 'They are not available.' };
       if (ev === 'm:sig' && JSON.stringify(d.data || '').length > 60000) return; toUser(t.id, ev, { from: me, kind: d.kind === 'video' ? 'video' : 'audio', accept: !!d.accept, data: d.data }); }));
