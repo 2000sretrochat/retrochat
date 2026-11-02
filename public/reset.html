@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset password - YappChat</title><link rel="stylesheet" href="/modern.css"><script src="/theme.js"></script>
+<style>body{font:14px Tahoma,Arial;max-width:420px;margin:40px auto;padding:0 16px}input{width:100%;padding:8px;margin:6px 0;box-sizing:border-box}button{padding:8px 16px}#m{margin-top:10px}</style></head><body>
+<h2>YappChat password reset</h2><div id=f></div><div id=m></div><p><a href="/">Back to YappChat</a></p>
+<script>const t=new URLSearchParams(location.search).get('t'),f=document.getElementById('f'),m=document.getElementById('m');
+const post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
+if(t){f.innerHTML='<label>New password<input type=password id=p1 maxlength=100 autocomplete=new-password></label><label>Confirm<input type=password id=p2 maxlength=100 autocomplete=new-password></label><button id=b>Set password</button>';
+ b.onclick=async()=>{if(p1.value!==p2.value)return m.textContent='Passwords do not match.';const r=await post('/api/reset',{t,password:p1.value});m.textContent=r.error||'Password changed. You can sign in now.';if(r.ok)f.innerHTML=''}}
+else{f.innerHTML='<label>Screen name or email<input id=n maxlength=100></label><button id=b>Send reset link</button>';b.onclick=async()=>{const r=await post('/api/forgot',{name:n.value});m.textContent=r.error||r.text}}</script></body></html>
