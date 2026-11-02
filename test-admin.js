@@ -13,7 +13,7 @@ const w = ms => new Promise(r => setTimeout(r, ms)); let pass = 0; const ok = (c
     ok((await fetch(U + '/api/admin/data')).status == 401, 'admin API rejects missing key');
     ok((await fetch(U + '/api/admin/data', { headers: { 'x-admin-key': 'wrong' } })).status == 401, 'admin API rejects wrong key');
     ok((await fetch(U + '/admin')).status == 200, '/admin page served (data still key-protected)');
-    let N; if (DB) { N = 'Geo' + sfx; const r = await fetch(U + '/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json', ...xff }, body: JSON.stringify({ name: N, password: 'hunter22pw' }) }); ok(r.ok, 'account signup'); }
+    let N; if (DB) { N = 'Geo' + sfx; const r = await fetch(U + '/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json', ...xff }, body: JSON.stringify({ agree: true,  name: N, password: 'hunter22pw' }) }); ok(r.ok, 'account signup'); }
     await w(3000);
     const d = await (await fetch(U + '/api/admin/data', { headers: { 'x-admin-key': KEY } })).json();
     const gg = d.guests.find(x => x.name == g); ok(gg && gg.ip == '8.8.8.8' && gg.online, 'guest IP from first X-Forwarded-For');

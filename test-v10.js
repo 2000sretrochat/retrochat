@@ -4,7 +4,7 @@ const PORT = 3017, U = 'http://localhost:' + PORT, DB = process.env.TEST_DATABAS
 const w = ms => new Promise(r => setTimeout(r, ms)); let pass = 0; const ok = (c, m) => { assert.ok(c, m); pass++; console.log('  ✓', m); };
 const E = (s, ev, d) => new Promise(r => d === undefined ? s.emit(ev, r) : s.emit(ev, d, r));
 const J = { 'Content-Type': 'application/json' };
-async function acct(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: J, body: JSON.stringify({ name: n, password: 'hunter22pw' }) }); return (r.headers.get('set-cookie') || '').split(';')[0]; }
+async function acct(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: J, body: JSON.stringify({ agree: true,  name: n, password: 'hunter22pw' }) }); return (r.headers.get('set-cookie') || '').split(';')[0]; }
 const conn = cookie => io(U, { transports: ['websocket'], extraHeaders: cookie ? { cookie } : {} });
 (async () => {
   if (!DB) { console.log('needs TEST_DATABASE_URL'); process.exit(1); }
@@ -38,7 +38,9 @@ const conn = cookie => io(U, { transports: ['websocket'], extraHeaders: cookie ?
     ok((await fetch(U + '/api/admin/room', { method: 'POST', headers: { ...J, 'x-admin-key': KEY }, body: JSON.stringify({ room: RN, close: true }) })).ok && !(await (await fetch(U + '/api/admin/rooms', { headers: { 'x-admin-key': KEY } })).json()).some(r => r.name == RN), 'admin closes room');
     ok((await fetch(U + '/api/admin/room', { method: 'POST', headers: { ...J, 'x-admin-key': KEY }, body: JSON.stringify({ room: 'Lobby', close: true }) })).status == 400, 'official rooms cannot be closed');
     // cam viewers + block
-    const c1 = conn(), c2 = conn(); await E(c1, 'login', { name: 'Cam' + sfx, room: 'Friends' }); await E(c2, 'login', { name: 'Vw' + sfx, room: 'Friends' });
+    // v11.7: guests can't broadcast, so the broadcaster is a registered account
+    const cco = ((await fetch(U + '/api/signup', { method: 'POST', headers: J, body: JSON.stringify({ agree: true, name: 'Cam' + sfx, password: 'hunter22pw' }) })).headers.get('set-cookie') || '').split(';')[0];
+    const c1 = conn(cco), c2 = conn(); await E(c1, 'login', { name: '', room: 'Friends' }); await E(c2, 'login', { name: 'Vw' + sfx, room: 'Friends' });
     let ros; c1.on('roster', r => ros = r); c1.emit('cam', true); await w(200);
     ok((await E(c2, 'view', c1.id)).ok, 'viewer opens cam'); await w(200);
     ok(ros.find(r => r.id == c1.id).viewers.includes('Vw' + sfx), "cam owner sees viewer in Who's watching");
@@ -53,7 +55,7 @@ const conn = cookie => io(U, { transports: ['websocket'], extraHeaders: cookie ?
     const pr = await (await fetch(U + '/api/profile/' + P)).json();
     ok(pr.displayName == 'Pro Fan' && pr.age == 29 && pr.location == 'Tempe, AZ' && pr.bio == 'Hi <b>there</b>' && pr.interests == 'music' && pr.memberSince, 'profile stored in Postgres with member-since');
     ok(!/ip|last_loc|email|pw/i.test(Object.keys(pr).join(',')), 'profile exposes no IP / IP location / email');
-    const gp = await (await fetch(U + '/api/profile/Cam' + sfx)).json(); ok(gp.guest && gp.name == 'Cam' + sfx && !gp.age, 'guest has minimal profile');
+    const gp = await (await fetch(U + '/api/profile/Vw' + sfx)).json(); ok(gp.guest && gp.name == 'Vw' + sfx && !gp.age, 'guest has minimal profile');
     ok((await fetch(U + '/api/profile/Nobody' + sfx)).status == 404, 'unknown profile 404');
     [o, g, g2, g3, p, c1, c2].forEach(x => x.disconnect());
     console.log(`\nPASS ${pass} checks`);

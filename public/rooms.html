@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><title>YappChat</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html><head><meta charset="utf-8"><title>YappChat</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#7c3aed"><link rel="apple-touch-icon" href="/icon-192.png"><script src="/dictate.js" defer></script><script src="/pwa.js" defer></script>
 <style>
 /* palette from poplyglot.github.io/poplyglot-russian-test: #1877E8 brand, #176FCF blue, #2468D7 deep, #10234A/#12213F ink, #4AB7F2 bubbles, #F4F9FF bg */
 :root{--brand:#1877E8;--blue:#176FCF;--deep:#2468D7;--navy:#10234A;--bub:rgba(74,183,242,.58);--sys:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--sky:#4AB7F2;--ink:#12213F;--line:#E1ECF7;--bg:#F6FAFE;--pale:#DCEBFC;--mid:#BFDCFA;--acc:#FFCE00;--muted:#5A6E88}
@@ -143,9 +143,9 @@ html.dark .meter{background:repeating-linear-gradient(90deg,#2a3f6b 0 7px,transp
 <div id="rhead"><span id="rtile"></span><div><div class=rn id=rname></div><div class=rt id=rtopic></div><div id="viewers"></div></div><span class=sp></span>
 <button class=hb id=bMod style="display:none" title="Room Admin Console"><i data-i=shield></i><span>Admin</span></button><button class=hb id=bInfo><i data-i=info></i><span>Room Info</span></button><button class="hb on" id=bUsers><i data-i=users></i><span>Users (<b id=ucnt>0</b>)</span></button><button class=hb id="cam" title="Share My Webcam"><i data-i=video></i><span>Webcam</span></button><button class="hb on" id="vbtn" title="Show/hide voice controls"><i data-i=mic></i><span>Voice</span></button></div>
 <div id="camstrip"></div>
-<div id="main"><div id="lpane"><div id="topic" style="display:none"><i></i></div><div id="log"></div><div id="typing"></div></div>
+<div id="main"><div id="lpane"><div id="topic" style="display:none"><i></i></div><div id="ann" style="display:none;padding:5px 10px;background:#fff6c8;border-bottom:1px solid #e6cf6a;font:13px Arial">&#128204; <span></span></div><div id="log"></div><div id="typing"></div></div>
 <div id="mpane"><div id=phead>People in Room (<span id=pcnt>0</span>)<span class=sp></span><button class=ib id=bPs style="width:30px;height:30px"><i data-i=search data-s=18></i></button></div><div class=srch id=psearch><i data-i=search data-s=16></i><input id=pq placeholder="Find someone..."></div><div id="mem"></div><div id="mbtns"><button id="bIm" title="Send a private message"><u>I</u>M</button><button id="bIgn"><u>I</u>gnore User</button></div></div></div>
-<div id=hq style="display:none;padding:4px 12px;font:12px var(--sys);background:#fff8e1;border-top:1px solid #f0d78c"></div><div id="vrow"><label><input type="checkbox" id="hf"> Hands Free</label><button id="talk" title="Hold to talk (or hold Ctrl)"><i data-i=mic data-s=18></i>Talk</button>
+<div id=hq style="display:none;padding:4px 12px;font:12px var(--sys);background:#fff8e1;border-top:1px solid #f0d78c"></div><div id="vrow"><label><input type="checkbox" id="hf"> Hands Free</label><button id="avb" title="Audio &amp; video options" style="padding:2px 6px">&#9881;</button><button id="talk" title="Hold to talk (or hold Ctrl)"><i data-i=mic data-s=18></i>Talk</button>
 <div class="meter" title="Your mic level"><i id="m1"></i></div><div class="meter" id=m2w title="Room voice level"><i id="m2"></i></div><span id=micn title="Mics in use / mic limit" style="font:600 12px var(--sys);color:#555;margin:0 6px"></span><button id=hand class=hb style="display:none;margin:0 6px" title="Join the line for the mic">Raise Hand</button><span id=mtl style="font:600 12px var(--sys);color:#c00"></span><span id="vstat"></span>
 <div id="vright"><input type="checkbox" id="mute"><button class=ib id=bMute title="Mute all voices"><i data-i=micoff></i></button><i data-i=vol style="color:var(--muted);margin-left:4px"></i><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" title="Speaker volume"><button class=ib id=bGear title="Settings"><i data-i=gear></i></button><div id="fsz" title="Chat text size (scroll to adjust)"><b style="font-size:11px;color:var(--muted)">A</b><b style="font-size:15px;color:var(--muted)">a</b><input type="range" id="fsr" min="11" max="24" step="1"><span id="fsv" style="font-size:11px;color:var(--muted);min-width:28px"></span></div></div></div>
 <div id="erow"><span id="smb" title="Smileys"></span><span id="tb" title="Text style">T</span><div id="smp"></div><span id="ra">Report Abuse</span></div>
@@ -154,7 +154,7 @@ html.dark .meter{background:repeating-linear-gradient(90deg,#2a3f6b 0 7px,transp
 <div id="form" class=inbox><button class=ib id=bAa title="Text style"><i data-i=font data-s=22></i></button><button class=ib id=bSm title="Smileys"><i data-i=smile data-s=22></i></button><button class=ib disabled title="Images coming soon"><i data-i=image data-s=22></i></button><button class=ib disabled title="Files coming soon"><i data-i=clip data-s=22></i></button><textarea id="msg" maxlength="300" autocomplete="off" placeholder="Type a message..."></textarea></div>
 </div>
 <!-- Ad slot: paste the AdSense <ins class="adsbygoogle"> unit inside this div -->
-<div id="ad-slot"></div>
+<div id="ad-slot"></div><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div>
 <div id="modw" class="pmwin" style="display:none;flex-direction:column;width:330px;left:calc(50% - 165px);top:120px"><div class=tbar><i data-i=shield data-s=16></i> Room Admin Console<span class=sp></span><span class=x id=modX><i data-i=close data-s=14></i></span></div>
 <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
 <label>User: <select id=modu style="width:100%"></select></label>
@@ -162,7 +162,7 @@ html.dark .meter{background:repeating-linear-gradient(90deg,#2a3f6b 0 7px,transp
 <div id=modown class=modg><button id=mAdm>Make Admin</button><button id=mBan>Ban</button><label style="margin-left:8px">Mics <select id=mMics><option value=1>Single mic</option><option value=2>Multi: 2</option><option value=3>Multi: 3</option><option value=4>Multi: 4</option><option value=5>Multi: 5</option></select></label><label style="margin-left:8px"><input type=checkbox id=mHq style="width:auto;display:inline"> Hands up</label><label style="margin-left:8px">Turn timer <select id=mTm><option value=0>Off</option><option value=30>30 sec</option><option value=60>1 min</option><option value=90>1 min 30</option><option value=c>Custom...</option></select></label></div>
 <div style="font-weight:700">Muted / bounced</div><div id=modl></div><div id=modadm style="font-size:12px;color:var(--muted)"></div></div></div>
 <div id="foot"><span class="appname-plain"></span> &middot; an original nostalgia project</div>
-<script src="/device.js"></script><script src="/settings.js"></script><script src="/browse.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/avatar.js"></script><script>
+<script src="/device.js"></script><script src="/settings.js"></script><script src="/browse.js"></script><script src="/av.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/avatar.js"></script><script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Yapp','Chat'];
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
@@ -185,7 +185,7 @@ fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;if(acct){$('who').innerH
 let rTab='all';
 function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=>r.rating=='R'))adultOk=true;rooms=YBrowse.favs(rs,!!acct);
  const rr=r=>`${YBrowse.star(r)} <span class="room${r.name==room?' sel':''}" data-r="${escT(r.name)}" title="${escT(r.topic||'')}${r.owner?' - owner: '+escT(r.owner):''}">${escT(r.name)} (${r.count}${r.cams?', '+r.cams+' cam':''})${YProf.badge(r.rating)}</span>`;
- const tabs=`<div style="margin-bottom:4px"><a href="#" data-rt=all style="font-weight:${rTab=='all'?'bold':'normal'}">Browse Rooms</a> | <a href="#" data-rt=top style="font-weight:${rTab=='top'?'bold':'normal'}">Top Rooms</a></div>`;
+ const tabs=`<div style="margin-bottom:4px"><b class=yonline style="float:right;font-size:11px;color:#060"></b><a href="#" data-rt=all style="font-weight:${rTab=='all'?'bold':'normal'}">Browse Rooms</a> | <a href="#" data-rt=top style="font-weight:${rTab=='top'?'bold':'normal'}">Top Rooms</a></div>`;
  if(rTab=='top'){const t=YBrowse.top(rooms);$('rlist').innerHTML=tabs+'<div class=cat>Top 10 busiest rooms (live)</div>'+(t.map((r,i)=>`<div>${i+1}. ${rr(r)} - ${r.count} people, ${r.cams} on cam</div>`).join('')||'<span style="color:#888">Nobody is chatting right now.</span>')}
  else $('rlist').innerHTML=tabs+YBrowse.groups(rooms,acct&&acct.name.toLowerCase()).map(([c,l])=>`<div class=cat>${escT(c)}</div>`+(l.length?'':'<span class=room style="text-decoration:none;color:#888;cursor:default">No user rooms yet - create one!</span>')+l.map(rr).join(' ')).join('')+(adultOk?'':'<span class=room id=show18 style="color:#e67e22">Show R-rated rooms (18+)...</span>');
  document.querySelectorAll('[data-rt]').forEach(e=>e.onclick=ev=>{ev.preventDefault();rTab=e.dataset.rt;loadRooms()});
@@ -215,7 +215,7 @@ S.on('inc',d=>{INC=d.on;ANN=d.announce;incUI()});
 S.on('incwarn',d=>{if(confirm("You're incognito \u2014 send visibly?"))S.emit('say',{text:d.text,...st,vis:true})});
 function login(){if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error)return $('err').textContent=r.error;if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const a=document.createElement('a');a.href='#';a.onclick=e=>{e.preventDefault();window.openMasterConsole&&openMasterConsole()};a.id='mcon';a.className='hb';a.textContent='Master Console';a.style.cssText='text-decoration:none;align-self:center;padding:0 8px';$('bInfo').after(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon>Master Console</div><hr>');$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMcon').insertAdjacentHTML('afterend','<div id=mInc>Incognito</div><div id=mAnn>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
  me=r.name;$('login').style.display='none';$('brand').style.display='none';$('chat').style.display='block';
- $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" style="background:${c}"></span>`).join('');
+ $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" title="${c=='#8b5cf6'?'Purple':c}" style="background:${c}"></span>`).join('');
  document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;$('msg').style.color=st.color;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
  $('msg').focus();});}
 $('go').onclick=login;$('nm').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();login()}});
@@ -275,6 +275,9 @@ S.on('mics',d=>{if(d.room==room){micMax=d.max;drawMics()}});
 function openMod(n){const w=$('modw');w.style.display='flex';if(n)modSel=n;drawMod()}let modSel='';
 function dotUI(){const m=ros.find(x=>x.id==S.id),d=!!(m&&m.dot),b=$('talk');if(!b)return;b.disabled=d;b.title=d?"You've been dotted":'Hold to talk (or hold Ctrl)';b.style.opacity=d?.5:''}
 function drawMod(){const r=myRole();if(!r){$('modw').style.display='none';return}const others=ros.filter(m=>m.id!=S.id&&m.role!='owner'&&(r=='owner'||m.role!='admin'));
+ if(!$('annBox')){$('modl').insertAdjacentHTML('beforebegin','<div id=annBox style="margin:6px 0;padding:6px;border:1px solid #ccd;background:#fffbe6"><b>Room announcement</b> (pinned at the top of the room)<br><textarea id=annT rows=2 maxlength=300 style="width:100%"></textarea><button id=annS>Save</button> <button id=annC>Clear</button></div>');
+  const sv=t=>S.emit('ann:set',{text:t},r=>r&&r.error?alert(r.error):($('annT').value=t));$('annS').onclick=()=>sv($('annT').value);$('annC').onclick=()=>sv('')}
+ if(document.activeElement!=$('annT'))$('annT').value=decA(curAnn);
  if(!others.find(m=>m.name==modSel))modSel=others[0]?.name||'';
  $('modu').innerHTML=others.map(m=>`<option ${m.name==modSel?'selected':''}>${escT(m.name)}</option>`).join('')||'<option value="">(nobody you can moderate)</option>';
  const t=ros.find(m=>m.name==modSel)||{};$('modown').style.display=r=='owner'?'':'none';$('mAdm').textContent=t.role=='admin'?'Remove Admin':'Make Admin';
@@ -303,6 +306,33 @@ $('mBuzz').onclick=()=>S.emit('buzz');document.addEventListener('keydown',e=>{if
 $('mHelp').onclick=()=>alert('Voice: hold the green Talk button (or hold Ctrl) to talk. Tick Hands Free to stay on the mic. Mute silences everyone.\nWebcam: click Webcam to share yours. Click the camera icon next to a name to view theirs.\nBuzz: Ctrl+G.');
 $('mAbout').onclick=()=>alert(APP_NAME.join('')+' - an original nostalgia chat project.');
 $('vbtn').onclick=()=>{const v=$('vrow');v.style.display=v.style.display=='none'?'':'none';$('vbtn').classList.toggle('on',v.style.display!='none')};$('vbtn').classList.add('on');
+let curAnn='';const decA=t=>{const d=document.createElement('textarea');d.innerHTML=t;return d.value};
+function showAnn(t){curAnn=t;$('ann').style.display=t?'':'none';$('ann').querySelector('span').innerHTML=t}
+S.on('ann',d=>{if(d.room==room)showAnn(d.text)});
+function reportUser(who,msg){const why=prompt('Report '+who+(msg?' for this message:\n"'+msg+'"':'')+'\n\nWhat happened?','');if(why===null)return;S.emit('report',{who,why:(why||'')+(msg?' | message: "'+msg.slice(0,250)+'"':'')});alert('Thanks. Your report was sent to the site moderators.')}
+// audio/video options panel
+async function avPanel(){let w=$('avp');if(!w){w=document.createElement('div');w.id='avp';w.style.cssText='position:fixed;z-index:60;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card,#fff);color:inherit;border:1px solid #889;border-radius:6px;padding:12px;font:13px Arial;box-shadow:0 6px 24px #0005;min-width:290px;max-width:94vw';document.body.appendChild(w)}
+ const c=YAV.cfg(),ds=await YAV.devices(),sel=(id,o,v)=>`<select id=${id} style="width:100%">${o.map(([k,l])=>`<option value="${escT(k)}" ${k==v?'selected':''}>${escT(l)}</option>`).join('')}</select>`;
+ w.innerHTML=`<b>Audio &amp; Video Options</b><p style="margin:8px 0 2px">Mic mode</p>${sel('avMode',[['voice','Voice (echo cancel, noise suppression, auto gain)'],['music','Music / Stereo (raw, 2-channel, 128 kbps)']],c.mode)}
+ <p style="margin:8px 0 2px">Input device</p>${sel('avDev',[['','Default microphone']].concat(ds.map((d,i)=>[d.deviceId,d.label||('Input '+(i+1))])),c.dev)}<small>Includes Stereo Mix / virtual cables if your computer has them.</small>
+ <p style="margin:8px 0 2px">Share computer audio</p>${sel('avSys',[['off','Off'],['mix','Mix computer audio with my mic'],['only','Computer audio only']],c.sys)}<small>Chrome/Edge: tick "Share audio" in the picker.</small>
+ <p style="margin:8px 0 2px">Push to talk</p>${sel('avPtt',[['hold','Hold to talk (button, Ctrl, or Space)'],['open','Open mic (Hands Free)']],c.ptt)}
+ <p style="margin:8px 0 2px">Cam quality</p>${sel('avCam',[['low','Low (320x240, 15fps)'],['normal','Normal (640x480)'],['hd','HD (1280x720 where supported)']],c.camQ)}<small>Bitrate drops automatically when many people view your cam.</small>
+ <div style="text-align:right;margin-top:10px"><button id=avOk>Apply</button> <button id=avX>Close</button></div>`;
+ $('avX').onclick=()=>w.remove();$('avOk').onclick=async()=>{const old=YAV.cfg();['mode','dev','sys','ptt','camQ'].forEach((k,i)=>YAV.set(k,$(['avMode','avDev','avSys','avPtt','avCam'][i]).value));const n=YAV.cfg();w.remove();
+  $('hf').checked=n.ptt=='open';if(n.sys=='off'&&old.sys!='off')YAV.stopSys();
+  if(mic&&(old.mode!=n.mode||old.dev!=n.dev||old.sys!=n.sys))await swapMic();
+  if(camS&&old.camQ!=n.camQ){const t=camS.getVideoTracks()[0];try{await t.applyConstraints(YAV.camConstraints())}catch{}retuneCam()}}}
+async function swapMic(){let ns;try{ns=await YAV.buildMic()}catch(e){alert('Could not switch audio: '+e.message);return}const nt=ns.getAudioTracks()[0];nt.enabled=talking;
+ for(const k of Object.keys(pcs).filter(x=>x[0]=='a')){const pc=pcs[k],snd=pc.getSenders().find(s=>s.track&&s.track.kind=='audio');if(snd){await snd.replaceTrack(nt).catch(()=>{});YAV.tune(pc)}}
+ const old=mic;mic=ns;(old._parts||[old]).forEach(st=>st.getAudioTracks().forEach(t=>{if(!(ns._parts||[ns]).includes(st))t.stop()}));meter(mic,'m1');S.emit('avmode',YAV.cfg().mode=='music'||YAV.cfg().sys!='off')}
+let lastAct=Date.now(),idleNow=false;['mousemove','keydown','pointerdown','touchstart'].forEach(ev=>addEventListener(ev,()=>{lastAct=Date.now();if(idleNow){idleNow=false;S.emit('idle',false)}},{passive:true}));
+setInterval(()=>{if(me&&!idleNow&&Date.now()-lastAct>10*60e3){idleNow=true;S.emit('idle',true)}},30e3);
+$('avb').onclick=avPanel;$('hf').checked=YAV.cfg().ptt=='open';$('hf').addEventListener('change',()=>YAV.set('ptt',$('hf').checked?'open':'hold'));
+// Space = push to talk when not typing
+const typing=e=>/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.target.isContentEditable;
+document.addEventListener('keydown',e=>{if(e.code=='Space'&&!e.repeat&&me&&!typing(e)&&!$('hf').checked){e.preventDefault();setTalk(true)}});
+document.addEventListener('keyup',e=>{if(e.code=='Space'&&me&&!typing(e)&&!$('hf').checked){e.preventDefault();setTalk(false)}});
 $('ra').onclick=()=>{const who=prompt('Report abuse: which screen name?',selName||'');if(!who)return;const why=prompt('What happened?','')||'';S.emit('report',{who,why});alert('Thanks. Your report was sent to the room moderators.')};
 // chat log
 const tstr=t=>t?new Date(t).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'';
@@ -314,7 +344,7 @@ function add(m){const L=$('log'),d=document.createElement('div'),atB=L.scrollHei
  else{let t=smile(m.text);const sty=`color:${m.color};font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
   d.innerHTML=YAv.html(m.name,(ros.find(r=>r.name==m.name)||{}).av??m.av,'')+`<div class=tx>${ts}<span class=n style="color:${ncol(m.name)}${m.role=='owner'?';font-weight:800':''}">${m.name}${roleB(m.role)}:</span> <span style="${sty}">${t}</span></div>`}
  L.appendChild(d);if(atB)L.scrollTop=L.scrollHeight}
-S.on('history',h=>{room=h.room;micMax=h.mics||1;owner=h.owner;history.replaceState(null,'','?room='+encodeURIComponent(h.room));$('rname').innerHTML=escT(h.room)+YProf.badge(h.rating);$('rtopic').textContent=h.topic||'';$('rtile').innerHTML=YI.room(h.room,48);$('msg').placeholder='Type a message to '+h.room+'...';setHdr();$('topic').innerHTML=`You are in <b>"${escT(h.room)}"</b> <i>( ${escT(h.topic||'')} )</i>`+(h.owner?` <small style="color:#555">- owner: ${escT(h.owner)}</small>`:'');$('log').innerHTML='';h.msgs.forEach(add)});
+S.on('history',h=>{room=h.room;showAnn(h.ann||'');micMax=h.mics||1;owner=h.owner;history.replaceState(null,'','?room='+encodeURIComponent(h.room));$('rname').innerHTML=escT(h.room)+YProf.badge(h.rating);$('rtopic').textContent=h.topic||'';$('rtile').innerHTML=YI.room(h.room,48);$('msg').placeholder='Type a message to '+h.room+'...';setHdr();$('topic').innerHTML=`You are in <b>"${escT(h.room)}"</b> <i>( ${escT(h.topic||'')} )</i>`+(h.owner?` <small style="color:#555">- owner: ${escT(h.owner)}</small>`:'');$('log').innerHTML='';h.msgs.forEach(add)});
 S.on('msg',add);
 let typers={};S.on('typing',({name})=>{if(ignored.has(name))return;typers[name]=Date.now()+3500;showTyping()});
 function showTyping(){const now=Date.now(),n=Object.keys(typers).filter(k=>typers[k]>now);$('typing').textContent=prefs.typ&&n.length?n.join(', ')+(n.length>1?' are':' is')+' typing...':''}
@@ -342,18 +372,18 @@ function meter(stream,key,id){try{actx=actx||new AudioContext();actx.resume();co
  const tick=()=>{if(!stream.active)return;an.getByteTimeDomainData(buf);let m=0;for(const v of buf)m=Math.max(m,Math.abs(v-128));if(key=='m1')lv.m1=m/128;else lv.m2[id]=m/128;requestAnimationFrame(tick)};tick()}catch(e){}}
 setInterval(()=>{$('m1').style.width=Math.min(100,(talking?lv.m1:0)*250)+'%';const r=Math.max(0,...Object.values(lv.m2));$('m2').style.width=Math.min(100,($('mute').checked?0:r)*250)+'%'},100);
 function renderRoster(){const q=($('pq')?.value||'').toLowerCase();$('pcnt').textContent=ros.length;$('ucnt').textContent=ros.length;setHdr();
- $('mem').innerHTML=ros.filter(m=>!q||m.name.toLowerCase().includes(q)).map(m=>{const ic=m.talk?'&#127908;':(m.cam?'':'');return `<div class="mem${m.talk?' talking':''}${m.name==selName?' sel':''}${ignored.has(m.name)?' ign':''}" data-n="${escT(m.name)}"><span class=sdot></span><span class=mi>${YAv.html(m.name,m.av,'')}${m.talk?'<span class=tk>&#127908;</span>':''}</span><span class=nm${m.role=='owner'?' style="font-weight:800"':''}>${escT(m.name)}</span>${m.talk&&m._end?`<span class=mtl data-end="${m._end}" style="color:#c00;font-size:11px"></span>`:''}${roleB(m.role)}${m.dot?`<span class=dotb title="Dotted${m.dl?'':' (until lifted)'}" style="color:#d22;display:inline-flex;align-items:center;margin-left:3px">${YI.svg('micoff',13)}${m.dl?`<span data-dend="${m._dend}" style="font-size:10px;margin-left:2px"></span>`:''}</span>`:''}${m.mt||m.mm?`<span class=mutedb title="Muted (${m.mt&&m.mm?'text + mic':m.mt?'text':'mic'})">${YI.svg(m.mm?'micoff':'chat',13)}</span>`:''}${m.guest?'<span class=gt>guest</span>':''}${m.inc?'<span title="Incognito (masters only see this)" style="opacity:.45;font-size:11px;margin-left:3px">&#128065;</span>':''}${m.cam?`<span class="ci" title="View Webcam" data-v="${m.id}" data-n="${escT(m.name)}">&#128247;</span>`:''}</div>`}).join('');
+ $('mem').innerHTML=ros.filter(m=>!q||m.name.toLowerCase().includes(q)).map(m=>{const ic=m.talk?'&#127908;':(m.cam?'':'');return `<div class="mem${m.talk?' talking':''}${m.name==selName?' sel':''}${ignored.has(m.name)?' ign':''}" data-n="${escT(m.name)}"><span class=sdot></span><span class=mi>${YAv.html(m.name,m.av,'')}${m.talk?'<span class=tk>&#127908;</span>':''}</span>${m.idle?'<span title="Idle (away 10+ min)" style="font-size:10px;color:#888">zZ</span>':''}${m.music?'<span title="Music / stereo mode" style="font-size:11px">&#127925;</span>':''}<span class=nm${m.role=='owner'?' style="font-weight:800"':''}>${escT(m.name)}</span>${m.talk&&m._end?`<span class=mtl data-end="${m._end}" style="color:#c00;font-size:11px"></span>`:''}${roleB(m.role)}${m.dot?`<span class=dotb title="Dotted${m.dl?'':' (until lifted)'}" style="color:#d22;display:inline-flex;align-items:center;margin-left:3px">${YI.svg('micoff',13)}${m.dl?`<span data-dend="${m._dend}" style="font-size:10px;margin-left:2px"></span>`:''}</span>`:''}${m.mt||m.mm?`<span class=mutedb title="Muted (${m.mt&&m.mm?'text + mic':m.mt?'text':'mic'})">${YI.svg(m.mm?'micoff':'chat',13)}</span>`:''}${m.guest?'<span class=gt>guest</span>':''}${m.inc?'<span title="Incognito (masters only see this)" style="opacity:.45;font-size:11px;margin-left:3px">&#128065;</span>':''}${m.cam?`<span class="ci" title="View Webcam" data-v="${m.id}" data-n="${escT(m.name)}">&#128247;</span>`:''}</div>`}).join('');
  $('mem').querySelectorAll('.mem').forEach(e=>{e.onclick=ev=>{if(ev.target.closest('.ci'))return;selName=e.dataset.n;renderRoster()};e.ondblclick=()=>{if(e.dataset.n!=me)openPm(e.dataset.n)};e.oncontextmenu=ev=>{ev.preventDefault();selName=e.dataset.n;renderRoster();ctxMenu(ev,e.dataset.n)}});
  $('mem').querySelectorAll('.ci').forEach(e=>e.onclick=()=>e.dataset.v==S.id?0:view(e.dataset.v,e.dataset.n));
  const t=ros.filter(m=>m.talk&&!ignored.has(m.name)).map(m=>escT(m.name));$('vstat').innerHTML=t.length?t.join(', ')+(t.length>1?' are':' is')+' talking':'';}
 // ===== Voice & webcam (WebRTC mesh, Socket.IO signaling) =====
-const ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]};
+let ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]};fetch('/api/ice').then(r=>r.json()).then(j=>{if(j&&j.iceServers)ICE=j}).catch(()=>{});
 let me=null, ros=[], mic=null, camS=null, pcs={}, talking=false, wins={};
 function pcFor(k,id,init){ // k: 'a' audio | 'v' video I broadcast | 'w' video I watch
  if(pcs[k+id])return pcs[k+id];const pc=new RTCPeerConnection(ICE);pcs[k+id]=pc;
  const rk={a:'a',v:'w',w:'v'}[k]; // the key the remote side uses
  pc.onicecandidate=e=>e.candidate&&S.emit('signal',{to:id,data:{k:rk,c:e.candidate}});
- pc.onnegotiationneeded=async()=>{if(!init)return;await pc.setLocalDescription(await pc.createOffer());S.emit('signal',{to:id,data:{k:rk,sdp:pc.localDescription}})};
+ pc.onnegotiationneeded=async()=>{if(!init)return;await pc.setLocalDescription(YAV.munge(await pc.createOffer()));YAV.tune(pc);S.emit('signal',{to:id,data:{k:rk,sdp:pc.localDescription}})};
  pc.ontrack=e=>{if(k=='a'){let a=document.getElementById('au'+id);if(!a){a=document.createElement('audio');a.id='au'+id;a.autoplay=true;document.body.appendChild(a)}a.srcObject=e.streams[0]||new MediaStream([e.track]);applyAudio(a,id);meter(a.srcObject,'m2',id);a.play().catch(()=>{})}
   if(k=='w'&&wins[id]){const v=wins[id].querySelector('video');v.srcObject=e.streams[0]||new MediaStream([e.track]);v.play().catch(()=>{})}};
  pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState))closePc(k,id)};
@@ -362,7 +392,7 @@ function closePc(k,id){const pc=pcs[k+id];if(!pc)return;delete pcs[k+id];try{pc.
 let sq=Promise.resolve();S.on('signal',m=>{sq=sq.then(()=>onSig(m)).catch(e=>console.log('sig',e.message))});
 async function onSig({from,data}){const {k}=data;let pc=pcs[k+from];
  if(data.sdp){if(data.sdp.type=='offer'){closePc(k,from);pc=pcFor(k,from,false);if(k=='a'&&mic&&!pc.getSenders().some(s=>s.track))mic.getTracks().forEach(t=>pc.addTrack(t,mic));
-   await pc.setRemoteDescription(data.sdp);await pc.setLocalDescription(await pc.createAnswer());S.emit('signal',{to:from,data:{k:{a:'a',v:'w',w:'v'}[k],sdp:pc.localDescription}})}
+   await pc.setRemoteDescription(data.sdp);await pc.setLocalDescription(YAV.munge(await pc.createAnswer()));YAV.tune(pc);S.emit('signal',{to:from,data:{k:{a:'a',v:'w',w:'v'}[k],sdp:pc.localDescription}})}
   else if(pc)await pc.setRemoteDescription(data.sdp)}
  else if(data.c&&pc)try{await pc.addIceCandidate(data.c)}catch(e){}}
 function syncAudio(){ // connect audio to every room member where at least one side has a mic; mic holder (lower id if both) offers
@@ -370,10 +400,10 @@ function syncAudio(){ // connect audio to every room member where at least one s
  Object.keys(pcs).filter(x=>x[0]=='a'&&!ids.has(x.slice(1))).forEach(x=>closePc('a',x.slice(1)));
  for(const r of ros){if(r.id==S.id)continue;const mine=!!mic,their=r.voice;if(!mine&&!their){closePc('a',r.id);continue}
   const iInit=mine&&(!their||S.id<r.id);if(iInit&&!pcs['a'+r.id]){const pc=pcFor('a',r.id,true);mic.getTracks().forEach(t=>pc.addTrack(t,mic))}}}
-async function getMic(){if(mic)return true;try{mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})}catch(e){alert('Microphone not available: '+e.message);return false}
+async function getMic(){if(mic)return true;try{mic=await YAV.buildMic()}catch(e){alert('Microphone not available: '+e.message);return false}
  mic.getAudioTracks().forEach(t=>t.enabled=false);meter(mic,'m1');
  Object.keys(pcs).filter(x=>x[0]=='a').forEach(x=>closePc('a',x.slice(1))); // rebuild with mic
- S.emit('voice',true);return true}
+ S.emit('voice',true);S.emit('avmode',YAV.cfg().mode=='music'||YAV.cfg().sys!='off');return true}
 async function setTalk(on){if(on&&!(await getMic()))return;if(talking==on)return;talking=on;mic&&mic.getAudioTracks().forEach(t=>t.enabled=on);$('talk').classList.toggle('on',on);S.emit('talk',on,r=>{if(on&&r&&r.error&&talking){talking=false;mic&&mic.getAudioTracks().forEach(t=>t.enabled=false);$('talk').classList.remove('on');if(r.full){$('hf').checked=false;$('talk').innerHTML=YI.svg('mic',18)+'Talk';add({sys:1,text:escT(r.error)+(r.hq?'':' \u2013 wait for a free mic.')})}}})}
 const tb=$('talk');
 tb.addEventListener('pointerdown',e=>{e.preventDefault();if(!$('hf').checked)setTalk(true)});
@@ -384,7 +414,7 @@ document.addEventListener('keyup',e=>{if(e.key=='Control'&&me&&!$('hf').checked)
 $('hf').onchange=async()=>{if($('hf').checked){await setTalk(true);tb.innerHTML=YI.svg('mic',18)+'Talk (on)'}else{await setTalk(false);tb.innerHTML=YI.svg('mic',18)+'Talk'}};
 $('cam').onclick=async()=>{if(camS){stopCam();return}
  if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return camErr({name:'InsecureContext',message:'Camera API unavailable (page must be opened over https)'});
- try{camS=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:15}},audio:false})}catch(e){
+ try{camS=await navigator.mediaDevices.getUserMedia({video:YAV.camConstraints(),audio:false})}catch(e){
   if(e.name=='OverconstrainedError'||e.name=='ConstraintNotSatisfiedError'||e.name=='TypeError'){try{camS=await navigator.mediaDevices.getUserMedia({video:true})}catch(e2){return camErr(e2)}}else return camErr(e)}
  $('cam').classList.add('on');$('cam').innerHTML=YI.svg('video')+'<span>Stop Cam</span>';S.emit('cam',true);openWin(S.id,me+' (you)',camS)};
 function camErr(e){console.warn('[webcam]',e.name,e.message);const n=e.name||'Error';let m;
@@ -396,7 +426,8 @@ function camErr(e){console.warn('[webcam]',e.name,e.message);const n=e.name||'Er
  alert(m)}
 function stopCam(){camS&&camS.getTracks().forEach(t=>t.stop());camS=null;Object.keys(pcs).filter(x=>x[0]=='v').forEach(x=>closePc('v',x.slice(1)));
  $('cam').classList.remove('on');$('cam').innerHTML=YI.svg('video')+'<span>Webcam</span>';$('viewers').textContent='';S.emit('cam',false);closeWin(S.id,true)}
-S.on('view-req',({id})=>{if(!camS)return;closePc('v',id);const pc=pcFor('v',id,true);camS.getTracks().forEach(t=>pc.addTrack(t,camS))});
+S.on('view-req',({id})=>{if(!camS)return;closePc('v',id);const pc=pcFor('v',id,true);camS.getTracks().forEach(t=>pc.addTrack(t,camS));retuneCam()});
+function retuneCam(){const v=Object.keys(pcs).filter(x=>x[0]=='v');window.YAV_viewers=v.length;v.forEach(x=>YAV.tune(pcs[x]))}
 S.on('unview',({id})=>closePc('v',id));
 S.on('cam-off',({id})=>closeWin(id,true));
 S.on('media-gone',({id})=>{['a','v','w'].forEach(k=>closePc(k,id));closeWin(id,true)});
@@ -416,8 +447,8 @@ function openWin(id,name,stream){const w=document.createElement('div');w.classNa
 function fullCam(v){const f=v.requestFullscreen||v.webkitRequestFullscreen||v.webkitEnterFullscreen;if(f)f.call(v).catch?.(()=>{})}
 function closeWin(id,remote){const w=wins[id];if(!w)return;if(w.pop)w.pop.remove();w.remove();delete wins[id];$('camstrip').classList.toggle('has',!!$('camstrip').children.length);if(id!=S.id){closePc('w',id);if(!remote)S.emit('unview',id)}}
 function ctxMenu(ev,n){document.querySelectorAll('.yctx').forEach(x=>x.remove());const m=document.createElement('div');m.className='yctx imenu open';m.style.cssText=`position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;display:block;z-index:300`;
- m.innerHTML='<div data-c=p>View Profile</div>'+(n!=me?'<div data-c=im>Private Message</div><div data-c=ign>'+(isIgn(n)?'Unignore':'Ignore')+'</div>'+(acct?'<div data-c=blk>'+(isBlk(n)?'Unblock':'Block')+'</div><div data-c=inv>Invite to Room</div>':''):'')+(myRole()&&n!=me?'<div data-c=mod>Room Admin Console...</div>':'');document.body.appendChild(m);
- m.onclick=e=>{const c=e.target.dataset.c;m.remove();if(c=='p')YProf.show(n,{me:acct?me:''});else if(c=='im')openPm(n);else if(c=='ign')toggleIgnore(n);else if(c=='blk')toggleBlock(n);else if(c=='mod')openMod(n);else if(c=='inv')roomInvite(n)};setTimeout(()=>addEventListener('click',()=>m.remove(),{once:true}),0)}
+ m.innerHTML='<div data-c=p>View Profile</div>'+(n!=me?'<div data-c=im>Private Message</div><div data-c=ign>'+(isIgn(n)?'Unignore':'Ignore')+'</div>'+(acct?'<div data-c=blk>'+(isBlk(n)?'Unblock':'Block')+'</div><div data-c=inv>Invite to Room</div>':'')+'<div data-c=rep>Report...</div>':'')+(myRole()&&n!=me?'<div data-c=mod>Room Admin Console...</div>':'');document.body.appendChild(m);
+ m.onclick=e=>{const c=e.target.dataset.c;m.remove();if(c=='p')YProf.show(n,{me:acct?me:''});else if(c=='im')openPm(n);else if(c=='ign')toggleIgnore(n);else if(c=='blk')toggleBlock(n);else if(c=='mod')openMod(n);else if(c=='inv')roomInvite(n);else if(c=='rep')reportUser(n)};setTimeout(()=>addEventListener('click',()=>m.remove(),{once:true}),0)}
 function roomInvite(n){if(!acct)return alert('Sign in to invite people to rooms.');n=n||prompt('Invite which screen name to '+room+'?',selName||'');if(!n)return;S.emit('room:invite',{to:n.trim()},r=>alert(r&&r.ok?'Invitation sent to '+r.name+'.':(r&&r.error)||'Could not send invite.'))}
 $('mInvR').onclick=()=>roomInvite();
 S.on('room-invite',({from,room:rm,rating})=>{if(rm==room)return;const d=document.createElement('div');d.style.cssText='position:fixed;right:16px;bottom:16px;width:290px;background:#fff;border:2px solid #36c;box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:9999;font:13px Arial';
@@ -436,4 +467,4 @@ S.on('roster',r=>{r.forEach(m=>{if(m.tl)m._end=Date.now()+m.tl*1e3;if(m.dl)m._de
  syncAudio()});
 S.on('history',()=>{Object.keys(wins).forEach(id=>id==S.id||closeWin(id,true));Object.keys(pcs).forEach(x=>closePc(x[0],x.slice(1)));
  if(camS)stopCam();if(mic){setTalk(false);S.emit('voice',true)}});
-</script></body></html>
+</script><script>window.YTalking=()=>{try{return !!talking}catch{return false}}</script></body></html>

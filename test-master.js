@@ -5,7 +5,7 @@ const w = ms => new Promise(r => setTimeout(r, ms)); let pass = 0; const ok = (c
 const E = (s, ev, d) => new Promise(r => d === undefined ? s.emit(ev, r) : s.emit(ev, d, r));
 const sfx = Date.now() % 100000, MN = 'mz' + sfx;
 const H = c => ({ 'Content-Type': 'application/json', ...(c ? { cookie: c } : {}) });
-async function signup(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: H(), body: JSON.stringify({ name: n, password: 'hunter22pw' }) }); return (r.headers.get('set-cookie') || '').split(';')[0]; }
+async function signup(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: H(), body: JSON.stringify({ agree: true,  name: n, password: 'hunter22pw' }) }); return (r.headers.get('set-cookie') || '').split(';')[0]; }
 async function login(n) { const r = await fetch(U + '/api/login', { method: 'POST', headers: H(), body: JSON.stringify({ name: n, password: 'hunter22pw' }) }); return { status: r.status, c: (r.headers.get('set-cookie') || '').split(';')[0] }; }
 const get = (p, c) => fetch(U + p, { headers: H(c) });
 const post = async (p, b, c) => { const r = await fetch(U + p, { method: 'POST', headers: H(c), body: JSON.stringify(b) }); return { status: r.status, j: await r.json().catch(() => ({})) }; };

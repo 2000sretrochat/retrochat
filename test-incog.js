@@ -5,7 +5,7 @@ const w = ms => new Promise(r => setTimeout(r, ms)); let pass = 0; const ok = (c
 const E = (s, ev, d) => new Promise(r => d === undefined ? s.emit(ev, r) : s.emit(ev, d, r));
 const sfx = Date.now() % 100000, MN = "mi" + sfx, M2 = "mj" + sfx;
 const H = c => ({ 'Content-Type': 'application/json', ...(c ? { cookie: c } : {}) });
-async function signup(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: H(), body: JSON.stringify({ name: n, password: 'hunter22pw' }) }); return (r.headers.get('set-cookie') || '').split(';')[0]; }
+async function signup(n) { const r = await fetch(U + '/api/signup', { method: 'POST', headers: H(), body: JSON.stringify({ agree: true,  name: n, password: 'hunter22pw' }) }); return (r.headers.get('set-cookie') || '').split(';')[0]; }
 async function login(n) { const r = await fetch(U + '/api/login', { method: 'POST', headers: H(), body: JSON.stringify({ name: n, password: 'hunter22pw' }) }); return { status: r.status, c: (r.headers.get('set-cookie') || '').split(';')[0] }; }
 const get = (p, c) => fetch(U + p, { headers: H(c) });
 const post = async (p, b, c) => { const r = await fetch(U + p, { method: 'POST', headers: H(c), body: JSON.stringify(b) }); return { status: r.status, j: await r.json().catch(() => ({})) }; };
@@ -74,7 +74,7 @@ const has = (x, n) => JSON.stringify(x).includes(n);
     await post('/api/master/roommod', { room: 'Lobby', action: 'undot', who: 'nd' + sfx }, mc);
     const rh2 = await (await fetch(U + '/rooms.html')).text(); ok(/You've been dotted/.test(rh2) && /data-dend/.test(rh2) && /until lifted/.test(rh2), 'room UI has dotted tooltip, countdown and duration picker');
     // one screen name per email
-    const sp = (n, e) => post('/api/signup', { name: n, password: 'hunter22pw', email: e });
+    const sp = (n, e) => post('/api/signup', { agree: true, name: n, password: 'hunter22pw', email: e });
     ok((await sp('ea' + sfx, 'Some.One' + sfx + 'noreply@yappchat.invalid')).status === 200, 'first sign-up with an email works');
     const dup = await sp('eb' + sfx, '  someone' + sfx + '@googlemail.com '); ok(dup.status === 409 && dup.j.error === 'That email already has a screen name.', 'second name for same Gmail (dots/+tag/case/space) rejected');
     ok((await sp('ec' + sfx, 'x' + sfx + '@example.com')).status === 200 && (await sp('ed' + sfx, 'X' + sfx + '@EXAMPLE.com')).status === 409, 'non-Gmail compared case-insensitively');

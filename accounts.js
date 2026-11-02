@@ -9,7 +9,7 @@ const RESERVED = /^(admin|administrator|moderator|mod|support|system|yappchat|st
 function parseCookies(h) { const o = {}; String(h || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim()); }); return o; }
 async function userFromCookie(h) {
   const t = parseCookies(h)[COOKIE]; if (!t || !db.status().ready) return null;
-  try { const r = await db.q('select u.id,u.name from sessions s join users u on u.id=s.user_id where s.token=$1 and s.expires>now() and not u.banned', [sha(t)]); return r[0] || null; } catch { return null; }
+  try { const r = await db.q('select u.id, case when lower(s.display)=u.name_lc then s.display else u.name end as name, u.name as canon from sessions s join users u on u.id=s.user_id where s.token=$1 and s.expires>now() and not u.banned', [sha(t)]); return r[0] || null; } catch { return null; }
 }
 // simple fixed-window rate limiter
 const hits = new Map();
@@ -29,17 +29,19 @@ function http(app, express, hooks = {}) { H = hooks;
   });
   const maint = (res) => res.status(503).json({ error: 'Accounts are temporarily unavailable (maintenance). Please try again later.', maintenance: true });
   const setCookie = (req, res, token, remember) => res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: secure(req), path: '/', ...(remember ? { maxAge: 30 * 864e5 } : {}) });
-  async function newSession(req, res, uid, remember) {
+  async function newSession(req, res, uid, remember, display) {
     const t = crypto.randomBytes(32).toString('base64url');
-    await db.q('insert into sessions(token,user_id,expires) values($1,$2,now()+$3::interval)', [sha(t), uid, remember ? '30 days' : '2 days']);
+    await db.q('insert into sessions(token,user_id,expires,display) values($1,$2,now()+$3::interval,$4)', [sha(t), uid, remember ? '30 days' : '2 days', display || null]);
     setCookie(req, res, t, remember);
   }
   app.get('/api/status', (q, r) => r.json({ accounts: db.status().ready, message: db.status().ready ? null : 'Accounts are temporarily unavailable while we finish setting up the database. Chat rooms still work as a guest.' }));
+  app.get('/api/receipts', async (req, res) => { const u = await userFromCookie(req.headers.cookie); if (!u) return res.json({ on: false }); try { res.json({ on: !!(await db.q('select receipts from users where id=$1', [u.id]))[0]?.receipts }); } catch { res.json({ on: false }); } });
+  app.post('/api/receipts', async (req, res) => { const u = await userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in first.' }); await db.q('update users set receipts=$2 where id=$1', [u.id, req.body?.on === true]); res.json({ ok: true, on: req.body?.on === true }); });
   app.get('/api/me', async (req, res) => { const u = await userFromCookie(req.headers.cookie); let m = false; if (u) { try { m = !!(await db.q('select is_master from users where id=$1', [u.id]))[0]?.is_master; } catch { } } res.set('Cache-Control', 'no-store'); res.json(u ? (m ? { name: u.name, m: true } : { name: u.name }) : { name: null }); });
   app.get('/api/available', async (req, res) => {
     if (!db.status().ready) return maint(res);
     if (limited('av:' + req.ip, 60, 60e3)) return res.status(429).json({ error: 'Too many requests' });
-    const n = String(req.query.name || ''); if (!NAME_RE.test(n) || RESERVED.test(n)) return res.json({ available: false, valid: false });
+    const n = String(req.query.name || ''); if (!NAME_RE.test(n) || RESERVED.test(n) || (H.reservedName && H.reservedName(n))) return res.json({ available: false, valid: false });
     const r = await db.q('select 1 from users where name_lc=$1', [n.toLowerCase()]); res.json({ available: !r.length && !(H.guestInUse && H.guestInUse(n)), valid: true });
   });
   app.post('/api/signup', async (req, res) => {
@@ -48,7 +50,8 @@ function http(app, express, hooks = {}) { H = hooks;
     if (limited('su:' + req.ip, +process.env.SIGNUP_LIMIT || 5, 3600e3)) return res.status(429).json({ error: 'Too many sign-ups from your network. Try again later.' });
     const { name, password, remember } = req.body || {}; let { email } = req.body || {}; if (typeof email === 'string') email = email.trim();
     if (typeof name !== 'string' || !NAME_RE.test(name)) return res.status(400).json({ error: 'Screen names are 3-20 characters, start with a letter, and use letters, numbers, _ or .' });
-    if (RESERVED.test(name)) return res.status(400).json({ error: 'That screen name is not available.' });
+    if (req.body.agree !== true) return res.status(400).json({ error: 'Please agree to the Terms and Rules (13 or older) to sign up.' });
+    if (RESERVED.test(name) || (H.reservedName && H.reservedName(name))) return res.status(400).json({ error: 'That screen name is not available.' });
     if (typeof password !== 'string' || password.length < 8 || password.length > 100) return res.status(400).json({ error: 'Passwords must be 8-100 characters.' });
     if (email && (typeof email !== 'string' || email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return res.status(400).json({ error: 'That email address does not look right.' });
     if (H.guestInUse && H.guestInUse(name)) return res.status(409).json({ error: 'That screen name is already taken.' });
@@ -70,7 +73,8 @@ function http(app, express, hooks = {}) { H = hooks;
     const ok = await bcrypt.compare(String(password || ''), r[0] ? r[0].pw : DUMMY); // constant work either way
     if (!r[0] || !ok) return res.status(401).json({ error: 'Invalid screen name or password.' });
     if (r[0].banned) return res.status(403).json({ error: 'This screen name has been banned.' });
-    await newSession(req, res, r[0].id, !!remember); H.seedMaster && await H.seedMaster(r[0].id, r[0].name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'login'); res.json({ ok: true, name: r[0].name });
+    const typed = String(name).trim(), disp = typed.toLowerCase() === r[0].name.toLowerCase() ? typed : r[0].name; // session display = capitalization typed at sign-in
+    await newSession(req, res, r[0].id, !!remember, disp); H.seedMaster && await H.seedMaster(r[0].id, r[0].name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'login'); res.json({ ok: true, name: disp });
   });
   app.post('/api/logout', async (req, res) => {
     const t = parseCookies(req.headers.cookie)[COOKIE]; if (t && db.status().ready) await db.q('delete from sessions where token=$1', [sha(t)]).catch(() => {});
@@ -81,7 +85,7 @@ function http(app, express, hooks = {}) { H = hooks;
 // ---------- Messenger sockets ----------
 function sockets(io, hooks) {
   const online = new Map(); // uid -> Set(socket)
-  const ROOM_TAG = '[room]'; const state = new Map(); // uid -> {status,msg,idle,avatar,name}
+  const ROOM_TAG = '[room]', AUDS = ['lol', 'doh', 'woohoo', 'wave', 'kiss', 'drumroll'], IMVS = ['none', 'beach', 'space', 'hearts', 'city', 'retro']; const state = new Map(); // uid -> {status,msg,idle,avatar,name}
   const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = sr ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In chat: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
   const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || st.msg !== ROOM_TAG) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
   setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
@@ -91,7 +95,7 @@ function sockets(io, hooks) {
   const idOf = async n => { const r = await db.q('select id,name from users where name_lc=$1', [String(n || '').toLowerCase().slice(0, 40)]); return r[0]; };
   const mutual = async (a, b) => (await db.q('select 1 from contacts where owner=$1 and contact=$2', [a, b])).length > 0;
   const blocked = async (by, who) => (await db.q('select 1 from blocks where owner=$1 and blocked=$2', [by, who])).length > 0;
-  const FONTS = ['Arial', 'Verdana', 'Tahoma', 'Comic Sans MS', 'Times New Roman', 'Courier New'], COLORS = ['#000000', '#ff0000', '#0000ff', '#008000', '#800080', '#ff6600', '#008080', '#990033'];
+  const FONTS = ['Arial', 'Verdana', 'Tahoma', 'Comic Sans MS', 'Times New Roman', 'Courier New'], COLORS = ['#000000', '#ff0000', '#0000ff', '#008000', '#800080', '#ff6600', '#008080', '#990033', '#8b5cf6'];
   const fmt = m => ({ b: !!m.b, i: !!m.i, u: !!m.u, color: COLORS.includes(m.color) ? m.color : '#000000', f: FONTS.includes(m.f) ? m.f : 'Arial' });
   hooks.onlineName = n => { for (const [uid, st] of state) if (st.name.toLowerCase() === String(n).toLowerCase() && online.has(uid)) return uid; return null; };
   presFn = hooks.presence = uid => online.has(uid) ? { online: true, status: state.get(uid)?.status || 'online', msg: state.get(uid)?.msg || '' } : { online: false, status: 'offline', msg: '' };
@@ -130,12 +134,12 @@ function sockets(io, hooks) {
         for (const x of [...(online.get(uid) || [])]) if (x !== s && x.data.mess) { x.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); online.get(uid).delete(x); x.disconnect(true); } }
       const [u] = await db.q('select name,status,status_msg,avatar from users where id=$1', [uid]);
       const first = !online.has(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; ready = true;
-      if (!state.has(uid)) state.set(uid, { name: u.name, status: STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg, avatar: u.avatar, idle: false });
+      if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg, avatar: u.avatar, idle: false });
       const cs = await db.q('select u.id,u.name,c.grp from contacts c join users u on u.id=c.contact where c.owner=$1 order by lower(u.name)', [uid]);
       const groups = (await db.q('select name from groups where owner=$1 order by name', [uid])).map(r => r.name);
       const reqs = await db.q('select u.name,r.msg from requests r join users u on u.id=r.from_id where r.to_id=$1', [uid]);
       const bl = (await db.q('select u.name from blocks b join users u on u.id=b.blocked where b.owner=$1', [uid])).map(r => r.name);
-      const off = await db.q('select o.id,u.name,o.body,extract(epoch from o.created)*1000 as t from offline o join users u on u.id=o.from_id where o.to_id=$1 order by o.id', [uid]);
+      const off = await db.q('select o.id,u.name,o.body,extract(epoch from o.created)*1000 as t from offline o join users u on u.id=o.from_id where o.to_id=$1 and not exists(select 1 from blocks b where b.owner=$1 and b.blocked=o.from_id) order by o.id', [uid]);
       if (off.length) await db.q('delete from offline where to_id=$1 and id<=$2', [uid, off[off.length - 1].id]);
       if (first) broadcast(uid, me);
       const st = state.get(uid);
@@ -187,14 +191,29 @@ function sockets(io, hooks) {
     async function peer(name) { const t = await idOf(name); if (!t || !(await mutual(uid, t.id)) || (!s.data.master && await blocked(t.id, uid))) return null; return t; }
     s.on('m:im', safe(async m => {
       if (!ready || !m) return; if (flood()) return { error: 'You are sending messages too fast.' };
-      const text = String(m.text || '').trim().slice(0, 1000); if (!text) return; const t = await peer(m.to); if (!t) return { error: 'You can only message your contacts.' };
-      const body = { text: esc(text), ...fmt(m) }, now = Date.now();
+      const text = String(m.text || '').trim().slice(0, 1000); if (!text) return; { const fl = require('./flood').check(me, text, s.data && s.data.master); if (fl) return { error: fl }; } const t = await peer(m.to); if (!t) return { error: 'You can only message your contacts.' };
+      const body = { text: esc(text), ...fmt(m), ...(AUDS.includes(m.aud) ? { aud: m.aud } : {}) }, now = Date.now();
+      try { const ar = await db.q('select id from users where id = any($1) and archive', [[uid, t.id]]); for (const r of ar) await db.q('insert into im_archive(owner,peer,dir,body) values($1,$2,$3,$4)', [r.id, r.id === uid ? t.name : me, r.id === uid ? 'out' : 'in', body]); } catch { }
       for (const x of online.get(uid) || []) if (x !== s) x.emit('m:im-echo', { to: t.name, t: now, ...body });
       if (online.has(t.id)) { toUser(t.id, 'm:im', { from: me, t: now, ...body }); return { ok: true, t: now, ...body }; }
       await db.q('insert into offline(to_id,from_id,body) values($1,$2,$3)', [t.id, uid, body]); return { ok: true, offline: true, t: now, ...body };
     }));
+    s.on('m:seen', safe(async ({ to }) => { if (!ready) return; const t = await peer(to); if (!t) return;
+      const r = await db.q('select count(*)::int n from users where id = any($1) and receipts', [[uid, t.id]]); if (r[0].n === 2) toUser(t.id, 'm:seen', { from: me, t: Date.now() }); }));
     s.on('m:typing', safe(async ({ to }) => { if (!ready) return; const t = await peer(to); if (t) toUser(t.id, 'm:typing', { from: me }); }));
     let lastBuzz = 0;
+    // ---- message archive (opt-in) ----
+    s.on('m:arch-set', safe(async ({ on }) => { await db.q('update users set archive=$2 where id=$1', [uid, !!on]); return { ok: true, on: !!on }; }));
+    s.on('m:arch-get', safe(async ({ q, peer: p } = {}) => { const on = !!(await db.q('select archive from users where id=$1', [uid]))[0]?.archive;
+      const rows = await db.q("select peer,dir,body,extract(epoch from t)*1000 as t from im_archive where owner=$1 and ($2='' or lower(peer)=lower($2)) and ($3='' or body->>'text' ilike '%'||$3||'%') order by id desc limit 300", [uid, String(p || '').slice(0, 40), String(q || '').slice(0, 60).replace(/[%_\\]/g, '')]);
+      return { ok: true, on, rows: rows.map(r => ({ peer: r.peer, dir: r.dir, text: r.body.text, aud: r.body.aud, t: +r.t })) }; }));
+    s.on('m:arch-del', safe(async ({ peer: p } = {}) => { if (p) await db.q('delete from im_archive where owner=$1 and lower(peer)=lower($2)', [uid, String(p).slice(0, 40)]); else await db.q('delete from im_archive where owner=$1', [uid]); return { ok: true }; }));
+    // ---- IMVironments: per-conversation theme, shared by both people ----
+    const pairKey = (a, b) => a < b ? a + ':' + b : b + ':' + a;
+    s.on('m:imv', safe(async ({ to, env }) => { if (!IMVS.includes(env)) return { error: 'Unknown IMVironment.' }; const t = await peer(to); if (!t) return { error: 'You can only theme chats with your contacts.' };
+      await db.q('insert into imv(k,env) values($1,$2) on conflict(k) do update set env=$2', [pairKey(uid, t.id), env]);
+      toUser(uid, 'm:imv', { with: t.name, env, by: me }); toUser(t.id, 'm:imv', { with: me, env, by: me }); return { ok: true }; }));
+    s.on('m:imv-get', safe(async ({ with: w }) => { const t = await idOf(w); if (!t) return { env: 'none' }; const r = await db.q('select env from imv where k=$1', [pairKey(uid, t.id)]); return { env: r[0]?.env || 'none' }; }));
     s.on('m:buzz', safe(async ({ to }) => { if (!ready) return; if (Date.now() - lastBuzz < 10000) return { error: 'Please wait before buzzing again.' }; const t = await peer(to); if (!t) return { error: 'Not a contact.' };
       lastBuzz = Date.now(); if (!online.has(t.id)) return { error: esc(t.name) + ' is offline.' }; toUser(t.id, 'm:buzz', { from: me }); return { ok: true }; }));
     s.on('m:invite', safe(async ({ to, room }) => { if (!ready) return; return hooks.invite({ uid, name: me, master: !!s.data.master, room }, to); }));
