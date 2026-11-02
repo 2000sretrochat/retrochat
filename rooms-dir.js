@@ -1,15 +1,6 @@
 // Classic Yahoo! Chat directory as a tree: category -> subfolders -> rooms (modeled on the original chat.yahoo.com list).
 // A node is either an array of rooms or an object of { subfolder: node }; an object's '' key holds rooms at that level.
 // Rooms in ADULT_ROOMS are rated R (18+). Room names must be unique across the whole directory.
-const US = {
-  '': ['United States Lobby'],
-  'Alabama': [], 'Alaska': [], 'Arizona': ['Arizona', 'Phoenix'], 'Arkansas': [], 'California': ['California', 'Los Angeles', 'San Diego', 'San Francisco Bay Area'], 'Colorado': [], 'Connecticut': [], 'Delaware': [], 'Florida': ['Florida', 'Miami'],
-  'Georgia': ['Georgia', 'Atlanta'], 'Hawaii': [], 'Idaho': [], 'Illinois': ['Illinois', 'Chicago'], 'Indiana': [], 'Iowa': [], 'Kansas': [], 'Kentucky': [], 'Louisiana': [], 'Maine': [], 'Maryland': [], 'Massachusetts': ['Massachusetts', 'Boston'],
-  'Michigan': ['Michigan', 'Detroit'], 'Minnesota': [], 'Mississippi': [], 'Missouri': ['Missouri', 'St Louis'], 'Montana': [], 'Nebraska': [], 'Nevada': ['Nevada', 'Las Vegas'], 'New Hampshire': [], 'New Jersey': [], 'New Mexico': [],
-  'New York': ['New York', 'New York City'], 'North Carolina': [], 'North Dakota': [], 'Ohio': [], 'Oklahoma': [], 'Oregon': ['Oregon', 'Portland'], 'Pennsylvania': ['Pennsylvania', 'Philadelphia'], 'Rhode Island': [], 'South Carolina': [], 'South Dakota': [],
-  'Tennessee': [], 'Texas': ['Texas', 'Austin', 'Dallas', 'Houston'], 'Utah': [], 'Vermont': [], 'Virginia': [], 'Washington': ['Washington', 'Seattle'], 'Washington, DC': [], 'West Virginia': [], 'Wisconsin': [], 'Wyoming': [],
-};
-for (const k of Object.keys(US)) if (k && !US[k].length) US[k] = [k];
 const DIR_TREE = {
   'Business & Finance': { 'Investing': ['Asian Markets', 'Bond Market', 'Stock Watch', 'FinanceVision', 'Real Estate'], 'Business & Careers': ['Career Development', 'Small & Medium Business', 'Work From Home', 'Biotechnology'] },
   'Computers & Internet': { 'Operating Systems': ['Windows', 'Macintosh', 'Linux, FreeBSD, Solaris'], 'Internet & Web': ['Surfing the Web', 'Web Design', 'Auctions Chat'], 'General': ['Computers Lobby', 'Electronics', "Hacker's Lounge", 'Programming', 'Chat Help'] },
@@ -39,19 +30,7 @@ const DIR_TREE = {
     'Sports': { '': ['The Locker Room', 'Sports Trivia', 'The Olympic Games', 'College Sports', 'Extreme Sports'], 'Football (American)': ['NFL Football', 'College Football', 'Fantasy Football', 'CFL'], 'Baseball': ['MLB', 'College Baseball', 'Fantasy Baseball'], 'Basketball': ['NBA'], 'Hockey': ['NHL', 'Minor League Hockey'],
       'Soccer & Rugby': ['Soccer', 'UK Football'], 'Combat Sports': ['Wrestling', 'Boxing & MMA', 'In The Ring'], 'Racing': ['Auto Racing'], 'Other Sports': ['Cricket', 'Curling', 'Golf', 'Tennis'] },
   },
-  'Regional': {
-    '': ['Regional Lobby'],
-    'United States': US,
-    'Canada': ['Canada', 'Montreal', 'Toronto', 'Vancouver'], 'Mexico': ['Mexico'], 'Brazil': ['Brazil'],
-    'United Kingdom': ['United Kingdom', 'London', 'Glasgow', 'Belfast', 'Scotland'], 'Ireland': ['Ireland', 'Dublin'],
-    'Europe': ['Europe', 'France', 'Germany', 'Italy', 'Spain', 'Denmark', 'Norway', 'Sweden', 'Russia'],
-    'India': ['India', 'Calcutta', 'Chennai', 'Delhi', 'Goa', 'Gujarat', 'Hyderabad', 'Kerala', 'Mumbai', 'Punjab', 'Tamil Nadu'],
-    'South Asia': ['Bangladesh', 'Nepal', 'Pakistan', 'Sri Lanka'],
-    'China & Taiwan': ['China', 'Hong Kong', 'Taiwan'], 'Japan': ['Japan', 'Tokyo'], 'Korea': ['Korea', 'Seoul'],
-    'Philippines': ['Philippines', 'Pinoy Chat', 'Metro Manila Barkada', 'Cebu Tambayan', 'Mindanao', 'Overseas Filipino Workers Zone'],
-    'Southeast Asia': ['Asia Global Chat', 'Indonesia', 'Bali', 'Jakarta', 'Surabaya', 'Malaysia', 'Kuala Lumpur', 'Penang', 'Singapore', 'Thailand', 'Bangkok', 'Vietnam', 'Hanoi', 'Saigon', 'Brunei', 'East Timor'],
-    'Australia & New Zealand': ['Australia', 'Sydney', 'New Zealand', 'Auckland'], 'Middle East': ['Middle East'],
-  },
+  'Regional': ['Regional Lobby', 'United States', 'Canada', 'Mexico', 'Brazil', 'Argentina', 'Chile', 'Colombia', 'Peru', 'Venezuela', 'Cuba', 'Puerto Rico', 'Jamaica', 'United Kingdom', 'Ireland', 'France', 'Germany', 'Italy', 'Spain', 'Portugal', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Denmark', 'Norway', 'Sweden', 'Finland', 'Poland', 'Greece', 'Russia', 'Ukraine', 'Turkey', 'Israel', 'Egypt', 'Saudi Arabia', 'United Arab Emirates', 'Iran', 'Iraq', 'Lebanon', 'Nigeria', 'Ghana', 'Kenya', 'South Africa', 'Ethiopia', 'Morocco', 'India', 'Pakistan', 'Bangladesh', 'Sri Lanka', 'Nepal', 'China', 'Taiwan', 'Japan', 'Korea', 'Philippines', 'Vietnam', 'Thailand', 'Indonesia', 'Malaysia', 'Singapore', 'Brunei', 'East Timor', 'Australia', 'New Zealand'],
   'Religion & Beliefs': { 'Christianity': ['Christian Chat', 'Catholic Chat', 'Bible Study'], 'World Religions': ['Buddhism Chat', 'Hinduism', 'Islam Chat', 'Jewish Chat', 'Sikhism'], 'Spirituality': ['Spirituality', 'Paganism', 'Astrology', 'Religion', 'Atheism & Agnosticism'] },
   'Romance': { 'By Age': ["20's Love", "30's Love", "40's Love", "50's Love", "60's Love"], 'Singles & Dating': ['Romance', 'Singles', 'Single Parents', 'Flirting', 'Pickup Bar', 'Disco Inferno', 'Moonlight Way', 'Love Stinks', 'Asian Connections', 'Interracial Dating', 'BBW and Admirers'], 'Adult (18+)': ['Married & Flirting', 'Adult Romance'] },
   'Schools & Education': ["Professors' Chat", 'Study Group', 'The University Years', 'Homework Help', 'High School', 'Teachers', 'Violence in Schools'],
