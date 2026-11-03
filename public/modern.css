@@ -42,7 +42,7 @@ html.dark #log span[style*="#8b5cf6" i],html.dark .bb span[style*="#8b5cf6" i],h
  #vrow,#erow,.hb,#tbar,.tools{flex-wrap:wrap!important;gap:4px}
  textarea,input[type=text],input[type=password],#msg{font-size:16px!important}
  .yprof,#modw>div,#avp,.yset{left:2vw!important;right:2vw!important;width:96vw!important;max-width:96vw!important;transform:none!important;top:6vh!important}
- #menu{overflow-x:auto;white-space:nowrap}
+ #menu{white-space:nowrap}
  .im .tools button span{display:none}
  #ad-slot{max-width:100%!important}
  #pwaInstall{bottom:56px!important}
@@ -72,3 +72,18 @@ html.dark #log span[style*="#8b5cf6" i],html.dark .bb span[style*="#8b5cf6" i],h
 @media (max-width:860px){#fsv{display:none}#fsr{width:56px!important}}
 #mem{overflow-x:hidden}
 #thm{display:inline-flex!important;align-items:center;justify-content:center}
+/* v13.6 narrow menu bar: no scrolling, drop-downs never clipped */
+#menu{overflow:visible!important;flex-wrap:wrap;row-gap:0;max-width:100%}
+#menu>div{flex:0 0 auto}
+@media (max-width:560px){#menu{padding:2px 4px!important;gap:0}#menu>div{padding:4px 7px!important;font-size:12.5px}.ydlogo{padding:0 4px 0 2px!important}.ydlogo>span{display:none}}
+@media (max-width:380px){#menu>div{padding:4px 5px!important;font-size:12px}}
+#menu .dd.ddfix{position:fixed!important;margin-top:0!important;z-index:9999!important;max-height:calc(100vh - 8px);overflow-y:auto}
+/* v13.6 dialogs fit narrow windows */
+.yae .bx{max-width:96vw;overflow-x:hidden!important}.yae .tabs{flex-wrap:wrap!important;row-gap:6px}.yae .tabs div{white-space:nowrap}
+.yae .ft{flex-wrap:wrap}.yae canvas{max-width:100%}
+.yprof{max-width:96vw;max-height:94vh;overflow-x:hidden!important;overflow-y:auto!important}
+html.yd.ydpop body{overflow:hidden}
+html.yd.ydpop .yae{background:var(--card,#fff)!important;align-items:stretch}
+html.yd.ydpop .yae .bx{width:100vw!important;max-width:none!important;max-height:none!important;height:100vh;border-radius:0!important;box-shadow:none!important;overflow-y:auto!important;display:flex;flex-direction:column}
+html.yd.ydpop .yae .bx .pn.on{flex:1}html.yd.ydpop .yae .hd{display:none!important}
+html.yd.ydpop .yprof{left:0!important;top:0!important;transform:none!important;width:100vw!important;max-width:none!important;height:100vh;max-height:none!important;border:0!important;border-radius:0!important;box-shadow:none!important}

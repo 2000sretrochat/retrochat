@@ -19,3 +19,13 @@
   d.body.appendChild(el);popped.add(el);el._pw=pw;let done=false;const fin=()=>{if(done)return;done=true;el._pw=null;popped.delete(el);onClose&&onClose()};
   pw.addEventListener('pagehide',fin);pw.addEventListener('beforeunload',fin);return pw};
 })();
+// v13.6: in-window dialogs (avatar, settings, profile) open as their own native windows in the desktop app.
+(function(){if(!window.YD)return;let n=0;
+ const sz=el=>el.classList.contains('yae')?[520,680]:el.classList.contains('yset')?[520,640]:[420,600];
+ const pop=el=>{if(el._pw||el._ydp)return;el._ydp=1;const [w,h]=sz(el);const t=(el.querySelector('.hd span,.hd,.tbar,h2,h3')||{}).textContent||'YappChat';
+  const parent=document.body;let closing=false;
+  const pw=window.ydPop(el,'ydlg'+(++n),w,h,t.trim().replace(/\u00d7$/,'').trim()||'YappChat',()=>{closing=true;if(el.isConnected)el.remove()});
+  if(!pw)return;// popup blocked: stays in-window
+  new MutationObserver((_,o)=>{if(el.parentNode!==pw.document.body){o.disconnect();if(!closing)try{pw.close()}catch(e){}}}).observe(pw.document.body,{childList:true})};
+ const start=()=>new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(x=>{if(x.nodeType==1&&x.parentNode==document.body&&(x.classList.contains('yae')||x.classList.contains('yprof')))setTimeout(()=>x.parentNode==document.body&&pop(x))}))).observe(document.body,{childList:true});
+ document.body?start():document.addEventListener('DOMContentLoaded',start)})();

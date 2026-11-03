@@ -4,3 +4,6 @@ let t=localStorage[K]||(matchMedia('(prefers-color-scheme: dark)').matches?'dark
 addEventListener('DOMContentLoaded',()=>{const b=document.createElement('button');b.id='thm';b.type='button';b.setAttribute('aria-label','Toggle dark mode');document.body.appendChild(b);apply(t);
  b.onclick=()=>{t=t=='dark'?'light':'dark';localStorage[K]=t;apply(t)}});
 addEventListener('storage',e=>{if(e.key==K){t=e.newValue||'light';apply(t)}})})();
+;(function(){function fix(){document.querySelectorAll('#menu>div').forEach(function(m){var d=m.querySelector(':scope>.dd');if(!d)return;if(!m.classList.contains('open')){d.classList.remove('ddfix');d.style.left=d.style.top='';return}
+d.classList.add('ddfix');var r=m.getBoundingClientRect(),W=document.documentElement.clientWidth,H=window.innerHeight;d.style.left='0px';d.style.top='0px';var w=d.offsetWidth,h=d.offsetHeight;var x=Math.max(4,Math.min(r.left,W-w-4)),y=r.bottom+2;if(y+h>H-4)y=Math.max(4,H-h-4);d.style.left=x+'px';d.style.top=y+'px'})}
+document.addEventListener('click',function(){setTimeout(fix,0)});document.addEventListener('contextmenu',function(){setTimeout(fix,0)});window.addEventListener('resize',fix)})();
