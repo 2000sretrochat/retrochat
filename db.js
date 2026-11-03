@@ -46,6 +46,7 @@ create table if not exists room_meta(room text primary key, rating text);
 alter table room_meta add column if not exists mics int;
 alter table room_meta add column if not exists hq boolean;
 alter table room_meta add column if not exists mtimer int;
+alter table room_meta add column if not exists mann int;
 create table if not exists im_archive(id serial primary key, owner int not null references users(id) on delete cascade, peer text not null, dir text not null, body jsonb not null, t timestamptz default now());
 create index if not exists im_archive_owner on im_archive(owner, id);
 create table if not exists imv(k text primary key, env text not null);

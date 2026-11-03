@@ -71,3 +71,4 @@ html.dark #log span[style*="#8b5cf6" i],html.dark .bb span[style*="#8b5cf6" i],h
 .mem{min-width:0}.mem .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}.mem .gt,.mem .ci,.mem .sdot,.mem .mi{flex:none}
 @media (max-width:860px){#fsv{display:none}#fsr{width:56px!important}}
 #mem{overflow-x:hidden}
+#thm{display:inline-flex!important;align-items:center;justify-content:center}
