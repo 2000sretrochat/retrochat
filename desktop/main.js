@@ -42,6 +42,8 @@ function create() {
 }
 app.on('web-contents-created', (_, wc) => wire(wc));
 app.whenReady().then(() => {
+  // Auto-update from GitHub releases (silent check; prompts to restart when an update is downloaded)
+  if (app.isPackaged) { try { const { autoUpdater } = require('electron-updater'); autoUpdater.autoDownload = true; autoUpdater.on('error', () => {}); autoUpdater.checkForUpdatesAndNotify().catch(() => {}); setInterval(() => autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600 * 1000); } catch (e) {} }
   const ses = session.defaultSession;
   const okP = ['media', 'notifications', 'display-capture', 'mediaKeySystem', 'clipboard-sanitized-write', 'fullscreen'];
   ses.setPermissionRequestHandler((wc, p, cb) => cb(internal(wc.getURL()) && okP.includes(p)));
@@ -55,6 +57,8 @@ app.whenReady().then(() => {
   tray.on('click', show);
 });
 // web Notifications from the page are native already; also flash the taskbar and offer a tray balloon when hidden
+const MICVOL = require('./micvol');
+ipcMain.handle('yc-micvol', (_, d) => (d ? MICVOL.step(d) : MICVOL.get()));
 ipcMain.on('yc-notify', (_, t, b) => { if (win && !win.isFocused()) { win.flashFrame(true); if (Notification.isSupported() && !win.isVisible()) { const n = new Notification({ title: String(t || 'YappChat'), body: String(b || ''), icon }); n.on('click', show); n.show(); } } });
 app.on('before-quit', () => { quitting = true; });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
