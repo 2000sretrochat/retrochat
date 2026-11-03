@@ -88,8 +88,7 @@ app.post('/api/fav', express.json(), async (req, res) => { const a = await userF
   const room = String(req.body?.room || ''); if (!ROOMS[room]) return res.status(404).json({ error: 'No such room.' }); const lc = a.name.toLowerCase();
   try { await db.q(req.body?.on ? 'insert into favorites(owner,room) values($1,$2) on conflict do nothing' : 'delete from favorites where owner=$1 and room=$2', [lc, room]); res.json({ ok: true }); } catch { res.status(503).json({ error: 'Favorites are unavailable right now.' }); } });
 // ---- idle chat bots (Late Night), toggled by masters; not sockets, so they never count toward IP/session limits ----
-(function loadURooms(n) { if (!db.status().ready) return n < 90 && setTimeout(() => loadURooms(n + 1), 2000).unref?.();
-  Promise.resolve().then(() => db.q('select * from user_rooms')).then(rs => { for (const r of rs) { if (ROOMS[r.name] && !UROOMS.has(r.name)) continue; UROOMS.set(r.name, { owner: r.owner, ownerLc: r.owner.toLowerCase(), emptySince: Date.now(), icon: r.icon || '' }); ROOMS[r.name] = DIR[r.cat] ? r.cat : 'Cultures & Community'; TOPICS[r.name] = r.topic || 'Welcome to ' + r.name; history[r.name] = history[r.name] || []; if (r.rating) RATE[r.name] = r.rating; if (r.mics) MICS[r.name] = r.mics; } if (rs.length) console.log('restored', rs.length, 'user rooms'); }).catch(e => console.error('user rooms', e.message)); })(0);
+const loadURooms = () => Promise.resolve().then(() => db.q('select * from user_rooms')).then(rs => { for (const r of rs) { if (ROOMS[r.name] && !UROOMS.has(r.name)) continue; UROOMS.set(r.name, { owner: r.owner, ownerLc: r.owner.toLowerCase(), emptySince: Date.now(), icon: r.icon || '' }); ROOMS[r.name] = DIR[r.cat] ? r.cat : 'Cultures & Community'; TOPICS[r.name] = r.topic || 'Welcome to ' + r.name; history[r.name] = history[r.name] || []; if (r.rating) RATE[r.name] = r.rating; if (r.mics) MICS[r.name] = r.mics; } if (rs.length) console.log('restored', rs.length, 'user rooms'); }).catch(e => console.error('user rooms', e.message));
 // ICE servers (STUN + optional TURN), credentials come from env, never hardcoded in the client
 let iceCache = null;
 // room preview (Browse Rooms hover / long-press): who's inside, minus incognito masters and blocked users
@@ -319,6 +318,16 @@ io.on('connection', s => {
     saveURoom(name); cb({ ok: true, name, rating, mics }); if (s.data.name) join(name);
   });
   const isOwner = () => { const r = UROOMS.get(s.data.room); return r && s.data.acct && r.ownerLc === s.data.acct.name.toLowerCase(); };
+  s.on('rename-room', async (nn, cb) => { if (typeof cb !== 'function') return; const old = s.data.room;
+    if (!old || !UROOMS.has(old) || !(isOwner() || s.data.master)) return cb({ error: 'Only the room owner can rename this room.' });
+    const name = String(nn || '').replace(/\s+/g, ' ').trim(); if (name === old) return cb({ ok: true, name });
+    const r0 = UROOMS.get(old); UROOMS.delete(old); const e = roomNameError(name); if (e) { UROOMS.set(old, r0); return cb({ error: e }); }
+    try { await db.q('update user_rooms set name=$2 where name=$1', [old, name]);
+      for (const t of ['room_meta', 'room_mod', 'room_ann', 'room_history', 'favorites']) await db.q(`update ${t} set room=$2 where room=$1`, [old, name]).catch(err => console.error('rename', t, err.message));
+    } catch (err) { UROOMS.set(old, r0); return cb({ error: err.code === '23505' ? 'A room with that name already exists.' : 'Could not rename the room right now.' }); }
+    UROOMS.set(name, r0); for (const M of [ROOMS, TOPICS, history, RATE, MOD, MICS, HQ, MTIMER, QUEUE, MANN, ANN]) if (old in M) { M[name] = M[old]; delete M[old]; }
+    for (const x of socks(old)) { x.leave(old); x.join(name); x.data.room = name; }
+    io.to(name).emit('room-renamed', { from: old, to: name }); push(name, { sys: true, text: 'Room renamed to ' + esc(name) }); upd(name); io.emit('rooms-changed'); cb({ ok: true, name }); });
   s.on('set-topic', (t, cb) => { if (!isOwner()) return cb && cb({ error: 'Only the room owner can change the topic.' }); TOPICS[s.data.room] = cleanTopic(t) || TOPICS[s.data.room];
     saveURoom(s.data.room); io.to(s.data.room).emit('topic', TOPICS[s.data.room]); push(s.data.room, { sys: true, text: esc(s.data.name) + ' changed the topic to: ' + esc(TOPICS[s.data.room]) }); cb && cb({ ok: true }); });
   s.on('kick', (who, cb) => doMod({ action: 'kick', who }, cb));
@@ -470,4 +479,4 @@ io.on('connection', s => {
 acc.sockets(io, AH);
 const RESET = require('./reset')(app, express);
 const MASTER = require('./master')({ resetLink: RESET.makeLink, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, setMicOpts, RATINGS, KICK_MS });
-db.init().then(() => MASTER.load()).catch(e => console.error('[master load]', e.message)).finally(() => server.listen(process.env.PORT || 3000, () => console.log('YappChat on', process.env.PORT || 3000)));
+db.init().then(() => loadURooms()).then(() => MASTER.load()).catch(e => console.error('[master load]', e.message)).finally(() => { if (!db.status().ready) { const t = setInterval(() => { if (db.status().ready) { clearInterval(t); loadURooms().then(() => MASTER.load()).catch(() => {}); } }, 2000); } }).finally(() => server.listen(process.env.PORT || 3000, () => console.log('YappChat on', process.env.PORT || 3000)));
