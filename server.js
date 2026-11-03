@@ -271,8 +271,8 @@ function modAct(s, room, { action, who, mins } = {}, cb) {
 const IPCONN = new Map(), MAXCONN = +process.env.MAX_SOCKETS_PER_IP || 30, KEYTRY = new Map();
 io.use((s, next) => { const ip = geo.clientIp(s.handshake.headers, s.handshake.address); const n = IPCONN.get(ip) || 0; if (n >= MAXCONN) return next(new Error('Too many connections')); IPCONN.set(ip, n + 1); s.once('disconnect', () => { const m = (IPCONN.get(ip) || 1) - 1; m > 0 ? IPCONN.set(ip, m) : IPCONN.delete(ip); }); next(); });
 io.on('connection', s => {
-  { let win = Date.now(), cnt = 0, strikes = 0; s.use((pkt, next) => { const now = Date.now(); if (now - win > 10e3) { win = now; cnt = 0; } const lim = s.data.master ? 400 : 120;
-    if (++cnt > lim) { if (++strikes > 3) { s.disconnect(true); return; } const cb = pkt[pkt.length - 1]; if (typeof cb === 'function') cb({ error: 'Slow down - too many actions.' }); return; } next(); }); }
+  { let win = Date.now(), cnt = 0, strikes = 0; s.use((pkt, next) => { const now = Date.now(); if (now - win > 10e3) { win = now; cnt = 0; } const lim = s.data.master ? 800 : 300;
+    if (++cnt > lim) { if (++strikes > 50) { s.disconnect(true); return; } const cb = pkt[pkt.length - 1]; if (typeof cb === 'function') cb({ error: 'Slow down - too many actions.' }); return; } next(); }); }
   let stamps = [];
   s.on('login', async ({ name, room }, cb) => {
     name = s.data.acct ? s.data.acct.name : String(name || '').trim();
