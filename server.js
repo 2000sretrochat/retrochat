@@ -98,6 +98,7 @@ app.get('/api/peek', async (req, res) => { const room = String(req.query.room ||
   let mine = new Set(); if (a) try { mine = new Set((await db.q('select blocked from blocks where owner=$1 union select owner from blocks where blocked=$1', [a.id])).map(r => r.blocked)); } catch { }
   const names = socks(room).filter(x => !x.data.inc && !(x.data.acct && mine.has(x.data.acct.id))).map(x => x.data.name).concat(botsIn(room).map(b => b.name || b));
   res.set('Cache-Control', 'no-store').json({ names: names.slice(0, 30), more: Math.max(0, names.length - 30) }); });
+app.get('/api/gif', async (req, res) => { const k = process.env.GIPHY_KEY; if (!k) return res.json({ needKey: true }); try { const q = String(req.query.q || '').slice(0, 60); const u = 'https://api.giphy.com/v1/gifs/' + (q ? 'search' : 'trending') + '?api_key=' + encodeURIComponent(k) + '&limit=24&rating=pg-13' + (q ? '&q=' + encodeURIComponent(q) : ''); const r = await fetch(u); const j = await r.json(); res.json({ items: (j.data || []).map(d => d.id).filter(id => /^[A-Za-z0-9]{4,40}$/.test(id)) }); } catch (e) { res.json({ items: [] }); } });
 app.get('/api/ice', async (req, res) => { const stun = { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }; const out = [stun];
   try { const E = process.env;
     if (E.TURN_URLS && E.TURN_USERNAME && E.TURN_CREDENTIAL) out.push({ urls: E.TURN_URLS.split(',').map(x => x.trim()), username: E.TURN_USERNAME, credential: E.TURN_CREDENTIAL });
@@ -218,7 +219,7 @@ setInterval(() => { for (const r of Object.keys(ROOMS)) { let ch = advance(r);
   if (ch) upd(r); } }, 1000).unref();
 const AH = { roomExists: r => !!ROOMS[r], roomRating: r => rateOf(r), rawRoomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && ROOMS[x.data.room] ? x.data.room : null; },
   bannedFrom: (r, n) => { const e = MOD[r]?.kicked?.get?.(String(n).toLowerCase()); return !!e && e > Date.now(); },
-  toRoomUser: (n, ev, d) => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); x && x.emit(ev, d); }, roomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && !x.data.inc && ROOMS[x.data.room] ? x.data.room : null; } };
+  toRoomUser: (n, ev, d) => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); x && x.emit(ev, d); }, roomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && !x.data.inc && !x.data.master && ROOMS[x.data.room] ? x.data.room : null; } };
 function lists(room) { if (!room) return; setImmediate(() => { for (const x of socks(room)) if (x.data.acct) AH.roomChanged?.(x.data.name); }); const R = {}; for (const x of socks(room)) { const k = x.data.master ? 1 : 0; R[k] = R[k] || [roster(room, !!k), members(room, !!k)]; x.emit('roster', R[k][0]); x.emit('members', R[k][1]); } }
 function upd(room) { if (room) { lists(room); io.to(room).emit('micq', micq(room)); } }
 const MAXVIEW = 6;
@@ -342,7 +343,7 @@ io.on('connection', s => {
     if (!s.data.name || !m) return;
     if (mod(s.data.room).mt.has(s.data.name.toLowerCase())) return s.emit('msg', { sys: true, text: 'You are muted in this room and cannot send messages.' });
     const now = Date.now(); stamps = stamps.filter(t => now - t < 10000);
-    if (stamps.length >= 5) return s.emit('msg', { sys: true, text: 'You are sending messages too fast. Slow down.' });
+    if (stamps.length >= 5) { if (now - (s.data.flw || 0) > 5000) { s.data.flw = now; s.emit('msg', { sys: true, text: 'Whoa, slow down a little! Give it a few seconds and try again.' }); } return; }
     stamps.push(now);
     const text = String(m.text || '').trim().slice(0, MAXLEN); if (!text) return;
     { const fl = FLOOD.check(s.data.acct?.name || s.data.name, text, s.data.master); if (fl) return s.emit('msg', { sys: true, text: fl }); }

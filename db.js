@@ -16,6 +16,7 @@ create table if not exists offline(id serial primary key, to_id int not null ref
 create index if not exists offline_to on offline(to_id);
 create table if not exists avatars(user_id int primary key references users(id) on delete cascade, mime text not null, data bytea not null, updated timestamptz not null default now());
 alter table users add column if not exists last_ip text;
+alter table users add column if not exists show_room boolean default true;
 alter table sessions add column if not exists display text;
 alter table users add column if not exists last_loc text;
 alter table users add column if not exists last_at timestamptz;
