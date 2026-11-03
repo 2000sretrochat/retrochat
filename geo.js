@@ -2,7 +2,7 @@
 const db = require('./db'), crypto = require('crypto');
 const CACHE = new Map(), TTL = 12 * 3600e3, GUESTS = new Map(); // ip -> {loc,t}; name_lc -> guest record
 function clientIp(headers, fallback) {
-  const xf = String(headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const xf = String(headers['cf-connecting-ip'] || headers['true-client-ip'] || String(headers['x-forwarded-for'] || '').split(',')[0]).trim(); // Cloudflare (in front of Render) overwrites these, so they can't be spoofed
   let ip = xf || String(fallback || ''); if (ip.startsWith('::ffff:')) ip = ip.slice(7);
   return ip.slice(0, 64);
 }
