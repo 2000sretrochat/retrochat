@@ -55,6 +55,8 @@ app.whenReady().then(() => {
   tray.on('click', show);
 });
 // web Notifications from the page are native already; also flash the taskbar and offer a tray balloon when hidden
+const MICVOL = require('./micvol');
+ipcMain.handle('yc-micvol', (_, d) => (d ? MICVOL.step(d) : MICVOL.get()));
 ipcMain.on('yc-notify', (_, t, b) => { if (win && !win.isFocused()) { win.flashFrame(true); if (Notification.isSupported() && !win.isVisible()) { const n = new Notification({ title: String(t || 'YappChat'), body: String(b || ''), icon }); n.on('click', show); n.show(); } } });
 app.on('before-quit', () => { quitting = true; });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
