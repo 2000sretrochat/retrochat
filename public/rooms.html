@@ -165,7 +165,7 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
 @media (max-width:900px){#rhead .hb span{display:none}#rhead .hb.inv span{display:inline}#avb span{display:none}}
 @media (max-height:640px){.adph-lb{height:40px}}
 .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 13px var(--sys);color:#00205B;padding:0 10px 0 6px;align-self:center}
-</style></head><body>
+</style><link rel="stylesheet" href="/room137.css"></head><body>
 <div id="brand"><div style="text-align:center"><div style="display:flex;align-items:center;gap:10px;justify-content:center"><span class=lgbig></span><div class="logo appname"></div></div><div class="tag">Chat rooms, voice &amp; webcams &mdash; old school.</div></div></div>
 <div id="login" class="win"><div class="tbar"><span class=lgs></span> <span><span class="brandname appname"></span> Chat Rooms</span><span class="sp"></span></div><div class="in">
 <div id="who"></div><span id="nmw">Screen name: <input type="text" id="nm" maxlength="20" autocomplete="off"></span> <button id="go">Sign in as Guest</button><label id="incl" style="display:none;font-size:12px;margin-left:6px"><input type="checkbox" id="incq"> Enter incognito</label> <button id="mk" title="Create your own room">Create Room</button><div id="err"></div><div class="privacy" style="font-size:11px;color:var(--muted,#667);margin-top:8px">We log IP address and approximate location for safety and moderation.</div>
@@ -210,7 +210,7 @@ document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${AP
 document.querySelectorAll('.lgs').forEach(e=>e.innerHTML=YI.logo(26));document.querySelectorAll('.lgbig').forEach(e=>e.innerHTML=YI.logo(56));
 function setHdr(){$('hdr').textContent=room+' ('+(typeof ros!='undefined'?ros.length:0)+') \u2013 Chat Room'}
 document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('');
-const $=id=>document.getElementById(id), S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
+const $=id=>document.getElementById(id)||(window.ydFind&&ydFind(id))||null, S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
 (function(){const r=$('fsr'),L=$('log'),set=v=>{v=Math.max(11,Math.min(24,Math.round(+v||14)));r.value=v;$('fsv').textContent=v+'px';L.style.setProperty('--chatfs',v+'px');L.classList.add('fsz');localStorage.rcChatFs=v};
  set(localStorage.rcChatFs||14);r.oninput=()=>set(r.value);$('fsz').addEventListener('wheel',e=>{e.preventDefault();set(+r.value+(e.deltaY<0?1:-1))},{passive:false})})();
 let room=new URLSearchParams(location.search).get('room')||'',owner=null,acct=null, st={b:false,i:false,u:false,color:'#000000',f:'Arial'}, rooms=[], selName=null;
@@ -559,4 +559,4 @@ document.querySelectorAll('#hdr').forEach(()=>{});
  else{const lab=document.createElement('span');lab.textContent='Boost';lab.className='mlb';lab.style.cssText='font:600 10px var(--sys);color:var(--muted,#567);margin-right:2px';wrap.prepend(lab);show(YAV.cfg().boost);up.onclick=()=>show(YAV.setBoost(YAV.cfg().boost+10));dn.onclick=()=>show(YAV.setBoost(YAV.cfg().boost-10))}})();
 
 (()=>{const e=document.getElementById('mMute');if(!e)return;const u=()=>e.classList.toggle('chk',localStorage.ycSound==='off');u();e.onclick=()=>{localStorage.ycSound=localStorage.ycSound==='off'?'on':'off';u()};addEventListener('storage',u);addEventListener('ycsound',u)})();
-</script></body></html>
+</script><script src="/room137.js"></script></body></html>
