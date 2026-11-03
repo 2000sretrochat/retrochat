@@ -42,6 +42,8 @@ function create() {
 }
 app.on('web-contents-created', (_, wc) => wire(wc));
 app.whenReady().then(() => {
+  // Auto-update from GitHub releases (silent check; prompts to restart when an update is downloaded)
+  if (app.isPackaged) { try { const { autoUpdater } = require('electron-updater'); autoUpdater.autoDownload = true; autoUpdater.on('error', () => {}); autoUpdater.checkForUpdatesAndNotify().catch(() => {}); setInterval(() => autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600 * 1000); } catch (e) {} }
   const ses = session.defaultSession;
   const okP = ['media', 'notifications', 'display-capture', 'mediaKeySystem', 'clipboard-sanitized-write', 'fullscreen'];
   ses.setPermissionRequestHandler((wc, p, cb) => cb(internal(wc.getURL()) && okP.includes(p)));
