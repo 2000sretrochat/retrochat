@@ -416,4 +416,4 @@ function onSig({from,data}){const w=ims[from.toLowerCase()];if(!w||!w._call||!da
   else if(c.pc)await c.pc.setRemoteDescription(data.sdp)}else if(data.ice&&c.pc)await c.pc.addIceCandidate(data.ice).catch(()=>{})}).catch(e=>console.warn('sig',e))}
 function endCall(w,notify){const c=w._call;if(!c)return;if(notify)S&&S.emit('m:hang',{to:c.peer});c.pc&&c.pc.close();c.stream&&c.stream.getTracks().forEach(t=>t.stop());w.querySelectorAll('video').forEach(v=>v.srcObject=null);w.querySelector('audio')?.remove();w._call=null;callUI(w,false);notify&&sys(w,'Call ended.')}
 addEventListener('beforeunload',()=>Object.values(ims).forEach(w=>endCall(w,true)));
-</script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div></body></html>
+</script><script src="/mcog.js"></script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div></body></html>
