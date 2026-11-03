@@ -49,7 +49,9 @@ function roomNameError(n) {
 const cleanTopic = t => String(t || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 100); // raw; client escapes
 // user rooms are kept permanently (owner can reopen them with their settings); nothing is deleted when they empty out
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-app.use((req,res,next)=>{res.setHeader('Permissions-Policy','camera=(self), microphone=(self), display-capture=(self)');next()});
+app.disable('x-powered-by');
+const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'";
+app.use((req,res,next)=>{res.set({'Permissions-Policy':'camera=(self), microphone=(self), display-capture=(self)','Content-Security-Policy':CSP,'X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'strict-origin-when-cross-origin','Cross-Origin-Opener-Policy':'same-origin'}); if (req.secure) res.set('Strict-Transport-Security','max-age=15552000'); next()});
 acc.http(app, express, { reservedName: n => MASTER.reserved(n), ipBanned: ip => MASTER.ipBanned(ip), seedMaster: (id, n) => MASTER.seedMaster(id, n), guestInUse: n => users.has(String(n).toLowerCase()) && !!io.sockets.sockets.get(users.get(String(n).toLowerCase()))?.data.guest });
 app.get('/privacy', (req, res) => res.sendFile(__dirname + '/public/privacy.html'));
 app.get('/terms', (req, res) => res.sendFile(__dirname + '/public/terms.html'));
@@ -265,7 +267,12 @@ function modAct(s, room, { action, who, mins } = {}, cb) {
     else { const a = action === 'unmutetext' ? m.mt.delete(lc) : action === 'unmutemic' ? m.mm.delete(lc) : (m.mt.delete(lc) | m.mm.delete(lc)); if (!a) return cb({ error: 'That user is not muted.' }); say(nm + ' was unmuted by ' + by + '.'); } }
   MASTER.saveMod(room); upd(room); cb({ ok: true, list: modList(room) });
 }
+// per-IP socket cap + per-socket event rate limit (masters get a higher ceiling)
+const IPCONN = new Map(), MAXCONN = +process.env.MAX_SOCKETS_PER_IP || 30, KEYTRY = new Map();
+io.use((s, next) => { const ip = geo.clientIp(s.handshake.headers, s.handshake.address); const n = IPCONN.get(ip) || 0; if (n >= MAXCONN) return next(new Error('Too many connections')); IPCONN.set(ip, n + 1); s.once('disconnect', () => { const m = (IPCONN.get(ip) || 1) - 1; m > 0 ? IPCONN.set(ip, m) : IPCONN.delete(ip); }); next(); });
 io.on('connection', s => {
+  { let win = Date.now(), cnt = 0, strikes = 0; s.use((pkt, next) => { const now = Date.now(); if (now - win > 10e3) { win = now; cnt = 0; } const lim = s.data.master ? 400 : 120;
+    if (++cnt > lim) { if (++strikes > 3) { s.disconnect(true); return; } const cb = pkt[pkt.length - 1]; if (typeof cb === 'function') cb({ error: 'Slow down - too many actions.' }); return; } next(); }); }
   let stamps = [];
   s.on('login', async ({ name, room }, cb) => {
     name = s.data.acct ? s.data.acct.name : String(name || '').trim();
@@ -314,7 +321,7 @@ io.on('connection', s => {
     saveURoom(s.data.room); io.to(s.data.room).emit('topic', TOPICS[s.data.room]); push(s.data.room, { sys: true, text: esc(s.data.name) + ' changed the topic to: ' + esc(TOPICS[s.data.room]) }); cb && cb({ ok: true }); });
   s.on('kick', (who, cb) => doMod({ action: 'kick', who }, cb));
   let keyTries = 0;
-  s.on('mod:site', (k, cb) => { if (typeof cb !== 'function') return; if (++keyTries > 5) return cb({ error: 'Too many attempts.' });
+  s.on('mod:site', (k, cb) => { if (typeof cb !== 'function') return; const kip = s.data.ip || '?', kt = (KEYTRY.get(kip) || []).filter(t => Date.now() - t < 3600e3); if (++keyTries > 5 || kt.length >= 10) return cb({ error: 'Too many attempts.' }); kt.push(Date.now()); KEYTRY.set(kip, kt);
     if (!keyOk(k)) return cb({ error: 'Wrong admin key.' }); s.data.site = true; upd(s.data.room); cb({ ok: true }); });
   s.on('mod:list', cb => { if (typeof cb !== 'function') return; if (!roleOf(s, s.data.room)) return cb({ error: 'Only the room owner and admins can do that.' }); cb(modList(s.data.room)); });
   s.on('mod', (d, cb) => doMod(d || {}, cb));

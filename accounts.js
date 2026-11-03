@@ -15,7 +15,7 @@ async function userFromCookie(h) {
 const hits = new Map();
 function limited(key, max, ms) { const now = Date.now(); let h = hits.get(key); if (!h || now - h.t > ms) h = { t: now, n: 0 }; h.n++; hits.set(key, h); return h.n > max; }
 setInterval(() => { const now = Date.now(); for (const [k, h] of hits) if (now - h.t > 3600e3) hits.delete(k); }, 600e3).unref();
-const DUMMY = bcrypt.hashSync('x-dummy-password', 10);
+const DUMMY = bcrypt.hashSync('x-dummy-password', 12);
 
 let H = {};
 function http(app, express, hooks = {}) { H = hooks;
@@ -40,14 +40,14 @@ function http(app, express, hooks = {}) { H = hooks;
   app.get('/api/me', async (req, res) => { const u = await userFromCookie(req.headers.cookie); let m = false; if (u) { try { m = !!(await db.q('select is_master from users where id=$1', [u.id]))[0]?.is_master; } catch { } } res.set('Cache-Control', 'no-store'); res.json(u ? (m ? { name: u.name, m: true } : { name: u.name }) : { name: null }); });
   app.get('/api/available', async (req, res) => {
     if (!db.status().ready) return maint(res);
-    if (limited('av:' + req.ip, 60, 60e3)) return res.status(429).json({ error: 'Too many requests' });
+    if (limited('av:' + geo.clientIp(req.headers, req.socket.remoteAddress), 60, 60e3)) return res.status(429).json({ error: 'Too many requests' });
     const n = String(req.query.name || ''); if (!NAME_RE.test(n) || RESERVED.test(n) || (H.reservedName && H.reservedName(n))) return res.json({ available: false, valid: false });
     const r = await db.q('select 1 from users where name_lc=$1', [n.toLowerCase()]); res.json({ available: !r.length && !(H.guestInUse && H.guestInUse(n)), valid: true });
   });
   app.post('/api/signup', async (req, res) => {
     if (!db.status().ready) return maint(res);
     if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return res.status(403).json({ error: 'Sign-ups from your network are not allowed.' });
-    if (limited('su:' + req.ip, +process.env.SIGNUP_LIMIT || 5, 3600e3)) return res.status(429).json({ error: 'Too many sign-ups from your network. Try again later.' });
+    if (limited('su:' + geo.clientIp(req.headers, req.socket.remoteAddress), +process.env.SIGNUP_LIMIT || 5, 3600e3)) return res.status(429).json({ error: 'Too many sign-ups from your network. Try again later.' });
     const { name, password, remember } = req.body || {}; let { email } = req.body || {}; if (typeof email === 'string') email = email.trim();
     if (typeof name !== 'string' || !NAME_RE.test(name)) return res.status(400).json({ error: 'Screen names are 3-20 characters, start with a letter, and use letters, numbers, _ or .' });
     if (req.body.agree !== true) return res.status(400).json({ error: 'Please agree to the Terms and Rules (18 or older) to sign up.' });
@@ -68,7 +68,7 @@ function http(app, express, hooks = {}) { H = hooks;
     if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return res.status(403).json({ error: 'Sign-ins from your network are not allowed.' });
     const { name, password, remember } = req.body || {};
     const lc = String(name || '').toLowerCase().slice(0, 40);
-    if (limited('li:' + req.ip, 20, 900e3) || limited('ln:' + lc, 8, 900e3)) return res.status(429).json({ error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
+    if (limited('li:' + geo.clientIp(req.headers, req.socket.remoteAddress), 20, 900e3) || limited('ln:' + lc, 8, 900e3)) return res.status(429).json({ error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
     const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw,banned from users where name_lc=$1', [lc]) : [];
     const ok = await bcrypt.compare(String(password || ''), r[0] ? r[0].pw : DUMMY); // constant work either way
     if (!r[0] || !ok) return res.status(401).json({ error: 'Invalid screen name or password.' });

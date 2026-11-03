@@ -30,10 +30,10 @@ module.exports = function (app, express) {
   app.get('/api/verify', async (req, res) => { const t = String(req.query.t || ''); const r = t ? (await db.q('delete from email_verify where token=$1 returning user_id, expires', [sha(t)]).catch(() => []))[0] : null;
     if (!r || new Date(r.expires) < new Date()) return res.redirect('/?verified=0'); await db.q('update users set verified=true where id=$1', [r.user_id]).catch(() => {}); res.redirect('/?verified=1'); });
   app.get('/api/reset/config', (req, res) => res.json({ email: enabled() }));
-  app.post('/api/forgot', express.json(), async (req, res) => { const ip = req.ip, n = (hits.get(ip) || []).filter(t => Date.now() - t < 3600e3); if (n.length >= 5) return res.status(429).json({ error: 'Too many requests. Try again later.' }); n.push(Date.now()); hits.set(ip, n);
+  app.post('/api/forgot', express.json(), async (req, res) => { const ip = require('./geo').clientIp(req.headers, req.socket.remoteAddress), n = (hits.get(ip) || []).filter(t => Date.now() - t < 3600e3); if (n.length >= 5) return res.status(429).json({ error: 'Too many requests. Try again later.' }); n.push(Date.now()); hits.set(ip, n);
     if (!enabled()) return res.json({ ok: true, email: false, text: 'Email reset is not available yet. Use the Report button in a chat room to ask a moderator for a reset link.' });
     const k = String(req.body?.name || '').trim().toLowerCase().slice(0, 100); const generic = { ok: true, email: true, text: 'If that account has an email address on file, a reset link is on its way. It expires in 1 hour.' };
-    if (!k) return res.json(generic);
+    if (!k) return res.json(generic); { const kn = (hits.get('n:' + k) || []).filter(t => Date.now() - t < 3600e3); if (kn.length >= 3) return res.json(generic); kn.push(Date.now()); hits.set('n:' + k, kn); }
     try { const u = (await db.q('select id,name,email from users where name_lc=$1 or lower(email)=$1 limit 1', [k]))[0]; if (u && u.email) await send(u.email, u.name, await makeLink(req, u.id)); } catch (e) { console.error('forgot', e.message); }
     res.json(generic); });
   app.post('/api/reset', express.json(), async (req, res) => { const { t, password } = req.body || {};
