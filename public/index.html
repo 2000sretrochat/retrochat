@@ -142,7 +142,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div id="menu">
   <div>Messenger<div class="dd"><div id="mStatus">Change My Status...</div><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom" title="Let friends see which chat room you are in">&#10003; Show the room I'm in</div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
   <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mProf">View Profile of Selected</div><div id="mMyProf">Edit My Profile...</div><div id="mGroup" style="display:none"></div><div id="mMove" style="display:none"></div><hr><div id="mRem">Remove Selected Contact</div><div id="mBlock">Block Selected Contact</div><div id="mBlocked">Blocked List...</div></div></div>
-  <div>Actions<div class="dd"><div id="mIm">Send an IM to Selected</div><div id="mBuzz">Buzz Selected</div><div id="mInv">Invite to Room</div><hr><div id="mRooms">Browse Chat Rooms...</div></div></div>
+  <div>Actions<div class="dd"><div id="mIm">Send a PM to Selected</div><div id="mBuzz">Buzz Selected</div><div id="mInv">Invite to Room</div><hr><div id="mRooms">Browse Chat Rooms...</div></div></div>
   <div>Help<div class="dd"><div id="mHelp">Getting Started</div><div id="mAbout">About</div></div></div>
  </div>
  <div id="signin">
@@ -253,7 +253,7 @@ function start(){$('signin').style.display='none';$('main').style.display='flex'
  S.on('m:im',m=>{const w=openIm(m.from);line(w,m.from,m);if(!document.hidden)S.emit('m:seen',{to:m.from});else addEventListener('visibilitychange',function f(){if(!document.hidden){S.emit('m:seen',{to:m.from});removeEventListener('visibilitychange',f)}});{const e=w.querySelector('.yseen');e&&e.remove()}if(m.aud)YAud.play(m.aud,w);clearTyp(w);SND.im();if(document.hidden)document.title='* '+m.from+' says...'});
  S.on('m:im-echo',m=>{const w=openIm(m.to);line(w,ME.name,m)});
  S.on('m:typing',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;w.querySelector('.typ').textContent=from+' is typing...';clearTimeout(w._tt);w._tt=setTimeout(()=>clearTyp(w),4000)});
- S.on('m:buzz',({from})=>{const w=openIm(from);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(from)}: BUZZ!!!</div>`);scroll(w);SND.buzz();for(const el of [w,$('mwin')]){el.classList.remove('buzzing');void el.offsetWidth;el.classList.add('buzzing')}});
+ S.on('m:buzz',({from})=>{const w=openIm(from);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(from)}: BUZZ!!!</div>`);scroll(w);SND.buzz();if(localStorage.ycShake!='off')for(const el of [w,$('mwin')]){el.classList.remove('buzzing');void el.offsetWidth;el.classList.add('buzzing')}});
  S.on('m:invite',({from,room,rating})=>{SND.im();invPopup(from,room,rating,()=>emit('m:invite-decline',{from}))});S.on('m:invite-declined',({name})=>toast(escT(name)+' declined your invitation.'));
  S.on('m:call',onCall);S.on('m:callans',onCallAns);S.on('m:sig',onSig);S.on('m:hang',({from})=>{const w=ims[from.toLowerCase()];if(w){endCall(w,false);sys(w,from+' ended the call.')}});
 }
@@ -314,7 +314,7 @@ function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLo
  $('brl').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>window.open('/rooms.html?room='+encodeURIComponent(b.dataset.r),'yapprooms'))}
 $('mProf').onclick=()=>{const n=need();n&&YProf.show(n,{me:ME&&ME.name})};$('mMyProf').onclick=()=>YProf.edit();$('mSet').onclick=()=>YSet.open();
 $('mInv').onclick=()=>{const n=need();n&&invite(n)};
-$('mHelp').onclick=()=>alert('Add a Contact sends a buddy request. Once they accept, double-click their name to IM.\nUse the IM window buttons for BUZZ!, voice calls and webcam.\nChange your status and message at the top. Right-click a contact for more options.');
+$('mHelp').onclick=()=>alert('Add a Contact sends a buddy request. Once they accept, double-click their name to PM.\nUse the PM window buttons for BUZZ!, voice calls and webcam.\nChange your status and message at the top. Right-click a contact for more options.');
 $('mAbout').onclick=()=>alert(APP_NAME.join('')+' Messenger - an original nostalgia project.');
 const invOk=n=>{const c=contacts[String(n).toLowerCase()];return !c||(c.online&&c.status=='available'&&!c.idle)};
 async function invite(n){if(!invOk(n))return toast(escT(n)+" isn't available for invites.");let r=await emit('m:invite',{to:n});
@@ -341,7 +341,7 @@ function setImv(w,env){[...w.classList].filter(c=>c.startsWith('imv-')).forEach(
 async function reportUser(who){const why=prompt('Report '+who+' to the site moderators.\nWhat happened?','');if(why===null)return;const r=await fetch('/api/report',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({who,why})}).then(r=>r.json()).catch(()=>({error:'Network error'}));alert(r.error||'Thanks. Your report was sent to the site moderators.')}
 function openIm(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTop;if(ims[k]._pw)try{ims[k]._pw.focus()}catch(e){}return ims[k]}const name=(contacts[k]||{}).name||n;
  const w=document.createElement('div');w.className='im win';const i=Object.keys(ims).length;w.style.left=(330+i*28)+'px';w.style.top=(30+i*28)+'px';w.style.zIndex=++zTop;w.dataset.n=name;
- w.innerHTML=`<div class=tbar><span class=lgs>${YI.logo(24)}</span>${escT(name)} &ndash; Instant Message<span class=sp></span><span class="wb x"><i data-i=close data-s=16></i></span></div>
+ w.innerHTML=`<div class=tbar><span class=lgs>${YI.logo(24)}</span>${escT(name)} &ndash; Private Message<span class=sp></span><span class="wb x"><i data-i=close data-s=16></i></span></div>
  <div class=mbar><div>Conversation<div class=dd><div data-m=invite>Invite to Room</div><hr><div data-m=close>Close</div></div></div><div>Edit<div class=dd><div data-m=clearin>Clear Message Box</div></div></div><div>View<div class=dd><div data-m=fmt>Text Style Bar</div></div></div><div>Actions<div class=dd><div data-m=buzz>Send BUZZ!</div><div data-m=voice>Voice Call</div><div data-m=video>Webcam Call</div></div></div><div>Help<div class=dd><div data-m=help>Keyboard Tips</div></div></div></div>
  <div class=ihead><span class=pav></span><div><div class=nm style=cursor:pointer title='View profile' data-m=prof>${escT(name)}</div><div class=st></div></div><span class=sp></span>
  <button class=ib data-a=video title="Webcam call">${YI.svg('video',22)}</button><button class=ib data-a=voice title="Voice call">${YI.svg('phone',22)}</button><button class=ib data-a=buzz title="BUZZ! (Ctrl+G)">${YI.svg('bell',22)}</button><button class=ib data-a=more title="More">${YI.svg('dots',22)}</button>
@@ -354,7 +354,7 @@ function openIm(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTop
  <select class=font>${['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'].map(f=>`<option>${f}</option>`).join('')}</select><div class=smp></div></div>
  <div class=inbox><button class=ib data-a=aa title="Text style">${YI.svg('font',22)}</button><button class=ib data-a=sm title="Smileys">${YI.svg('smile',22)}</button><button class=ib disabled title="Images coming soon">${YI.svg('image',22)}</button><button class=ib disabled title="Files coming soon">${YI.svg('clip',22)}</button><textarea maxlength=1000 placeholder="Type a message... (Enter to send)"></textarea></div><form></form><div class="adph adph-c">Advertisement - Google Ads</div>`;
  YI.fill(w);w.querySelector('.inbox').appendChild(w.querySelector('.smp'));
- document.body.appendChild(w);ims[k]=w;if(YD)ydPop(w,'yim_'+k.replace(/\W/g,'_'),440,560,name+' - Instant Message',()=>{if(ims[k]!==w)return;try{endCall(w,true)}catch(e){}delete ims[k]});peerInfo(w,name);drag(w);w.onpointerdown=()=>w.style.zIndex=++zTop;
+ document.body.appendChild(w);ims[k]=w;if(YD)ydPop(w,'yim_'+k.replace(/\W/g,'_'),440,560,name+' - Private Message',()=>{if(ims[k]!==w)return;try{endCall(w,true)}catch(e){}delete ims[k]});peerInfo(w,name);drag(w);w.onpointerdown=()=>w.style.zIndex=++zTop;
  const st=w._st={b:false,i:false,u:false,color:'#000000',f:'Arial'},ta=w.querySelector('textarea');
  w.querySelector('.x').onclick=()=>{endCall(w,true);const pw=w._pw;delete ims[k];w.remove();pw&&pw.close()};
  w.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{st[b.dataset.s]=!st[b.dataset.s];b.classList.toggle('on',st[b.dataset.s]);ta.style.fontWeight=st.b?'bold':'';ta.style.fontStyle=st.i?'italic':'';ta.style.textDecoration=st.u?'underline':''});
