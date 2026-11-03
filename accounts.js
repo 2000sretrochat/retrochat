@@ -161,6 +161,8 @@ function sockets(io, hooks) {
       const t = await idOf(name); if (!t || t.id === uid) return t && t.id === uid ? { error: 'You cannot add yourself.' } : generic;
       if (await mutual(uid, t.id)) return { error: esc(t.name) + ' is already in your contacts.' };
       if (await blocked(t.id, uid)) return generic;
+      // sending a request to someone you blocked means you want them back: lift your block so the request can be answered
+      if (await blocked(uid, t.id)) { await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]); for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === uid) x.data.blk?.delete(t.id); }
       // if they already asked me, accept straight away
       if ((await db.q('select 1 from requests where from_id=$1 and to_id=$2', [t.id, uid])).length) return await accept(t);
       await db.q('insert into requests(from_id,to_id,msg) values($1,$2,$3) on conflict (from_id,to_id) do update set msg=excluded.msg, created=now()', [uid, t.id, String(msg || '').slice(0, 120)]);
