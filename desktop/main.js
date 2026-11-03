@@ -5,7 +5,7 @@ const URL0 = 'https://retrochat-izzg.onrender.com/', ORIGIN = new URL(URL0).orig
 app.setAppUserModelId('app.yappchat.desktop');
 if (!app.requestSingleInstanceLock()) { app.quit(); return; }
 let win, tray, quitting = false;
-const icon = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
+const icon = nativeImage.createFromPath(path.join(__dirname, 'build', process.platform === 'win32' ? 'icon.ico' : 'icon.png'));
 const PRE = { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false };
 // remembered positions per window kind (messenger, browse, room, im_<name>)
 const stF = () => path.join(app.getPath('userData'), 'windows.json');
