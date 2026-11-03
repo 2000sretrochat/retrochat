@@ -1,0 +1,43 @@
+// v13.6 Messenger quick-settings cogwheel (replaces the floating moon button on the Messenger)
+(function(){const $=i=>document.getElementById(i),L=localStorage;
+const css=`#thm{display:none!important}#mcog{margin-left:auto;align-self:center;flex:0 0 auto;width:30px;height:28px;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}#mcog svg{width:19px!important;height:19px!important;min-width:19px;flex:0 0 19px}#mcog{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}#mcog:hover,#mcog.on{background:var(--soft,#eaf3fd)!important}
+#mcogdd{position:fixed;z-index:9999;display:none;background:var(--card,#fff);color:var(--ink,#12213F);border:1px solid var(--line,#d5e2f0);border-radius:12px;box-shadow:var(--shadow,0 8px 24px rgba(0,0,0,.2));padding:6px;width:236px;max-height:calc(100vh - 8px);overflow-y:auto;font-size:13px}
+#mcogdd.open{display:block}#mcogdd .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}#mcogdd .it:hover{background:#0033A0;color:#fff}#mcogdd .it .r{margin-left:auto;font-size:12px;opacity:.8}
+#mcogdd hr{border:0;border-top:1px solid var(--line,#d5e2f0);margin:4px 0}#mcogdd .fs{display:flex;gap:4px;padding:4px 10px 6px}#mcogdd .fs span{flex:1;text-align:center;border:1px solid var(--line,#d5e2f0);border-radius:8px;padding:3px 0;cursor:pointer}#mcogdd .fs span.on{background:#0033A0;color:#fff;border-color:#0033A0}
+#mcogdd .h{font-size:11px;color:var(--muted,#5b6b85);padding:4px 10px 0;font-weight:600}html.mfs-s #mwin{font-size:12px}html.mfs-l #mwin{font-size:15px}html.mfs-l #mwin .cl,html.mfs-l #mwin #cl{font-size:15px}html.mfs-s #mwin #cl{font-size:12px}`;
+const COG='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
+const MOON='<svg viewBox="0 0 24 24" width="16" height="16" fill="#3b4f8a"><path d="M20.5 14.6A8.5 8.5 0 019.4 3.5a8.5 8.5 0 1011.1 11.1z"/></svg>',SUN='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f5b301" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" fill="#f5b301"/><path d="M12 2v2.2M12 19.8V22M2 12h2.2M19.8 12H22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>';
+const fsApply=()=>{const f=L.ycMFs||'m';document.documentElement.classList.remove('mfs-s','mfs-l');if(f!='m')document.documentElement.classList.add('mfs-'+f)};fsApply();
+function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
+ const b=document.createElement('button');b.id='mcog';b.type='button';b.title='Quick settings';b.setAttribute('aria-label','Quick settings');b.innerHTML=COG;m.appendChild(b);
+ const d=document.createElement('div');d.id='mcogdd';document.body.appendChild(d);
+ const chk=v=>v?'&#10003;':'';
+ const draw=()=>{const dark=window.YTheme&&YTheme.get()=='dark',sr=$('mShowRoom'),f=L.ycMFs||'m';
+  d.innerHTML=`<div class=it data-a=th>${dark?SUN:MOON}<span>${dark?'Light mode':'Night mode'}</span></div>
+  <div class=it data-a=snd><span>Mute sounds</span><span class=r>${chk(L.ycSound=='off')}</span></div>
+  <div class=it data-a=shk><span>Buzz shake</span><span class=r>${L.ycShake=='off'?'Off':'On'}</span></div>
+  <div class=it data-a=rb><span>Allow room buzzes</span><span class=r>${chk(L.ycRoomBuzz!='off')}</span></div>
+  <div class=h>Font size</div><div class=fs>${[['s','Small'],['m','Medium'],['l','Large']].map(([k,l])=>`<span data-f=${k} class="${k==f?'on':''}">${l}</span>`).join('')}</div>
+  ${sr&&sr.style.display!='none'?`<div class=h>Privacy</div><div class=it data-a=sr><span>Show the room I'm in</span><span class=r>${chk(/\u2713/.test(sr.textContent))}</span></div>`:''}
+  <hr><div class=it data-a=av><span>Audio &amp; Video settings&hellip;</span></div><div class=it data-a=all><span>All Settings&hellip;</span></div>`};
+ const place=()=>{const r=b.getBoundingClientRect(),W=document.documentElement.clientWidth,H=innerHeight,w=d.offsetWidth,h=d.offsetHeight;d.style.left=Math.max(4,Math.min(r.right-w,W-w-4))+'px';d.style.top=Math.max(4,Math.min(r.bottom+2,H-h-4))+'px'};
+ const show=o=>{d.classList.toggle('open',o);b.classList.toggle('on',o);if(o){draw();place()}};
+ b.onclick=e=>{e.stopPropagation();document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));show(!d.classList.contains('open'))};
+ document.addEventListener('click',e=>{if(!e.target.closest('#mcogdd,#mcog'))show(false)});addEventListener('resize',()=>d.classList.contains('open')&&place());
+ d.onclick=e=>{e.stopPropagation();const f=e.target.closest('[data-f]');if(f){L.ycMFs=f.dataset.f;fsApply();draw();return}const a=(e.target.closest('[data-a]')||{}).dataset?.a;if(!a)return;
+  if(a=='th')window.YTheme&&YTheme.toggle();else if(a=='snd'){L.ycSound=L.ycSound=='off'?'on':'off';dispatchEvent(new Event('ycsound'))}
+  else if(a=='shk')L.ycShake=L.ycShake=='off'?'on':'off';else if(a=='rb')L.ycRoomBuzz=L.ycRoomBuzz=='off'?'on':'off';
+  else if(a=='sr'){$('mShowRoom').click();setTimeout(draw,400)}
+  else if(a=='all'){show(false);window.YSet&&YSet.open();return}else if(a=='av'){show(false);avPanel();return}draw();place()}}
+async function avPanel(){if(!window.YAV)await new Promise(ok=>{const s=document.createElement('script');s.src='/av.js';s.onload=s.onerror=ok;document.head.appendChild(s)});if(!window.YAV)return alert('Audio settings are not available right now.');
+ document.querySelectorAll('.yprof').forEach(x=>x.remove());const c=YAV.cfg(),ds=await YAV.devices(),E=s=>String(s).replace(/[&<>"]/g,x=>'&#'+x.charCodeAt(0)+';');
+ const sel=(id,o,v)=>`<select id=${id} style="width:100%;margin:2px 0 8px">${o.map(([k,l])=>`<option value="${E(k)}" ${k==v?'selected':''}>${E(l)}</option>`).join('')}</select>`;
+ const w=document.createElement('div');w.className='yprof';w.innerHTML=`<div class=tbar>Audio &amp; Video Settings<span class=sp></span><span class=x title=Close>X</span></div><div class=pb style="padding:12px">
+ <b>Microphone</b>${sel('mavDev',[['','Default microphone'],...ds.map((x,i)=>[x.deviceId,x.label||'Microphone '+(i+1)])],c.dev)}
+ <b>Mic mode</b>${sel('mavMode',[['voice','Voice (noise reduction)'],['music','Music (full quality)']],c.mode)}
+ <b>Camera quality</b>${sel('mavCam',[['hd','HD'],['normal','Standard'],['low','Low (saves data)']],c.camQ)}
+ <label><input type=checkbox id=mavAgc ${c.agc?'checked':''}> Let my computer adjust my mic level automatically</label>
+ <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button id=mavX>Cancel</button><button id=mavOk style="background:#0033A0;color:#fff;border-color:#0033A0">Save</button></div></div>`;
+ document.body.appendChild(w);const q=s=>w.querySelector(s),cl=()=>w.remove();q('.x').onclick=q('#mavX').onclick=cl;
+ q('#mavOk').onclick=()=>{YAV.set('dev',q('#mavDev').value);YAV.set('mode',q('#mavMode').value);YAV.set('camQ',q('#mavCam').value);YAV.set('agc',q('#mavAgc').checked);cl()}}
+document.readyState=='loading'?addEventListener('DOMContentLoaded',init):init()})();
