@@ -86,8 +86,8 @@ function http(app, express, hooks = {}) { H = hooks;
 function sockets(io, hooks) {
   const online = new Map(); // uid -> Set(socket)
   const ROOM_TAG = '[room]', AUDS = ['lol', 'doh', 'woohoo', 'wave', 'kiss', 'drumroll'], IMVS = ['none', 'beach', 'space', 'hearts', 'city', 'retro']; const state = new Map(); // uid -> {status,msg,idle,avatar,name}
-  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = sr ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In chat: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
-  const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || st.msg !== ROOM_TAG) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
+  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = on && (sr || st.showRoom !== false) ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
+  const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || (st.msg !== ROOM_TAG && st.showRoom === false)) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
   setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
   const toUser = (uid, ev, data) => { for (const s of online.get(uid) || []) s.emit(ev, data); };
   async function watchers(uid) { return (await db.q('select owner from contacts where contact=$1', [uid])).map(r => r.owner); }
@@ -132,9 +132,10 @@ function sockets(io, hooks) {
     s.on('m:init', safe(async () => {
       if (!s.data.master) { const dc = module.exports.devConflict && module.exports.devConflict(s, me); if (dc) return { error: 'Another screen name (' + dc + ') is already signed in on this computer. Sign out of it first - only one screen name per computer.' };
         for (const x of [...(online.get(uid) || [])]) if (x !== s && x.data.mess) { x.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); online.get(uid).delete(x); x.disconnect(true); } }
-      const [u] = await db.q('select name,status,status_msg,avatar from users where id=$1', [uid]);
+      const [u] = await db.q('select name,status,status_msg,avatar,show_room from users where id=$1', [uid]);
       const first = !online.has(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; ready = true;
       if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg, avatar: u.avatar, idle: false });
+      state.get(uid).showRoom = u.show_room !== false;
       const cs = await db.q('select u.id,u.name,c.grp from contacts c join users u on u.id=c.contact where c.owner=$1 order by lower(u.name)', [uid]);
       const groups = (await db.q('select name from groups where owner=$1 order by name', [uid])).map(r => r.name);
       const reqs = await db.q('select u.name,r.msg from requests r join users u on u.id=r.from_id where r.to_id=$1', [uid]);
@@ -143,7 +144,7 @@ function sockets(io, hooks) {
       if (off.length) await db.q('delete from offline where to_id=$1 and id<=$2', [uid, off[off.length - 1].id]);
       if (first) broadcast(uid, me);
       const st = state.get(uid);
-      return { me: { name: u.name, status: st.status, msg: st.msg, avatar: st.avatar }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.grp)])],
+      return { me: { name: u.name, status: st.status, msg: st.msg, avatar: st.avatar, showRoom: st.showRoom !== false, m: !!s.data.master }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.grp)])],
         contacts: cs.map(c => ({ name: c.name, group: c.grp, ...pres(c.id) })), requests: reqs.map(r => ({ name: r.name, msg: esc(r.msg) })), blocked: bl,
         offline: off.map(o => ({ from: o.name, t: Math.round(o.t), ...o.body })) };
     }));
@@ -152,6 +153,7 @@ function sockets(io, hooks) {
       await db.q('update users set status=$2,status_msg=$3 where id=$1', [uid, st.status, st.msg]); for (const x of online.get(uid)) if (x !== s) x.emit('m:self', { status: st.status, msg: st.msg });
       await broadcast(uid, me); return { ok: true, status: st.status, msg: st.msg };
     }));
+    s.on('m:showroom', safe(async on => { if (!ready) return; const st = state.get(uid); st.showRoom = !!on; await db.q('update users set show_room=$2 where id=$1', [uid, !!on]); await broadcast(uid, me); return { ok: true, showRoom: st.showRoom }; }));
     s.on('m:idle', safe(async on => { if (!ready) return; const st = state.get(uid); if (st.idle === !!on) return; st.idle = !!on; await broadcast(uid, me); }));
     s.on('m:avatar', safe(async a => { if (!ready || !AVATARS.includes(a)) return { error: 'bad avatar' }; state.get(uid).avatar = a; await db.q('update users set avatar=$2 where id=$1', [uid, a]); await broadcast(uid, me); }));
     s.on('m:add', safe(async ({ name, msg }) => {
@@ -190,7 +192,7 @@ function sockets(io, hooks) {
     // relay helpers: only between mutual contacts, never to/from blockers
     async function peer(name) { const t = await idOf(name); if (!t || !(await mutual(uid, t.id)) || (!s.data.master && await blocked(t.id, uid))) return null; return t; }
     s.on('m:im', safe(async m => {
-      if (!ready || !m) return; if (flood()) return { error: 'You are sending messages too fast.' };
+      if (!ready || !m) return; if (flood()) return { error: 'Whoa, slow down a little! Wait a few seconds and try again.' };
       const text = String(m.text || '').trim().slice(0, 1000); if (!text) return; { const fl = require('./flood').check(me, text, s.data && s.data.master); if (fl) return { error: fl }; } const t = await peer(m.to); if (!t) return { error: 'You can only message your contacts.' };
       const body = { text: esc(text), ...fmt(m), ...(AUDS.includes(m.aud) ? { aud: m.aud } : {}) }, now = Date.now();
       try { const ar = await db.q('select id from users where id = any($1) and archive', [[uid, t.id]]); for (const r of ar) await db.q('insert into im_archive(owner,peer,dir,body) values($1,$2,$3,$4)', [r.id, r.id === uid ? t.name : me, r.id === uid ? 'out' : 'in', body]); } catch { }
