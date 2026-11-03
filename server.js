@@ -226,6 +226,7 @@ const MAXVIEW = 6;
 // ---- room moderation: owner (or site admin via ADMIN_KEY) > room admins > users. All checks are server-side. ----
 const MOD = {}; const KICK_MS = 5 * 60e3;
 const mod = r => MOD[r] = MOD[r] || { admins: new Set(), kicked: new Map(), dot: new Map(), mt: new Set(), mm: new Set() };
+const ROOMBUZZ = new Map();
 function roleOf(x, room) { if (!x || !x.data.name) return ''; const u = UROOMS.get(room), lc = x.data.name.toLowerCase();
   if (x.data.site || x.data.master) return 'owner'; if (u && x.data.acct && u.ownerLc === x.data.acct.name.toLowerCase()) return 'owner';
   if (x.data.acct && mod(room).admins.has(lc)) return 'admin'; return ''; }
@@ -349,7 +350,7 @@ io.on('connection', s => {
     { const fl = FLOOD.check(s.data.acct?.name || s.data.name, text, s.data.master); if (fl) return s.emit('msg', { sys: true, text: fl }); }
     if (s.data.inc) { if (m.vis !== true) { stamps.pop(); return s.emit('incwarn', { text }); } s.data.inc = false; upd(s.data.room); s.emit('inc', { on: false, announce: !!s.data.announce }); }
     const FONTS = ['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'];
-    push(s.data.room, { name: esc(s.data.name), av: s.data.av || '', role: s.data.master ? '' : roleOf(s, s.data.room), text: esc(text), color: COLORS.includes(m.color) ? m.color : '#000000', b: !!m.b, i: !!m.i, u: !!m.u, f: FONTS.includes(m.f) ? m.f : 'Arial', t: now });
+    push(s.data.room, { name: esc(s.data.name), av: s.data.av || '', role: s.data.master ? '' : roleOf(s, s.data.room), ...(s.data.guest && !s.data.master ? { g: true } : {}), text: esc(text), color: COLORS.includes(m.color) ? m.color : '#000000', b: !!m.b, i: !!m.i, u: !!m.u, f: FONTS.includes(m.f) ? m.f : 'Arial', t: now });
     if (!s.data.inc) botHear(s.data.room, s.data.name, text);
   });
   function mediaReset() {
@@ -398,8 +399,8 @@ io.on('connection', s => {
   s.on('unview', id => { const t = same(id); if (t && t.data.viewers?.delete(s.id)) { t.emit('unview', { id: s.id }); upd(s.data.room); } });
   s.on('signal', ({ to, data }) => { if (s.data.inc) return; const t = same(to); if (t && data && JSON.stringify(data).length < 60000) t.emit('signal', { from: s.id, name: s.data.name, data }); });
   let lastBuzz = 0, lastTyping = 0;
-  s.on('buzz', () => { if (!s.data.name) return; if (s.data.inc) return s.emit('msg', { sys: true, text: 'You are incognito.' }); if (mod(s.data.room).mt.has(s.data.name.toLowerCase())) return; const now = Date.now(); if (now - lastBuzz < 15000) return s.emit('msg', { sys: true, text: 'Please wait a bit before buzzing again.' }); lastBuzz = now;
-    push(s.data.room, { buzz: true, name: esc(s.data.name), t: now }); });
+  s.on('buzz', () => { if (!s.data.name) return; if (s.data.inc) return s.emit('msg', { sys: true, text: 'You are incognito.' }); if (!s.data.master && !roleOf(s, s.data.room)) return s.emit('msg', { sys: true, text: 'Only room owners and admins can buzz the room.' }); const now = Date.now(), rk = s.data.room; if (now - (ROOMBUZZ.get(rk) || 0) < 60000) return s.emit('msg', { sys: true, text: 'This room was buzzed recently. Try again in ' + Math.ceil((60000 - (now - ROOMBUZZ.get(rk))) / 1000) + 's.' }); ROOMBUZZ.set(rk, now); lastBuzz = now;
+    push(s.data.room, { buzz: true, rb: true, name: s.data.master ? 'A moderator' : esc(s.data.name), t: now }); });
   s.on('typing', () => { if (!s.data.name || s.data.inc) return; const now = Date.now(); if (now - lastTyping < 2000) return; lastTyping = now; /* room typing indicator removed in v13 (IMs only) */ });
   s.on('ann:set', async ({ text } = {}, cb) => { const room = s.data.room; if (!room || typeof cb !== 'function') return; if (!s.data.master && !roleOf(s, room)) return cb({ error: 'Only the room owner or admins can set the announcement.' });
     const t = String(text || '').trim().slice(0, 300); if (t) ANN[room] = esc(t); else delete ANN[room];
