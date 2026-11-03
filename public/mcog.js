@@ -14,7 +14,7 @@ function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.crea
  const chk=v=>v?'&#10003;':'';
  const draw=()=>{const dark=window.YTheme&&YTheme.get()=='dark',sr=$('mShowRoom'),f=L.ycMFs||'m';
   d.innerHTML=`<div class=it data-a=th>${dark?SUN:MOON}<span>${dark?'Light mode':'Night mode'}</span></div>
-  <div class=it data-a=snd><span>Mute sounds</span><span class=r>${chk(L.ycSound=='off')}</span></div>
+  <div class=it data-a=pmp><span>Pop up new PMs</span><span class=r>${chk(L.ycPmPop!='off')}</span></div><div class=it data-a=snd><span>Mute sounds</span><span class=r>${chk(L.ycSound=='off')}</span></div>
   <div class=it data-a=shk><span>Buzz shake</span><span class=r>${L.ycShake=='off'?'Off':'On'}</span></div>
   <div class=it data-a=rb><span>Allow room buzzes</span><span class=r>${chk(L.ycRoomBuzz!='off')}</span></div>
   <div class=h>Font size</div><div class=fs>${[['s','Small'],['m','Medium'],['l','Large']].map(([k,l])=>`<span data-f=${k} class="${k==f?'on':''}">${l}</span>`).join('')}</div>
@@ -25,7 +25,7 @@ function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.crea
  b.onclick=e=>{e.stopPropagation();document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));show(!d.classList.contains('open'))};
  document.addEventListener('click',e=>{if(!e.target.closest('#mcogdd,#mcog'))show(false)});addEventListener('resize',()=>d.classList.contains('open')&&place());
  d.onclick=e=>{e.stopPropagation();const f=e.target.closest('[data-f]');if(f){L.ycMFs=f.dataset.f;fsApply();draw();return}const a=(e.target.closest('[data-a]')||{}).dataset?.a;if(!a)return;
-  if(a=='th')window.YTheme&&YTheme.toggle();else if(a=='snd'){L.ycSound=L.ycSound=='off'?'on':'off';dispatchEvent(new Event('ycsound'))}
+  if(a=='th')window.YTheme&&YTheme.toggle();else if(a=='pmp'){L.ycPmPop=L.ycPmPop=='off'?'on':'off'}else if(a=='snd'){L.ycSound=L.ycSound=='off'?'on':'off';dispatchEvent(new Event('ycsound'))}
   else if(a=='shk')L.ycShake=L.ycShake=='off'?'on':'off';else if(a=='rb')L.ycRoomBuzz=L.ycRoomBuzz=='off'?'on':'off';
   else if(a=='sr'){$('mShowRoom').click();setTimeout(draw,400)}
   else if(a=='all'){show(false);window.YSet&&YSet.open();return}else if(a=='av'){show(false);avPanel();return}draw();place()}}
