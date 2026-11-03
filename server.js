@@ -26,7 +26,7 @@ const ROOMS = {}; for (const [c, rs] of Object.entries(DIR)) for (const r of rs)
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
 for (const r of Object.keys(ROOMS)) if (!TOPICS[r]) TOPICS[r] = ADULT_ROOMS.has(r) ? r + ' - adults only (18+)' : 'Welcome to ' + r + ' - chat about ' + r.toLowerCase();
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033','#8b5cf6'];
-const GRACE = new Map(); const users = new Map(); const VERSION='v13.2'; // lower(name) -> socket.id
+const GRACE = new Map(); const users = new Map(); const VERSION = 'v13.3'; // lower(name) -> socket.id
 const history = Object.fromEntries(Object.keys(ROOMS).map(r => [r, []]));
 // ---- user-created rooms (public, in memory; removed after ~10 min empty) ----
 const UROOMS = new Map(); // name -> { owner, ownerLc, emptySince }
@@ -194,22 +194,24 @@ const micsOf = r => MICS[r] || (UROOMS.has(r) ? 1 : MIC_DEFAULT_OFFICIAL);
 const micsUsed = r => socks(r).filter(x => x.data.talk).length;
 function parseSecs(t) { if (t == null || t === '' || t === 'off' || t === 0 || t === '0') return 0; const m = String(t).trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs|seconds?|m|min|mins|minutes?)?$/); if (!m) return null;
   const v = Math.round(parseFloat(m[1]) * (m[2] && m[2][0] === 'm' ? 60 : 1)); return v >= 5 && v <= 300 ? v : null; }
-function setMicOpts(room, { hq, timer } = {}) { if (!ROOMS[room]) return 'No such room.'; let t;
+function setMicOpts(room, { hq, timer, mann } = {}) { if (!ROOMS[room]) return 'No such room.'; let t;
+  if (mann !== undefined) { mann = +mann; if (![0, 1, 2, 3, 5].includes(mann)) return 'Mic timer must be off, 1, 2, 3 or 5 minutes.'; MANN[room] = mann; }
   if (timer !== undefined) { t = parseSecs(timer); if (t === null) return 'Timer must be off or 5 seconds to 5 minutes (e.g. 45s, 1m30 = 90).'; }
   if (hq !== undefined) { HQ[room] = !!hq; if (!hq) QUEUE[room] = []; } if (t !== undefined) { MTIMER[room] = t; for (const x of socks(room)) if (x.data.talk) x.data.talkUntil = t ? Date.now() + t * 1000 : 0; }
-  MASTER.saveMeta(room, { hq: !!HQ[room], mtimer: MTIMER[room] || 0 }); upd(room); return null; }
+  MASTER.saveMeta(room, { hq: !!HQ[room], mtimer: MTIMER[room] || 0, mann: MANN[room] || 0 }); upd(room); return null; }
 function setMics(room, n) { n = +n; if (!ROOMS[room]) return 'No such room.'; if (![1, 2, 3, 4, 5].includes(n)) return 'Mic limit must be 1 to 5.';
   MICS[room] = n; MASTER.saveMics(room, n); io.to(room).emit('mics', { room, max: n }); upd(room); return null; }
-const HQ = {}, MTIMER = {}, QUEUE = {}; // hands-up on/off, per-turn seconds (0=off), ordered socket ids
+const HQ = {}, MTIMER = {}, QUEUE = {}, MANN = {}; // hands-up on/off, per-turn seconds (0=off), ordered socket ids
 const qOf = r => QUEUE[r] = (QUEUE[r] || []).filter(id => { const x = io.sockets.sockets.get(id); return x && x.data.room === r && x.data.voice && !x.data.talk; });
 const hqOn = r => !!HQ[r] && micsOf(r) === 1;
-function micq(room) { return { room, on: hqOn(room), timer: MTIMER[room] || 0, max: micsOf(room), q: hqOn(room) ? qOf(room).map(id => io.sockets.sockets.get(id).data.name) : [] }; }
-function startTurn(x, room) { x.data.talk = true; x.data.talkUntil = MTIMER[room] ? Date.now() + MTIMER[room] * 1000 : 0; }
+function micq(room) { return { room, on: hqOn(room), timer: MTIMER[room] || 0, mann: MANN[room] || 0, max: micsOf(room), q: hqOn(room) ? qOf(room).map(id => io.sockets.sockets.get(id).data.name) : [] }; }
+function startTurn(x, room) { x.data.talk = true; x.data.talkStart = Date.now(); x.data.talkAnn = 0; x.data.talkUntil = MTIMER[room] ? Date.now() + MTIMER[room] * 1000 : 0; }
 function advance(room) { if (!room || !ROOMS[room]) return false; let ch = false;
   for (const x of socks(room)) if (x.data.talk && x.data.talkUntil && x.data.talkUntil <= Date.now()) { x.data.talk = false; x.data.talkUntil = 0; x.emit('micdrop', { reason: 'time' }); push(room, { sys: true, text: esc(x.data.name) + "'s mic time is up." }); ch = true; }
   if (hqOn(room)) { const q = qOf(room); while (q.length && micsUsed(room) < micsOf(room)) { const x = io.sockets.sockets.get(q.shift()); if (mod(room).mm.has(x.data.name.toLowerCase())) continue; startTurn(x, room); x.emit('yourturn', { secs: MTIMER[room] || 0 }); push(room, { sys: true, text: esc(x.data.name) + ' has the mic.' }); ch = true; } }
   return ch; }
-setInterval(() => { for (const r of Object.keys(ROOMS)) { let ch = advance(r); const d = MOD[r]?.dot;
+setInterval(() => { for (const r of Object.keys(ROOMS)) { let ch = advance(r);
+  if (MANN[r] && micsOf(r) === 1) for (const x of socks(r)) if (x.data.talk && x.data.talkStart) { const n = Math.floor((Date.now() - x.data.talkStart) / 60e3 / MANN[r]) * MANN[r]; if (n > (x.data.talkAnn || 0)) { x.data.talkAnn = n; push(r, { sys: true, text: esc(x.data.name) + ' has been on the mic ' + n + ' minute' + (n > 1 ? 's' : '') + '.' }); } } const d = MOD[r]?.dot;
   if (d) for (const [n, u] of d) if (u < DOTFOREVER && u <= Date.now()) { d.delete(n); ch = true; const x = socks(r).find(y => y.data.name.toLowerCase() === n); if (x) x.emit('undotted', { auto: true }); MASTER.saveMod(r); }
   if (ch) upd(r); } }, 1000).unref();
 const AH = { roomExists: r => !!ROOMS[r], roomRating: r => rateOf(r), rawRoomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && ROOMS[x.data.room] ? x.data.room : null; },
@@ -366,13 +368,14 @@ io.on('connection', s => {
     if (up) { if (!s.data.voice) return cb({ error: 'Turn on voice first.' }); if (s.data.talk) return cb({ error: 'You already have the mic.' }); if (!q.includes(s.id)) q.push(s.id); }
     else QUEUE[room] = q.filter(id => id !== s.id);
     advance(room); upd(room); cb({ ok: true }); });
-  s.on('handq', ({ who, op } = {}, cb) => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room; if (!roleOf(s, room)) return cb({ error: 'Only the room owner and admins can manage the line.' });
+  s.on('handq', ({ who, op } = {}, cb) => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room; if (!roleOf(s, room) && !s.data.master) return cb({ error: 'Only the room owner and admins can manage the line.' });
+    if (op === 'pass') { const cur = socks(room).filter(x => x.data.talk); if (!qOf(room).length) return cb({ error: 'Nobody is in line.' }); for (const x of cur) { x.data.talk = false; x.data.talkUntil = 0; x.emit('micdrop', { reason: 'pass' }); } push(room, { sys: true, text: esc(s.data.name) + ' passed the mic to the next in line.' }); advance(room); upd(room); return cb({ ok: true }); }
     const q = qOf(room), i = q.findIndex(id => io.sockets.sockets.get(id).data.name.toLowerCase() === String(who || '').toLowerCase()); if (i < 0) return cb({ error: 'Not in line.' });
     const [id] = q.splice(i, 1); if (op === 'up') q.splice(Math.max(0, i - 1), 0, id); else if (op === 'down') q.splice(Math.min(q.length, i + 1), 0, id); else if (op === 'top') q.unshift(id); else if (op !== 'remove') q.splice(i, 0, id);
     QUEUE[room] = q; upd(room); cb({ ok: true }); });
-  s.on('set-micopts', ({ hq, timer } = {}, cb) => { cb = typeof cb === 'function' ? cb : () => {}; if (roleOf(s, s.data.room) !== 'owner') return cb({ error: 'Only the room owner can change mic settings.' });
-    const e = setMicOpts(s.data.room, { hq, timer }); if (e) return cb({ error: e }); const r = s.data.room;
-    push(r, { sys: true, text: 'Mic settings: hands up ' + (HQ[r] ? 'on' : 'off') + ', turn timer ' + (MTIMER[r] ? MTIMER[r] + 's' : 'off') + '.' }); cb({ ok: true }); });
+  s.on('set-micopts', ({ hq, timer, mann } = {}, cb) => { cb = typeof cb === 'function' ? cb : () => {}; if (!roleOf(s, s.data.room) && !s.data.master) return cb({ error: 'Only the room owner and admins can change mic settings.' });
+    const e = setMicOpts(s.data.room, { hq, timer, mann }); if (e) return cb({ error: e }); const r = s.data.room;
+    push(r, { sys: true, text: 'Mic settings: hands up ' + (HQ[r] ? 'on' : 'off') + ', turn limit ' + (MTIMER[r] ? MTIMER[r] + 's' : 'off') + ', mic timer ' + (MANN[r] ? MANN[r] + ' min' : 'off') + '.' }); cb({ ok: true }); });
   s.on('set-mics', (n, cb) => { cb = typeof cb === 'function' ? cb : () => {}; if (roleOf(s, s.data.room) !== 'owner') return cb({ error: 'Only the room owner can change the mic limit.' });
     const e = setMics(s.data.room, n); if (e) return cb({ error: e }); saveURoom(s.data.room); push(s.data.room, { sys: true, text: 'Mic limit set to ' + MICS[s.data.room] + (MICS[s.data.room] === 1 ? ' (single mic).' : ' talkers at once.') }); cb({ ok: true }); });
   s.on('cam', on => { if (!s.data.name || (on && s.data.inc)) return; if (on && s.data.guest && !s.data.master) return s.emit('msg', { sys: true, text: 'Guests can\'t broadcast a webcam. Get a free screen name to use your cam.' }); s.data.cam = !!on; if (!on) { io.to(s.data.room).emit('cam-off', { id: s.id }); s.data.viewers = new Set(); } upd(s.data.room); });
@@ -457,5 +460,5 @@ io.on('connection', s => {
 });
 acc.sockets(io, AH);
 const RESET = require('./reset')(app, express);
-const MASTER = require('./master')({ resetLink: RESET.makeLink, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, setMicOpts, RATINGS, KICK_MS });
+const MASTER = require('./master')({ resetLink: RESET.makeLink, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, setMicOpts, RATINGS, KICK_MS });
 db.init().then(() => MASTER.load()).catch(e => console.error('[master load]', e.message)).finally(() => server.listen(process.env.PORT || 3000, () => console.log('YappChat on', process.env.PORT || 3000)));

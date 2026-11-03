@@ -2,13 +2,14 @@
 (function () {
   const LS = k => { try { return JSON.parse(localStorage.getItem('yav') || '{}')[k]; } catch { return undefined; } };
   const set = (k, v) => { let o = {}; try { o = JSON.parse(localStorage.getItem('yav') || '{}'); } catch { } o[k] = v; localStorage.setItem('yav', JSON.stringify(o)); };
-  const cfg = () => ({ mode: LS('mode') || 'voice', dev: LS('dev') || '', sys: LS('sys') || 'off', camQ: LS('camQ') || 'hd', ptt: LS('ptt') || 'hold' });
+  const cfg = () => ({ mode: LS('mode') || 'voice', dev: LS('dev') || '', sys: LS('sys') || 'off', camQ: LS('camQ') || 'hd', ptt: LS('ptt') || 'hold', agc: LS('agc') === true, boost: +(LS('boost') || 100) });
   let sysStream = null, ctx = null;
   async function buildMic() {
     const c = cfg(), music = c.mode === 'music';
-    const a = { echoCancellation: !music, noiseSuppression: !music, autoGainControl: !music };
+    const a = { echoCancellation: !music, noiseSuppression: !music, autoGainControl: !music && c.agc }; // never auto-change mic level unless the user opted in
     if (music) a.channelCount = 2; if (c.dev) a.deviceId = { exact: c.dev };
     let micS = null; if (c.sys !== 'only') { try { micS = await navigator.mediaDevices.getUserMedia({ audio: a }); } catch (e) { if (c.dev) { set('dev', ''); delete a.deviceId; micS = await navigator.mediaDevices.getUserMedia({ audio: a }); } else throw e; } }
+    if (micS && !(window.YappDesktop && window.YappDesktop.micVol)) micS = boosted(micS, c.boost);
     if (c.sys === 'off') return micS;
     if (!navigator.mediaDevices.getDisplayMedia) { alert('Sharing computer audio is not supported in this browser (try Chrome or Edge).'); if (micS) return micS; throw new Error('no audio source'); }
     if (!sysStream || !sysStream.getAudioTracks().some(t => t.readyState === 'live')) {
@@ -21,6 +22,11 @@
     ctx.createMediaStreamSource(micS).connect(dst); ctx.createMediaStreamSource(new MediaStream(sysStream.getAudioTracks())).connect(dst);
     const out = dst.stream; out._parts = [micS, sysStream]; return out;
   }
+  // web "Mic boost": GainNode on the outgoing mic track (0-200%)
+  let gainNode = null;
+  function boosted(src, pct) { try { ctx = ctx || new AudioContext(); ctx.resume && ctx.resume(); const dst = ctx.createMediaStreamDestination(); const g = ctx.createGain(); g.gain.value = Math.max(0, Math.min(200, pct)) / 100;
+    ctx.createMediaStreamSource(src).connect(g); g.connect(dst); gainNode = g; const out = dst.stream; out._parts = [src]; return out; } catch { return src; } }
+  function setBoost(pct) { pct = Math.max(0, Math.min(200, Math.round(pct))); set('boost', pct); if (gainNode) gainNode.gain.value = pct / 100; return pct; }
   // stereo Opus in SDP (Music mode)
   function munge(desc) {
     if (cfg().mode !== 'music' && cfg().sys === 'off' || !desc || !desc.sdp) return desc;
@@ -36,5 +42,5 @@
   function camBitrate(viewers) { const b = (Q[cfg().camQ] || Q.low).br; return Math.max(120000, Math.round(b / (viewers <= 2 ? 1 : viewers <= 5 ? 1.6 : viewers <= 10 ? 2.5 : 4))); }
   const camConstraints = () => { const q = Q[cfg().camQ] || Q.low; return { width: { ideal: q.w }, height: { ideal: q.h }, frameRate: { ideal: q.f } }; };
   async function devices() { try { return (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput'); } catch { return []; } }
-  window.YAV = { cfg, set, buildMic, munge, tune, camBitrate, camConstraints, devices, Q, stopSys() { sysStream && sysStream.getTracks().forEach(t => t.stop()); sysStream = null; } };
+  window.YAV = { cfg, set, buildMic, setBoost, munge, tune, camBitrate, camConstraints, devices, Q, stopSys() { sysStream && sysStream.getTracks().forEach(t => t.stop()); sysStream = null; } };
 })();
