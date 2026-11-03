@@ -235,13 +235,13 @@ $('bUp').onclick=doUp;$('fUp').addEventListener('keydown',e=>{if(e.key=='Enter')
 async function signOut(){if(!confirm('Sign out of '+APP_NAME.join('')+' Messenger?'))return;await api('/api/logout');S&&S.disconnect();location.reload()}
 $('mOut').onclick=$('wx').onclick=signOut;
 // ---------- connect ----------
-function start(){$('signin').style.display='none';$('main').style.display='flex';S=io();YSet.init(S);
+function start(){$('signin').style.display='none';$('main').style.display='flex';S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
  S.on('connect',async()=>{const r=await emit('m:init');if(r.error)return alert(r.error);ME=r.me;groups=r.groups;blockedL=r.blocked;contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
   $('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
   $('reqs').innerHTML='';r.requests.forEach(showReq);render();
   if(r.offline.length){const by={};r.offline.forEach(m=>(by[m.from]=by[m.from]||[]).push(m));for(const f in by){const w=openIm(f);sys(w,'Offline messages received while you were away:');by[f].forEach(m=>line(w,f,m,true))}SND.im();toast('You have <b>'+r.offline.length+'</b> offline message(s).')}});
  YAv.listen(S,(n,av)=>{const k=n.toLowerCase();if(contacts[k]){contacts[k].avatar=av;render();ims[k]&&peerInfo(ims[k],n)}if(ME&&k==ME.name.toLowerCase()){ME.avatar=av;setMyAv()}});
- S.on('disconnect',()=>toast('Disconnected from '+APP_NAME.join('')+'. Reconnecting...'));
+ {const d=document.createElement('div');d.id='cdot';d.textContent='Reconnecting…';d.style.cssText='display:none;position:fixed;bottom:8px;left:8px;z-index:999;background:rgba(0,0,0,.55);color:#fff;padding:2px 9px;border-radius:10px;font:500 11px system-ui;pointer-events:none';document.body.appendChild(d);let t=0;S.on('disconnect',()=>{clearTimeout(t);t=setTimeout(()=>{if(!S.connected)d.style.display=''},3000)});S.on('connect',()=>{clearTimeout(t);d.style.display='none'})}
  S.on('m:presence',p=>{const k=p.name.toLowerCase(),c=contacts[k];if(!c)return;const was=c.online;Object.assign(c,p);render();
   if(!was&&p.online){localStorage.ycDoor!='off'&&SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar,p.name)}else if(was&&!p.online){localStorage.ycDoor!='off'&&SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar,p.name)}
   const w=ims[k];w&&peerInfo(w,p.name)});
