@@ -1,0 +1,26 @@
+/* Reference palette read from the October 2013 archive:
+   blue #004990, light blue #4d90cd, orange #ff9900, ice #f1f5f8. */
+:root{--blue:#004990;--ink:#003876;--line:#b5d1eb;--orange:#ff9900;--orange-ink:#8d4d00}
+body{background:#d9e9f7}
+header{background:#003876;border-bottom-color:#0059a8}
+.brand-dot,.notice{color:#ff9900}
+.search{background:#4d90cd;border-color:#4d90cd;color:white}.search input{color:white}.search input::placeholder{color:#eef7ff}
+header>.avatar{background:#4d90cd;color:white}header nav .active{border-bottom-color:#ff9900}
+.left{background:#003876;border-color:#00529a}.identity .avatar{background:#4d90cd;color:white}
+.menu .selected{background:#004990;box-shadow:inset 3px 0 0 #ff9900}.menu button,.menu a{color:#e0effd}
+.left>.primary,.primary{background:#ff9900;color:#003568}.left>.primary{font-weight:700}
+.topic-list{border-color:#2465a1}.topic-list .label{color:#a4c9ec}.topic-list small{color:#b1d1ed}.topic-list .t1{background:#4d90cd;color:white}.topic-list .t2{background:#0a64b0;color:white}.topic-list .t3{background:#ff9900;color:#003876}
+.privacy-note>span{color:#ff9900}.privacy-note button{color:#a3d7ff}
+.intro .label{color:#3975ac}.intro p{color:#497cad}.demo{background:#cce2f5;border-color:#8db8df;color:#326ca1}
+h1{color:#003876}h1 span{color:#ff9900}
+.banner-art{background:#004990}.banner-art:before{border-color:#4d90cd}.banner-art:after{border-color:#73b5ed}.banner-art span:first-child{color:#ff9900}.banner-art span:last-child{color:white}
+.space-banner{background:#cce2f7;border-color:#8db8df}.banner-copy .avatar{background:#4d90cd;color:white;border-color:#cce2f7}.banner-copy strong{color:#004990}.banner-copy p{color:#3c73a6}.banner-copy button{background:#ff9900;border-color:#ff9900;color:#003568;font-weight:650}
+.write{background:#cce2f7;border-color:#99bfe1}.write .avatar{background:#4d90cd;color:white}.write button:nth-child(2){color:#326b9e}.photo-button{color:#a85d00}
+.feed-nav{border-bottom-color:#87b3da}.feed-nav .on{color:#004990;border-bottom-color:#ff9900}.feed-nav button{color:#3f76a8}.feed-nav>span{color:#4278a9}
+.post{background:#f1f5f8;border-color:#a2c4e3}.post-top strong{color:#004990}.post-top small{color:#4d7da7}.post-top .tag{background:#cee3f6;color:#004990}.post>p{color:#254f78}
+.link-preview{background:#dfedf8;border-color:#accce6;border-left-color:#4d90cd}.link-preview h3{color:#004990}.link-preview small,.link-preview p{color:#4a78a0}.post-actions button{color:#3c76aa}.post-actions button:last-child{color:#004990}.comment strong{color:#004990}
+.messenger{background:#003876;border-color:#0060ab}.messenger-title{background:#004990;border-bottom-color:#2778ba}.messenger-title>span{color:#ff9900}.presence .avatar{background:#4d90cd;color:white}.presence select{color:#c7eee0}.buddy small{color:#b4d6f2}.buddy-heading{color:#a8cce9}.buddy:hover{background:#004990}.activity{background:#004990;border-color:#1e65a4;color:#c3dff6}.add-contact{background:#4d90cd;color:white;padding:10px 13px;border-radius:4px;margin:14px auto 10px}.demo-note{color:#a6c8e7}
+.suggestion .follow{background:#4d90cd;border-color:#4d90cd;color:white}.suggestion .follow:hover{background:#004990;color:white;border-color:#004990}.familiar .section-title h2{color:#003876}.familiar>p,.suggestion small{color:#3d76a8}.section-title>span{color:#ff9900}
+.room-invite{background:#004990;border-top-color:#ff9900}.room-invite a{background:#ff9900;color:#003568;display:inline-block;padding:10px;border-radius:4px;font-weight:650}.quiet{color:#3b75a8}
+.profile{background:#f1f5f8}.profile-body>.avatar{border-color:#f1f5f8}.secondary{color:#004990;border-color:#4d90cd}.private-chat .chat-title{background:#004990}.private-chat form button{background:#004990}.empty{background:#f1f5f8;color:#3c74a5}
+:focus-visible{outline-color:#ff9900}

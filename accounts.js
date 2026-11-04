@@ -84,6 +84,8 @@ function http(app, express, hooks = {}) { H = hooks;
 
 // ---------- Messenger sockets ----------
 function sockets(io, hooks) {
+  const { clientKind, replacedSessions, CallRoutes } = require('./messenger-sessions');
+  const callRoutes = new CallRoutes();
   const online = new Map(); // uid -> Set(socket)
   const ROOM_TAG = '[room]', AUDS = ['lol', 'doh', 'woohoo', 'wave', 'kiss', 'drumroll'], IMVS = ['none', 'beach', 'space', 'hearts', 'city', 'retro']; const state = new Map(); // uid -> {status,msg,idle,avatar,name}
   const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = on && (sr || st.showRoom !== false) ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
@@ -131,9 +133,9 @@ function sockets(io, hooks) {
     const flood = () => { const now = Date.now(); stamps = stamps.filter(t => now - t < 10000); if (stamps.length >= 8) return true; stamps.push(now); return false; };
     s.on('m:init', safe(async () => {
       if (!s.data.master) { const dc = module.exports.devConflict && module.exports.devConflict(s, me); if (dc) return { error: 'Another screen name (' + dc + ') is already signed in on this computer. Sign out of it first - only one screen name per computer.' };
-        for (const x of [...(online.get(uid) || [])]) if (x !== s && x.data.mess) { x.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); online.get(uid).delete(x); x.disconnect(true); } }
+        for (const x of replacedSessions(s, online.get(uid) || [])) { x.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); online.get(uid).delete(x); x.disconnect(true); } }
       const [u] = await db.q('select name,status,status_msg,avatar,show_room from users where id=$1', [uid]);
-      const first = !online.has(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; ready = true;
+      const first = !online.has(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; s.data.messClient = clientKind(s); ready = true;
       if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg, avatar: u.avatar, idle: false });
       state.get(uid).showRoom = u.show_room !== false;
       const cs = await db.q('select u.id,u.name,c.grp from contacts c join users u on u.id=c.contact where c.owner=$1 order by lower(u.name)', [uid]);
@@ -224,11 +226,19 @@ function sockets(io, hooks) {
     s.on('m:invite-decline', safe(async ({ from }) => { const f = await idOf(from); if (f && online.has(f.id)) toUser(f.id, 'm:invite-declined', { name: me }); hooks.toRoomUser && hooks.toRoomUser(String(from), 'invite-declined', { name: me }); return { ok: true }; }));
     // 1:1 calls (voice / webcam) – signaling relay
     for (const ev of ['m:call', 'm:callans', 'm:sig', 'm:hang']) s.on(ev, safe(async d => { if (!ready || !d) return; const t = await peer(d.to); if (!t || !online.has(t.id)) return { error: 'They are not available.' };
-      if (ev === 'm:sig' && JSON.stringify(d.data || '').length > 60000) return; toUser(t.id, ev, { from: me, kind: d.kind === 'video' ? 'video' : 'audio', accept: !!d.accept, data: d.data }); }));
-    s.on('disconnect', async () => { const set = online.get(uid); if (!set) return; set.delete(s); if (!set.size) { online.delete(uid); const st = state.get(uid); state.delete(uid);
+      if (ev === 'm:sig' && JSON.stringify(d.data || '').length > 60000) return;
+      let destination;
+      if (ev === 'm:call') {
+        const route = callRoutes.start(s, uid, t.id, online.get(t.id) || []);
+        if (route.error) return { error: route.error }; destination = route.target;
+      } else destination = callRoutes.relay(s, uid, t.id, ev, !!d.accept);
+      if (!destination) return { error: 'This call is no longer active in this window.' };
+      destination.emit(ev, { from: me, kind: d.kind === 'video' ? 'video' : 'audio', accept: !!d.accept, data: d.data }); }));
+    s.on('disconnect', async () => { callRoutes.disconnect(s); const set = online.get(uid); if (!set) return; set.delete(s); if (!set.size) { online.delete(uid); const st = state.get(uid); state.delete(uid);
       try { await broadcast(uid, me); } catch {} if (st && st.idle) st.idle = false; } });
   });
 }
 let isOnlineFn = () => false, setAvFn = async () => {};
 let presFn = null, toUserFn = () => {};
 module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), toUser: (u, e, d) => toUserFn(u, e, d), devConflict: null, setAvatar: (uid, av) => setAvFn(uid, av) };
+
