@@ -7,7 +7,8 @@
   window.openMessenger = () => { dock.hidden = false; reopen.hidden = true; };
   window.privateChat = name => send('open-chat', name);
   window.request = name => send('add-contact', name);
-  window.discover = () => send('add-contact');
+  const previewDiscover = discover;
+  window.discover = (asModal = true) => asModal === false ? previewDiscover(false) : send('add-contact');
   window.compose = (() => { const original = compose; return () => { if (currentAlias === 'Guest') { openMessenger(); toast('Sign in through Messenger to use your Social preview.'); return; } original(); }; })();
   window.info = () => modal('<h2>ChatBabble Social + your messenger</h2><p>The messenger uses your real account, contacts, contact requests, and presence. Close its panel to hide it; use its Sign Out menu to end the login.</p><p>The Social feed is still a local preview: posts, photos, follows, and comments stay in this browser, separated by your signed-in alias. Sample posts and profiles are examples, not live users. Voice and webcam use your existing messenger.</p>');
   const updateIdentity = () => {
