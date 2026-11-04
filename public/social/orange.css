@@ -1,0 +1,18 @@
+/* YackSpace: bright orange accents alongside the established blues. */
+:root{--orange:#ff8a24;--orange-ink:#a34900}
+.brand b span{color:var(--orange)}
+.brand-dot,h1 span{color:var(--orange)}
+.banner-art span:first-child{color:var(--orange)}
+.banner-art:after{border-color:#ff8a2460}
+.banner-copy button{color:var(--orange-ink);background:#fff8ef;border:1px solid #ffc792;padding:8px 10px;border-radius:4px}
+.left>.primary{background:var(--orange);color:#173656}
+.photo-button{color:#be600e}
+.t3{background:#ff8a24;color:#173656}
+.menu .selected{box-shadow:inset 3px 0 0 var(--orange)}
+.feed-nav .on{border-bottom-color:var(--orange)}
+.room-invite{border-top:3px solid var(--orange)}
+.room-invite a{color:var(--orange-ink)}
+.notice{color:#bd5b09}
+.privacy-note>span{color:#e57b20}
+.suggestion .follow:hover{border-color:var(--orange);background:#fff8ef;color:var(--orange-ink)}
+:focus-visible{outline-color:var(--orange)}
