@@ -1,7 +1,13 @@
 // PWA: register service worker + Install button (shown when the browser allows install)
 (function () { if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-  let ev = null; const btn = () => { let b = document.getElementById('pwaInstall'); if (!b) { b = document.createElement('button'); b.id = 'pwaInstall'; b.textContent = '\u2B07 Install YappChat'; b.title = 'Install YappChat as an app';
-    b.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:9000;padding:6px 12px;border-radius:16px;background:#7c3aed;color:#fff;border:0;font:bold 12px Arial;box-shadow:0 2px 8px #0004;cursor:pointer';
+  let ev = null; const btn = () => { let b = document.getElementById('pwaInstall'); if (!b) { b = document.createElement('button'); b.id = 'pwaInstall'; b.type = 'button'; b.title = 'Install Razzle Social Chat as an app';
+    const logo = document.createElement('img');
+    logo.src = '/razzle-chat.svg';
+    logo.alt = '';
+    logo.width = 22;
+    logo.height = 22;
+    b.append(logo, 'Install Razzle Social Chat');
+    b.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:9000;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;background:#fff;color:#003876;border:1px solid #9ebfdf;font:700 13px system-ui;box-shadow:0 2px 8px #0004;cursor:pointer';
     b.onclick = async () => { if (!ev) return; ev.prompt(); await ev.userChoice.catch(() => {}); ev = null; b.remove(); }; document.body.appendChild(b); } return b; };
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); ev = e; if (!matchMedia('(display-mode: standalone)').matches) btn(); });
   addEventListener('appinstalled', () => { const b = document.getElementById('pwaInstall'); b && b.remove(); });
