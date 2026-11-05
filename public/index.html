@@ -235,7 +235,15 @@ $('bUp').onclick=doUp;$('fUp').addEventListener('keydown',e=>{if(e.key=='Enter')
 async function signOut(){if(!confirm('Sign out of '+APP_NAME.join('')+' Messenger?'))return;await api('/api/logout');S&&S.disconnect();location.reload()}
 $('mOut').onclick=$('wx').onclick=signOut;
 // ---------- connect ----------
-function start(){$('signin').style.display='none';$('main').style.display='flex';S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
+function start(){
+ const chatRoom = new URLSearchParams(location.search).get('chatRoom');
+ if (chatRoom) {
+  const destination = new URL('/rooms.html', location.origin);
+  destination.searchParams.set('room', chatRoom);
+  location.replace(destination);
+  return;
+ }
+ $('signin').style.display='none';$('main').style.display='flex';S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
  S.on('connect',async()=>{const r=await emit('m:init');if(r.error)return alert(r.error);ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
   $('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
   $('reqs').innerHTML='';r.requests.forEach(showReq);render();
