@@ -47,3 +47,23 @@ html.ydpop,html.ydpop body{min-width:0!important}
 @media (min-width:601px) and (max-width:1100px){#chat #avb span,#chat #mlv .mlb{display:none}#chat #talk{padding-left:12px!important;padding-right:12px!important}}
 @media (min-width:601px) and (max-width:860px){#chat #vrow label{font-size:0}#chat #vrow label input{margin:0}#chat #hf{transform:scale(1.1)}#chat #vrow .meter{flex-basis:60px!important}#chat #vstat{display:none}#chat #talk{padding:6px 10px!important}}
 @media (min-width:601px) and (max-width:720px){#chat #vrow{gap:4px!important;padding-left:6px!important;padding-right:6px!important}#chat #vol{width:44px!important}#chat #volv{min-width:26px;font-size:10px}#chat #vrow .meter{flex-basis:40px!important}#chat #hand{padding:4px 8px!important;font-size:11px}}
+
+/* Razzle Social Chat browser surfaces */
+#brand { padding: clamp(20px, 5vh, 48px) 16px 8px; }
+#brand .logo { font-size: clamp(24px, 5vw, 40px); line-height: 1.1; }
+#brand .tag { margin-top: 8px; font-size: 14px; line-height: 1.5; }
+#login.win { width: min(640px, calc(100% - 28px)); max-width: none; }
+#login .tbar, #chat > .tbar {
+  background: linear-gradient(115deg, #004990, #002b65) !important;
+  padding: 8px 12px;
+}
+#login .in { padding: clamp(14px, 4vw, 24px) !important; }
+#login #who { margin-bottom: 10px; line-height: 1.5; }
+#login #nm { max-width: 100%; min-height: 36px; }
+#login #go { min-height: 36px; margin-block: 4px; }
+.room-chooser-title { margin: 18px 0 8px; font-size: 16px; line-height: 1.4; }
+#login #rlist { border-top: 1px solid var(--line); padding-top: 8px; }
+#login #rlist .room { display: inline-block; padding: 0 7px; border-radius: 5px; }
+#login #rlist .room.sel { box-shadow: inset 3px 0 #ff9900; }
+#chat #log > div { padding-block: 5px; }
+#foot { padding: 8px 12px 54px; font-size: 12px; }
