@@ -244,3 +244,22 @@ html.ydpop,html.ydpop body{min-width:0!important}
  .social-chat-layout { grid-template-columns: minmax(0, 1fr); padding: 12px 14px 0; gap: 12px; }
  .social-chat-layout .topic-list { display: none; }
 }
+
+.room-brand-heading h1 { font-family: 'Segoe UI', system-ui, sans-serif; font-weight: 800; letter-spacing: -.045em; }
+#login .live-room-card { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+#login #rlist .live-room-card .room {
+ display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+ flex: 1; min-width: 0; padding: 8px 10px !important; margin: 0 !important;
+ border: 1px solid var(--line) !important; border-radius: 8px;
+ background: var(--card) !important; color: var(--ink) !important; text-align: left; line-height: 1.4;
+}
+#login #rlist .live-room-card .room.sel { background: var(--soft) !important; color: var(--ink) !important; }
+.live-room-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 7px; background: var(--soft); }
+.live-room-copy { display: grid; min-width: 0; gap: 2px; overflow-wrap: anywhere; }
+.live-room-copy strong { font-size: 14px; }
+.live-room-topic, .live-room-count { font-size: 12px; color: var(--muted); }
+.live-room-count { text-align: right; }
+@media (max-width: 480px) {
+ #login #rlist .live-room-card .room { grid-template-columns: 36px minmax(0, 1fr); gap: 3px 9px; }
+ .live-room-count { grid-column: 2; text-align: left; }
+}

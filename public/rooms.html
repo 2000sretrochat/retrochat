@@ -179,9 +179,9 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
       <a href="/rooms.html" aria-current="page">▦ <span>Chat</span></a>
     </nav>
     <div class="topic-list"><p class="label">FEATURED ROOMS</p>
-      <a class="featured-room" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/rooms.html?guest=1&amp;room=The%20Lounge"><span class="topic t1" aria-hidden="true">☕</span><span>The Lounge<small>Good company. No particular agenda.</small></span></a>
-      <a class="featured-room" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/rooms.html?guest=1&amp;room=Music%20after%20midnight"><span class="topic t2" aria-hidden="true">♫</span><span>Music after midnight<small>One good song leads to another.</small></span></a>
-      <a class="featured-room" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/rooms.html?guest=1&amp;room=The%20quiet%20corner"><span class="topic t3" aria-hidden="true">✧</span><span>The quiet corner<small>Slow conversations. Stay a while.</small></span></a>
+      <a class="featured-room" data-featured="Lobby" href="/rooms.html?room=Lobby"><span class="topic t1" aria-hidden="true">☕</span><span>Lobby<small>Pull up a chair and say hi.</small></span></a>
+      <a class="featured-room" data-featured="Late Night" href="/rooms.html?room=Late%20Night"><span class="topic t2" aria-hidden="true">☾</span><span>Late Night<small>For the night owls.</small></span></a>
+      <a class="featured-room" data-featured="The Lounge" href="/rooms.html?room=The%20Lounge"><span class="topic t3" aria-hidden="true">✧</span><span>The Lounge<small>Good company. No particular agenda.</small></span></a>
     </div>
   </aside>
   <main class="social-chat-main">
@@ -194,7 +194,7 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
     <h2 id="room-entry-title">Join a room</h2>
     <div id="who"><p>Choose a guest screen name for this visit. <a href="/?chat=1" data-chat-signin>Sign in</a> or <a href="/?chat=1&amp;signup=1" data-chat-signin>sign up</a>.</p></div>
     <div class="room-entry-actions">
-      <label id="nmw" for="nm">Screen name<input type="text" id="nm" maxlength="20" autocomplete="off"></label>
+      <label id="nmw" for="nm">Guest screen name<input type="text" id="nm" maxlength="20" autocomplete="off"></label>
       <button type="button" id="go">Continue as guest</button>
       <label id="incl" style="display:none"><input type="checkbox" id="incq"> Enter incognito</label>
       <button type="button" id="mk" disabled title="Sign in to create a room">Create room</button>
@@ -270,21 +270,48 @@ document.addEventListener('click', event => {
  destination.searchParams.set('chatRoom', room);
  link.href = destination.href;
 });
-let rTab=room?'all':(localStorage.ycRTab||'all');
+let rTab='top';
+function highlightFeaturedRoom(){
+ const featured = Array.from(document.querySelectorAll('[data-featured]'));
+ featured.forEach(link => link.toggleAttribute('data-selected', link.dataset.featured===room));
+ featured.forEach(link => {
+  if (link.hasAttribute('data-selected')) link.setAttribute('aria-current','page');
+  else link.removeAttribute('aria-current');
+ });
+ const chat = document.querySelector('.site-sidebar .menu a[href="/rooms.html"]');
+ if (featured.some(link => link.hasAttribute('data-selected'))) chat.removeAttribute('aria-current');
+ else chat.setAttribute('aria-current','page');
+}
+highlightFeaturedRoom();
 function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=>r.rating=='R'))adultOk=true;rooms=acct?YBrowse.favs(rs,true):rs;
- const rr=r=>`${acct?YBrowse.star(r):''} ${YBrowse.icon(r,16)}<span class="room${r.name==room?' sel':''}" data-r="${escT(r.name)}" title="${escT(r.topic||'')}${r.owner?' - owner: '+escT(r.owner):''}">${escT(r.name)} (${r.count}${r.cams?', '+r.cams+' cam':''})${YProf.badge(r.rating)}</span>`;
- const tabs=`<div class="room-directory-toolbar"><div class="room-directory-tabs" aria-label="Room lists">${[['mine','My Rooms'],['top','Top Rooms'],['all','Browse Rooms']].map(([key,label])=>`<button type="button" data-rt="${key}" aria-pressed="${rTab===key}">${label}</button>`).join('')}</div><span class="yonline"></span></div>`;
- if(rTab=='mine'&&!acct){$('rlist').innerHTML=tabs+'<p class="room-list-note"><a href="/?chat=1" data-chat-signin>Sign in</a> to star a room. Starred rooms appear here when you have an account.</p>'}else if(rTab=='mine'){const m=YBrowse.mine(rooms,acct&&String(acct.name||acct).toLowerCase());$('rlist').innerHTML=tabs+'<div class=cat>Rooms I own or admin, and starred rooms</div>'+(m.map(r=>`<div>${rr(r)}</div>`).join('')||'<span style="color:#888">Star a room (&#9734;) or create one and it will show here.</span>')}else
- if(rTab=='top'){const t=YBrowse.top(rooms);$('rlist').innerHTML=tabs+'<div class=cat>Top 10 busiest rooms (live)</div>'+(t.map((r,i)=>`<div>${i+1}. ${rr(r)} - ${r.count} people, ${r.cams} on cam</div>`).join('')||'<span style="color:#888">Nobody is chatting right now.</span>')}
- else $('rlist').innerHTML=tabs+YBrowse.tree(rooms,acct&&String(acct.name||acct).toLowerCase(),rr,$('social-chat-search').value.trim(),' ')+(adultOk?'':'<span class=room id=show18 style="color:#e67e22">Show R-rated rooms (18+)...</span>');
- document.querySelectorAll('[data-rt]').forEach(e=>e.onclick=ev=>{ev.preventDefault();rTab=localStorage.ycRTab=e.dataset.rt;loadRooms()});
+ const rr=r=>`<div class="live-room-card"><button type="button" class="room${r.name===room?' sel':''}" data-r="${escT(r.name)}" aria-pressed="${r.name===room}">
+  <span class="live-room-icon" aria-hidden="true">${YBrowse.icon(r,22)||'▦'}</span>
+  <span class="live-room-copy"><strong>${escT(r.name)}</strong>${r.topic?`<span class="live-room-topic">${escT(r.topic)}</span>`:''}</span>
+  <span class="live-room-count">${r.count} in room${r.cams?` · ${r.cams} on cam`:''} ${YProf.badge(r.rating)}</span>
+ </button>${acct?YBrowse.star(r):''}</div>`;
+ const lists=[['top','Top Rooms'],['all','Browse Rooms']];
+ if(acct)lists.push(['mine','My Rooms']);
+ const tabs=`<div class="room-directory-toolbar"><div class="room-directory-tabs" aria-label="Room lists">${lists.map(([key,label])=>`<button type="button" data-rt="${key}" aria-pressed="${rTab===key}">${label}</button>`).join('')}</div><span class="yonline"></span></div>`;
+ if(rTab==='mine'&&acct){
+  const saved=YBrowse.mine(rooms,String(acct.name||acct).toLowerCase());
+  $('rlist').innerHTML=tabs+(saved.map(rr).join('')||'<p class="room-list-note">Star a room or create one and it will show here.</p>');
+ }else if(rTab==='top'){
+  const top=YBrowse.top(rooms);
+  const selected=rooms.find(r=>r.name===room);
+  $('rlist').innerHTML=tabs+(selected&&!top.includes(selected)?`<div class="cat">Selected room</div>${rr(selected)}`:'')+'<div class="cat">Busiest rooms now</div>'+(top.map(rr).join('')||'<p class="room-list-note">Nobody is chatting right now.</p>');
+ }else{
+  const query=$('social-chat-search').value.trim().toLowerCase();
+  const matching=rooms.filter(r=>[r.name,r.topic,r.cat].some(value=>String(value||'').toLowerCase().includes(query)));
+  $('rlist').innerHTML=tabs+(matching.length?YBrowse.tree(matching,acct&&String(acct.name||acct).toLowerCase(),rr,query,''):'<p class="room-list-note">No matching rooms.</p>')+(adultOk||query?'':'<button type="button" id="show18">Show R-rated rooms (18+)</button>');
+ }
+ document.querySelectorAll('[data-rt]').forEach(e=>e.onclick=ev=>{ev.preventDefault();rTab=e.dataset.rt;loadRooms()});
  document.querySelectorAll('#rlist [data-fav]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();if(!acct)return;const r=rooms.find(x=>x.name==e.dataset.fav);YBrowse.toggle(r.name,!r.fav,true).then(ok=>ok?loadRooms():alert('Could not save favorite.'))});
  $('show18')&&($('show18').onclick=e=>{e.stopPropagation();ask18(loadRooms)});
  const mf=rooms.filter(r=>r.fav),mt=YBrowse.top(rooms);
  $('mRooms').innerHTML=(mf.length?'<div style="color:#888;cursor:default">&nbsp;Favorites</div>'+mf.map(r=>`<div data-j="${escT(r.name)}">&nbsp;&nbsp;\u2605 ${escT(r.name)} (${r.count})</div>`).join(''):'')+'<div style="color:#888;cursor:default">&nbsp;Top Rooms</div>'+(mt.map(r=>`<div data-j="${escT(r.name)}">&nbsp;&nbsp;${escT(r.name)} (${r.count})</div>`).join('')||'<div style="color:#888">&nbsp;&nbsp;(none busy)</div>');
  $('mRooms').style.padding='0';
  document.querySelectorAll('[data-j]').forEach(e=>e.onclick=()=>joinR(e.dataset.j));
- document.querySelectorAll('.room').forEach(e=>e.onclick=()=>{room=e.dataset.r;document.querySelectorAll('.room').forEach(x=>x.classList.toggle('sel',x==e))});});}
+ document.querySelectorAll('#rlist .room[data-r]').forEach(e=>e.onclick=()=>{room=e.dataset.r;highlightFeaturedRoom();document.querySelectorAll('#rlist .room[data-r]').forEach(x=>{x.classList.toggle('sel',x===e);x.setAttribute('aria-pressed',String(x===e))})});});}
 $('social-chat-search').addEventListener('input', () => { rTab='all'; loadRooms(); });
 loadRooms();setInterval(()=>{if(($('login').style.display!='none'&&rTab!='top')||document.querySelector('#menu>div.open'))return;loadRooms()},5000);
 let adultOk=false;function ask18(then){if(!YProf.confirm18())return;S.emit('adult',true,()=>{adultOk=true;then&&then()})}
