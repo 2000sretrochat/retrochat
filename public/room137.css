@@ -58,7 +58,20 @@ html.ydpop,html.ydpop body{min-width:0!important}
 #chat > .tbar {
   background: linear-gradient(115deg, #004990, #002b65) !important;
   padding: 8px 12px;
+  color: #fff !important;
 }
+#chat > .tbar #hdr {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff !important;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  white-space: nowrap;
+}
+#chat > .tbar .wb { color: #fff !important; flex-shrink: 0; }
 #login .in { padding: clamp(14px, 4vw, 24px) !important; }
 #login #who { margin-bottom: 10px; line-height: 1.5; }
 #login #nm { max-width: 100%; min-height: 36px; }
