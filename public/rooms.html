@@ -166,19 +166,22 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
 @media (max-height:640px){.adph-lb{height:40px}}
 .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 13px var(--sys);color:#00205B;padding:0 10px 0 6px;align-self:center}
 </style><link rel="stylesheet" href="/room137.css"></head><body>
-<div id="brand"><div style="text-align:center"><div style="display:flex;align-items:center;gap:10px;justify-content:center"><span class=lgbig></span><div class="logo appname"></div></div><div class="tag">Drop into a room for live text, voice, and webcam chat.</div></div></div>
+<header id="brand">
+  <div class="room-brand-heading"><img src="/razzle-chat.svg" width="46" height="46" alt=""><h1>Razzle Chat</h1></div>
+  <p class="tag">Drop into a room for live text, voice, and webcam chat.</p>
+</header>
 <section id="login" class="win" aria-labelledby="room-entry-title">
-  <div class="tbar"><span class="lgs"></span><h1 id="room-entry-title" class="brandname appname"></h1></div>
   <div class="in">
+    <h2 id="room-entry-title">Join a room</h2>
     <div id="who"><p>Choose a guest screen name for this visit. Already have an account? <a href="/">Sign in</a>.</p></div>
     <div class="room-entry-actions">
       <label id="nmw" for="nm">Screen name<input type="text" id="nm" maxlength="20" autocomplete="off"></label>
       <button type="button" id="go">Continue as guest</button>
       <label id="incl" style="display:none"><input type="checkbox" id="incq"> Enter incognito</label>
-      <button type="button" id="mk" title="Create your own room">Create room</button>
+      <button type="button" id="mk" disabled title="Sign in to create a room">Create room</button>
     </div>
     <div id="err" role="status"></div>
-    <h2 class="room-chooser-title">Choose a room</h2>
+    <h3 class="room-chooser-title">Room directory</h3>
     <div id="rlist"></div>
   </div>
 </section>
@@ -191,7 +194,7 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
  <div>Actions<div class="dd"><div id="mIgn">Ignore / Unignore Selected User</div><div id="mIgnL">Ignore &amp; Blocked Lists...</div><div id="mSet">Settings / Privacy...</div><div id="mInvR">Invite to Room...</div><div id="mIm">Send PM to Selected User</div><div id="mProf">View Profile of Selected User</div><div id="mMyProf">Edit My Profile...</div><div id="mAv">Change My Avatar...</div><div id="mKick" style="display:none">Admin Console...</div><hr><div id="mRep">Report Abuse...</div><div id="mBuzz" style="display:none">Buzz Room (shake everyone)</div><div id="mClear">Clear Chat Window</div></div></div>
  <div>Help<div class="dd"><div id="mHelp">How to Use Voice &amp; Webcam</div><div id="mAbout">About YappChat</div></div></div>
 </div>
-<div id="rhead"><span id="rtile"></span><div><div class=rnw><div class=rn id=rname></div><button class=folb id=bFol title="Follow this room - it shows up in My Rooms">&#9734; Follow</button></div><div class=rt id=rtopic></div><div id="viewers"></div></div><span class=sp></span>
+<div id="rhead"><span id="rtile"></span><div><div class=rnw><div class=rn id=rname></div><button class=folb id=bFol hidden title="Follow this room - it shows up in My Rooms">&#9734; Follow</button></div><div class=rt id=rtopic></div><div id="viewers"></div></div><span class=sp></span>
 <span id=hmst></span><button class="hb inv" id=bInv title="Invite buddies to this room"><i data-i=plus data-s=18></i><span>Invite</span></button><button class=hb id="cam" title="Share My Webcam"><i data-i=webcam data-s=20></i><span>Webcam</span></button><button class="hb on" id="vbtn" title="Show/hide voice controls"><i data-i=mic></i><span>Voice</span></button></div>
 <div id="camstrip"></div>
 <div id="main"><div id="lpane"><div id="topic" style="display:none"><i></i></div><div id="ann" style="display:none;padding:5px 10px;background:#fff6c8;border-bottom:1px solid #e6cf6a;font:13px Arial">&#128204; <span></span></div><div id="log"></div><div id="typing"></div></div>
@@ -237,17 +240,17 @@ const savePrefs=()=>localStorage.rcPrefs=JSON.stringify(prefs);
 const escT=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const smile=t=>RCSmileys.replace(t);
 const NCOL=['#c0392b','#0033A0','#8e44ad','#16a085','#d35400','#2c3e50','#27ae60','#b0186b'];const ncol=n=>NCOL[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%NCOL.length];
-fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
+fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;$('mk').disabled=!acct;$('mk').title=acct?'Create your own room':'Sign in to create a room';loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
  if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{});
-let rTab=localStorage.ycRTab||'mine';
-function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=>r.rating=='R'))adultOk=true;rooms=YBrowse.favs(rs,!!acct);
- const rr=r=>`${YBrowse.star(r)} ${YBrowse.icon(r,16)}<span class="room${r.name==room?' sel':''}" data-r="${escT(r.name)}" title="${escT(r.topic||'')}${r.owner?' - owner: '+escT(r.owner):''}">${escT(r.name)} (${r.count}${r.cams?', '+r.cams+' cam':''})${YProf.badge(r.rating)}</span>`;
- const tabs=`<div style="margin-bottom:4px"><b class=yonline style="float:right;font-size:11px;color:#060"></b><a href="#" data-rt=mine style="font-weight:${rTab=='mine'?'bold':'normal'}">My Rooms</a> | <a href="#" data-rt=top style="font-weight:${rTab=='top'?'bold':'normal'}">Top Rooms</a> | <a href="#" data-rt=all style="font-weight:${rTab=='all'?'bold':'normal'}">Browse Rooms</a></div>`;
- if(rTab=='mine'){const m=YBrowse.mine(rooms,acct&&String(acct.name||acct).toLowerCase());$('rlist').innerHTML=tabs+'<div class=cat>Rooms I own or admin, and starred rooms</div>'+(m.map(r=>`<div>${rr(r)}</div>`).join('')||'<span style="color:#888">Star a room (&#9734;) or create one and it will show here.</span>')}else
+let rTab=room?'all':(localStorage.ycRTab||'all');
+function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=>r.rating=='R'))adultOk=true;rooms=acct?YBrowse.favs(rs,true):rs;
+ const rr=r=>`${acct?YBrowse.star(r):''} ${YBrowse.icon(r,16)}<span class="room${r.name==room?' sel':''}" data-r="${escT(r.name)}" title="${escT(r.topic||'')}${r.owner?' - owner: '+escT(r.owner):''}">${escT(r.name)} (${r.count}${r.cams?', '+r.cams+' cam':''})${YProf.badge(r.rating)}</span>`;
+ const tabs=`<div class="room-directory-toolbar"><div class="room-directory-tabs" aria-label="Room lists">${[['mine','My Rooms'],['top','Top Rooms'],['all','Browse Rooms']].map(([key,label])=>`<button type="button" data-rt="${key}" aria-pressed="${rTab===key}">${label}</button>`).join('')}</div><span class="yonline"></span></div>`;
+ if(rTab=='mine'&&!acct){$('rlist').innerHTML=tabs+'<p class="room-list-note"><a href="/">Sign in</a> to star a room. Starred rooms appear here when you have an account.</p>'}else if(rTab=='mine'){const m=YBrowse.mine(rooms,acct&&String(acct.name||acct).toLowerCase());$('rlist').innerHTML=tabs+'<div class=cat>Rooms I own or admin, and starred rooms</div>'+(m.map(r=>`<div>${rr(r)}</div>`).join('')||'<span style="color:#888">Star a room (&#9734;) or create one and it will show here.</span>')}else
  if(rTab=='top'){const t=YBrowse.top(rooms);$('rlist').innerHTML=tabs+'<div class=cat>Top 10 busiest rooms (live)</div>'+(t.map((r,i)=>`<div>${i+1}. ${rr(r)} - ${r.count} people, ${r.cams} on cam</div>`).join('')||'<span style="color:#888">Nobody is chatting right now.</span>')}
  else $('rlist').innerHTML=tabs+YBrowse.tree(rooms,acct&&String(acct.name||acct).toLowerCase(),rr,'',' ')+(adultOk?'':'<span class=room id=show18 style="color:#e67e22">Show R-rated rooms (18+)...</span>');
  document.querySelectorAll('[data-rt]').forEach(e=>e.onclick=ev=>{ev.preventDefault();rTab=localStorage.ycRTab=e.dataset.rt;loadRooms()});
- document.querySelectorAll('#rlist [data-fav]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();const r=rooms.find(x=>x.name==e.dataset.fav);YBrowse.toggle(r.name,!r.fav,!!acct).then(ok=>ok?loadRooms():alert('Could not save favorite.'))});
+ document.querySelectorAll('#rlist [data-fav]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();if(!acct)return;const r=rooms.find(x=>x.name==e.dataset.fav);YBrowse.toggle(r.name,!r.fav,true).then(ok=>ok?loadRooms():alert('Could not save favorite.'))});
  $('show18')&&($('show18').onclick=e=>{e.stopPropagation();ask18(loadRooms)});
  const mf=rooms.filter(r=>r.fav),mt=YBrowse.top(rooms);
  $('mRooms').innerHTML=(mf.length?'<div style="color:#888;cursor:default">&nbsp;Favorites</div>'+mf.map(r=>`<div data-j="${escT(r.name)}">&nbsp;&nbsp;\u2605 ${escT(r.name)} (${r.count})</div>`).join(''):'')+'<div style="color:#888;cursor:default">&nbsp;Top Rooms</div>'+(mt.map(r=>`<div data-j="${escT(r.name)}">&nbsp;&nbsp;${escT(r.name)} (${r.count})</div>`).join('')||'<div style="color:#888">&nbsp;&nbsp;(none busy)</div>');
@@ -561,9 +564,9 @@ $('mRIcon').onclick=()=>{if(!isOwner()&&!window.MASTER)return alert('Only the ro
  w.querySelector('.x').onclick=()=>w.remove();w.querySelectorAll('.icpick span').forEach(sp=>sp.onclick=()=>S.emit('room:icon',sp.dataset.e,r=>{if(r&&r.error)return w.querySelector('#riE').textContent=r.error;w.remove()}))})};
 let folOn=false;const folUI=()=>{$('bFol').innerHTML=folOn?'&#9733; Following':'&#9734; Follow';$('bFol').classList.toggle('on',folOn);$('bFol').title=folOn?'Unfollow this room':'Follow this room - it shows up in My Rooms'};
 function toast(t){const d=document.createElement('div');d.className='ytoast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.classList.add('out'),1400);setTimeout(()=>d.remove(),1900)}
-function folLoad(){fetch('/api/rooms',{credentials:'same-origin'}).then(r=>r.json()).then(rs=>{YBrowse.favs(rs,!!acct);const r=rs.find(x=>x.name==room);folOn=!!(r&&r.fav);folUI()}).catch(()=>{})}
+function folLoad(){$('bFol').hidden=!acct;if(!acct)return;fetch('/api/rooms',{credentials:'same-origin'}).then(r=>r.json()).then(rs=>{YBrowse.favs(rs,!!acct);const r=rs.find(x=>x.name==room);folOn=!!(r&&r.fav);folUI()}).catch(()=>{})}
 S.on('history',()=>setTimeout(folLoad,50));
-$('bFol').onclick=async()=>{const on=!folOn;const ok=await YBrowse.toggle(room,on,!!acct);if(ok===false)return toast('Could not update - try again');folOn=on;folUI();toast(on?'Room followed':'Room unfollowed')};
+$('bFol').onclick=async()=>{if(!acct)return;const on=!folOn;const ok=await YBrowse.toggle(room,on,!!acct);if(ok===false)return toast('Could not update - try again');folOn=on;folUI();toast(on?'Room followed':'Room unfollowed')};
 S.on('room-icon',({room:r,icon})=>{if(r==room){$('rtile').innerHTML=icon?'<span class="rtileic rbig">'+escT(icon)+'</span>':YI.room(room,48);add({sys:1,text:'Room icon changed to '+escT(icon)+'.'})}});
 document.querySelectorAll('#hdr').forEach(()=>{});
 </script>
