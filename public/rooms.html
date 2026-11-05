@@ -173,7 +173,7 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
 <section id="login" class="win" aria-labelledby="room-entry-title">
   <div class="in">
     <h2 id="room-entry-title">Join a room</h2>
-    <div id="who"><p>Choose a guest screen name for this visit. Already have an account? <a href="/">Sign in</a>.</p></div>
+    <div id="who"><p>Choose a guest screen name for this visit. Already have an account? <a href="/?chat=1" data-chat-signin>Sign in</a>.</p></div>
     <div class="room-entry-actions">
       <label id="nmw" for="nm">Screen name<input type="text" id="nm" maxlength="20" autocomplete="off"></label>
       <button type="button" id="go">Continue as guest</button>
@@ -242,11 +242,18 @@ const smile=t=>RCSmileys.replace(t);
 const NCOL=['#c0392b','#0033A0','#8e44ad','#16a085','#d35400','#2c3e50','#27ae60','#b0186b'];const ncol=n=>NCOL[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%NCOL.length];
 fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;$('mk').disabled=!acct;$('mk').title=acct?'Create your own room':'Sign in to create a room';loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
  if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{});
+$('login').addEventListener('click', event => {
+ const link = event.target.closest('[data-chat-signin]');
+ if (!link || !room) return;
+ const destination = new URL(link.href);
+ destination.searchParams.set('chatRoom', room);
+ link.href = destination.href;
+});
 let rTab=room?'all':(localStorage.ycRTab||'all');
 function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=>r.rating=='R'))adultOk=true;rooms=acct?YBrowse.favs(rs,true):rs;
  const rr=r=>`${acct?YBrowse.star(r):''} ${YBrowse.icon(r,16)}<span class="room${r.name==room?' sel':''}" data-r="${escT(r.name)}" title="${escT(r.topic||'')}${r.owner?' - owner: '+escT(r.owner):''}">${escT(r.name)} (${r.count}${r.cams?', '+r.cams+' cam':''})${YProf.badge(r.rating)}</span>`;
  const tabs=`<div class="room-directory-toolbar"><div class="room-directory-tabs" aria-label="Room lists">${[['mine','My Rooms'],['top','Top Rooms'],['all','Browse Rooms']].map(([key,label])=>`<button type="button" data-rt="${key}" aria-pressed="${rTab===key}">${label}</button>`).join('')}</div><span class="yonline"></span></div>`;
- if(rTab=='mine'&&!acct){$('rlist').innerHTML=tabs+'<p class="room-list-note"><a href="/">Sign in</a> to star a room. Starred rooms appear here when you have an account.</p>'}else if(rTab=='mine'){const m=YBrowse.mine(rooms,acct&&String(acct.name||acct).toLowerCase());$('rlist').innerHTML=tabs+'<div class=cat>Rooms I own or admin, and starred rooms</div>'+(m.map(r=>`<div>${rr(r)}</div>`).join('')||'<span style="color:#888">Star a room (&#9734;) or create one and it will show here.</span>')}else
+ if(rTab=='mine'&&!acct){$('rlist').innerHTML=tabs+'<p class="room-list-note"><a href="/?chat=1" data-chat-signin>Sign in</a> to star a room. Starred rooms appear here when you have an account.</p>'}else if(rTab=='mine'){const m=YBrowse.mine(rooms,acct&&String(acct.name||acct).toLowerCase());$('rlist').innerHTML=tabs+'<div class=cat>Rooms I own or admin, and starred rooms</div>'+(m.map(r=>`<div>${rr(r)}</div>`).join('')||'<span style="color:#888">Star a room (&#9734;) or create one and it will show here.</span>')}else
  if(rTab=='top'){const t=YBrowse.top(rooms);$('rlist').innerHTML=tabs+'<div class=cat>Top 10 busiest rooms (live)</div>'+(t.map((r,i)=>`<div>${i+1}. ${rr(r)} - ${r.count} people, ${r.cams} on cam</div>`).join('')||'<span style="color:#888">Nobody is chatting right now.</span>')}
  else $('rlist').innerHTML=tabs+YBrowse.tree(rooms,acct&&String(acct.name||acct).toLowerCase(),rr,'',' ')+(adultOk?'':'<span class=room id=show18 style="color:#e67e22">Show R-rated rooms (18+)...</span>');
  document.querySelectorAll('[data-rt]').forEach(e=>e.onclick=ev=>{ev.preventDefault();rTab=localStorage.ycRTab=e.dataset.rt;loadRooms()});
