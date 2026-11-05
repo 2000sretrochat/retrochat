@@ -296,7 +296,11 @@ function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=
   const saved=YBrowse.mine(rooms,String(acct.name||acct).toLowerCase());
   $('rlist').innerHTML=tabs+(saved.map(rr).join('')||'<p class="room-list-note">Star a room or create one and it will show here.</p>');
  }else if(rTab==='top'){
-  const top=YBrowse.top(rooms);
+  const englishRooms = new Set(["Lobby","Late Night","The Lounge","Friends","Chit Chat","Advice Central","Cultures and Community Lobby","Holiday Happenings"]);
+  const top = rooms.filter(r => r.count > 0).sort((a,b) =>
+   Number(englishRooms.has(b.name)) - Number(englishRooms.has(a.name)) ||
+   b.count - a.count || b.cams - a.cams || a.name.localeCompare(b.name)
+  ).slice(0,10);
   const selected=rooms.find(r=>r.name===room);
   $('rlist').innerHTML=tabs+(selected&&!top.includes(selected)?`<div class="cat">Selected room</div>${rr(selected)}`:'')+'<div class="cat">Busiest rooms now</div>'+(top.map(rr).join('')||'<p class="room-list-note">Nobody is chatting right now.</p>');
  }else{
