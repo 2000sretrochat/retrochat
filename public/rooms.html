@@ -227,7 +227,7 @@ document.querySelectorAll('.lgs, .lgbig').forEach(element => {
   const size = element.classList.contains('lgbig') ? 56 : 26;
   element.innerHTML = `<img src="${chatLogo}" width="${size}" height="${size}" alt="">`;
 });
-function setHdr(){$('hdr').textContent=room+' ('+(typeof ros!='undefined'?ros.length:0)+') \u2013 Chat Room'}
+function setHdr(){$('hdr').textContent=room+' ('+(typeof ros!='undefined'?ros.length:0)+')'}
 document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('');
 const $=id=>document.getElementById(id)||(window.ydFind&&ydFind(id))||null, S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
 (function(){const r=$('fsr'),L=$('log'),set=v=>{v=Math.max(11,Math.min(24,Math.round(+v||14)));r.value=v;$('fsv').textContent=v+'px';L.style.setProperty('--chatfs',v+'px');L.classList.add('fsz');localStorage.rcChatFs=v};

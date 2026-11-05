@@ -60,6 +60,16 @@ html.ydpop,html.ydpop body{min-width:0!important}
   padding: 8px 12px;
   color: #fff !important;
 }
+#chat > .tbar .lgs {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  background: #fff;
+  border-radius: 8px;
+}
+#chat > .tbar .lgs img { display: block; width: 26px; height: 26px; }
 #chat > .tbar #hdr {
   min-width: 0;
   overflow: hidden;
