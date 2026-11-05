@@ -166,6 +166,25 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
 @media (max-height:640px){.adph-lb{height:40px}}
 .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 13px var(--sys);color:#00205B;padding:0 10px 0 6px;align-self:center}
 </style><link rel="stylesheet" href="/room137.css"></head><body>
+<header class="social-chat-header" id="social-chat-header">
+  <a class="social-chat-brand" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
+  <label class="social-chat-search"><span aria-hidden="true">⌕</span><input type="search" id="social-chat-search" placeholder="Search chat rooms and topics" aria-label="Search chat rooms and topics"></label>
+  <a href="/?chat=1" data-chat-signin>Sign in</a>
+</header>
+<div class="social-chat-layout" id="social-chat-layout">
+  <aside class="site-sidebar">
+    <nav class="menu" aria-label="Razzle navigation">
+      <a href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/">⌂ <span>Social</span></a>
+      <a href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/#people">✧ <span>Find your people</span></a>
+      <a href="/rooms.html" aria-current="page">▦ <span>Chat</span></a>
+    </nav>
+    <div class="topic-list"><p class="label">FEATURED ROOMS</p>
+      <a class="featured-room" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/rooms.html?guest=1&amp;room=The%20Lounge"><span class="topic t1" aria-hidden="true">☕</span><span>The Lounge<small>Good company. No particular agenda.</small></span></a>
+      <a class="featured-room" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/rooms.html?guest=1&amp;room=Music%20after%20midnight"><span class="topic t2" aria-hidden="true">♫</span><span>Music after midnight<small>One good song leads to another.</small></span></a>
+      <a class="featured-room" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/rooms.html?guest=1&amp;room=The%20quiet%20corner"><span class="topic t3" aria-hidden="true">✧</span><span>The quiet corner<small>Slow conversations. Stay a while.</small></span></a>
+    </div>
+  </aside>
+  <main class="social-chat-main">
 <header id="brand">
   <div class="room-brand-heading"><img src="/razzle-chat.svg" width="46" height="46" alt=""><h1>Razzle Chat</h1></div>
   <p class="tag">Drop into a room for live text, voice, and webcam chat.</p>
@@ -173,7 +192,7 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
 <section id="login" class="win" aria-labelledby="room-entry-title">
   <div class="in">
     <h2 id="room-entry-title">Join a room</h2>
-    <div id="who"><p>Choose a guest screen name for this visit. Already have an account? <a href="/?chat=1" data-chat-signin>Sign in</a>.</p></div>
+    <div id="who"><p>Choose a guest screen name for this visit. <a href="/?chat=1" data-chat-signin>Sign in</a> or <a href="/?chat=1&amp;signup=1" data-chat-signin>sign up</a>.</p></div>
     <div class="room-entry-actions">
       <label id="nmw" for="nm">Screen name<input type="text" id="nm" maxlength="20" autocomplete="off"></label>
       <button type="button" id="go">Continue as guest</button>
@@ -185,6 +204,8 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
     <div id="rlist"></div>
   </div>
 </section>
+  </main>
+</div>
 <div id="chat" class="win"><div id=cstat style="display:none">Reconnecting&hellip;</div>
 <div class="tbar"><span class=lgs></span><span id="hdr">Razzle Chat</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Leave chat"><i data-i=close data-s=16></i></span></div>
 <div id="menu">
@@ -242,7 +263,7 @@ const smile=t=>RCSmileys.replace(t);
 const NCOL=['#c0392b','#0033A0','#8e44ad','#16a085','#d35400','#2c3e50','#27ae60','#b0186b'];const ncol=n=>NCOL[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%NCOL.length];
 fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;$('mk').disabled=!acct;$('mk').title=acct?'Create your own room':'Sign in to create a room';loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
  if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{});
-$('login').addEventListener('click', event => {
+document.addEventListener('click', event => {
  const link = event.target.closest('[data-chat-signin]');
  if (!link || !room) return;
  const destination = new URL(link.href);
@@ -255,7 +276,7 @@ function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=
  const tabs=`<div class="room-directory-toolbar"><div class="room-directory-tabs" aria-label="Room lists">${[['mine','My Rooms'],['top','Top Rooms'],['all','Browse Rooms']].map(([key,label])=>`<button type="button" data-rt="${key}" aria-pressed="${rTab===key}">${label}</button>`).join('')}</div><span class="yonline"></span></div>`;
  if(rTab=='mine'&&!acct){$('rlist').innerHTML=tabs+'<p class="room-list-note"><a href="/?chat=1" data-chat-signin>Sign in</a> to star a room. Starred rooms appear here when you have an account.</p>'}else if(rTab=='mine'){const m=YBrowse.mine(rooms,acct&&String(acct.name||acct).toLowerCase());$('rlist').innerHTML=tabs+'<div class=cat>Rooms I own or admin, and starred rooms</div>'+(m.map(r=>`<div>${rr(r)}</div>`).join('')||'<span style="color:#888">Star a room (&#9734;) or create one and it will show here.</span>')}else
  if(rTab=='top'){const t=YBrowse.top(rooms);$('rlist').innerHTML=tabs+'<div class=cat>Top 10 busiest rooms (live)</div>'+(t.map((r,i)=>`<div>${i+1}. ${rr(r)} - ${r.count} people, ${r.cams} on cam</div>`).join('')||'<span style="color:#888">Nobody is chatting right now.</span>')}
- else $('rlist').innerHTML=tabs+YBrowse.tree(rooms,acct&&String(acct.name||acct).toLowerCase(),rr,'',' ')+(adultOk?'':'<span class=room id=show18 style="color:#e67e22">Show R-rated rooms (18+)...</span>');
+ else $('rlist').innerHTML=tabs+YBrowse.tree(rooms,acct&&String(acct.name||acct).toLowerCase(),rr,$('social-chat-search').value.trim(),' ')+(adultOk?'':'<span class=room id=show18 style="color:#e67e22">Show R-rated rooms (18+)...</span>');
  document.querySelectorAll('[data-rt]').forEach(e=>e.onclick=ev=>{ev.preventDefault();rTab=localStorage.ycRTab=e.dataset.rt;loadRooms()});
  document.querySelectorAll('#rlist [data-fav]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();if(!acct)return;const r=rooms.find(x=>x.name==e.dataset.fav);YBrowse.toggle(r.name,!r.fav,true).then(ok=>ok?loadRooms():alert('Could not save favorite.'))});
  $('show18')&&($('show18').onclick=e=>{e.stopPropagation();ask18(loadRooms)});
@@ -264,6 +285,7 @@ function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=
  $('mRooms').style.padding='0';
  document.querySelectorAll('[data-j]').forEach(e=>e.onclick=()=>joinR(e.dataset.j));
  document.querySelectorAll('.room').forEach(e=>e.onclick=()=>{room=e.dataset.r;document.querySelectorAll('.room').forEach(x=>x.classList.toggle('sel',x==e))});});}
+$('social-chat-search').addEventListener('input', () => { rTab='all'; loadRooms(); });
 loadRooms();setInterval(()=>{if(($('login').style.display!='none'&&rTab!='top')||document.querySelector('#menu>div.open'))return;loadRooms()},5000);
 let adultOk=false;function ask18(then){if(!YProf.confirm18())return;S.emit('adult',true,()=>{adultOk=true;then&&then()})}
 const joinR=r=>S.emit('join',r,x=>{if(x&&x.adult)return ask18(()=>joinR(r));if(x&&x.error&&x.error!='Already here')alert(x.error)});
@@ -282,7 +304,7 @@ function incUI(){const a=$('mInc'),b=$('mAnn');if(a)a.textContent=(INC?'\u2713 '
 S.on('inc',d=>{INC=d.on;ANN=d.announce;incUI()});
 S.on('incwarn',d=>{if(confirm("You're incognito \u2014 send visibly?"))S.emit('say',{text:d.text,...st,vis:true})});
 function login(){if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;if(!room)return $('err').textContent='Pick a room from the list first.';S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error)return $('err').textContent=r.error;if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const a=document.createElement('button');a.onclick=()=>window.openMasterConsole&&openMasterConsole();a.id='mcon';a.className='hb mst';a.title='Master Console (only you can see this)';a.innerHTML=YI.svg('shield',18)+'<span>Master</span>';$('hmst').appendChild(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon class=mst>Master Console</div><div id=mMadm class=mst>Room Admin Console (master)</div><hr>');$('mMadm').onclick=()=>openMod(selName);$('mAbout').insertAdjacentHTML('afterend','<div id=mSite class=mst>Site Moderator Key...</div>');$('mSite').onclick=()=>{const k=prompt('Site moderator key:');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMadm').insertAdjacentHTML('afterend','<div id=mInc class=mst>Incognito</div><div id=mAnn class=mst>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
- me=r.name;try{drawQ()}catch(e){};$('login').style.display='none';$('brand').style.display='none';$('chat').style.display='flex';
+ me=r.name;try{drawQ()}catch(e){};$('login').style.display='none';$('brand').style.display='none';$('social-chat-header').hidden=true;$('social-chat-layout').hidden=true;$('chat').style.display='flex';
  $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" title="${c=='#8b5cf6'?'Purple':c}" style="background:${c}"></span>`).join('');
  document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;$('msg').style.color=st.color;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
  $('msg').focus();});}

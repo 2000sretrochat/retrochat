@@ -1,7 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M35 9a23 23 0 0 1 20 23" fill="none" stroke="#4D90CD" stroke-width="6" stroke-linecap="round"/>
-  <path d="M29 55A23 23 0 0 1 9 32" fill="none" stroke="#004990" stroke-width="6" stroke-linecap="round"/>
-  <path id="quotes" fill="#004990" d="M9 27c-4 0-6-3-6-7 0-6 5-12 11-14l2 4c-4 2-6 5-6 6 4 0 6 2 6 5s-3 6-7 6Zm15 0c-4 0-6-3-6-7 0-6 5-12 11-14l2 4c-4 2-6 5-6 6 4 0 6 2 6 5s-3 6-7 6Z"/>
-  <use href="#quotes" transform="rotate(180 32 32)"/>
-  <path fill="#FF9900" d="M32 22c1.5 6.5 3.5 8.5 10 10-6.5 1.5-8.5 3.5-10 10-1.5-6.5-3.5-8.5-10-10 6.5-1.5 8.5-3.5 10-10Z"/>
+  <path fill="#4d90cd" d="M29 12h18a11 11 0 0 1 11 11v9a11 11 0 0 1-11 11h-4l-9 8v-8h-5a11 11 0 0 1-11-11v-9a11 11 0 0 1 11-11z"/>
+  <path fill="#004990" stroke="#fff" stroke-width="3" d="M17 6h19a12 12 0 0 1 12 12v10a12 12 0 0 1-12 12H24L12 50v-11a12 12 0 0 1-7-11V18A12 12 0 0 1 17 6z"/>
+  <path fill="#ff9900" d="M26 13c1.4 6.4 3.6 8.6 10 10-6.4 1.4-8.6 3.6-10 10-1.4-6.4-3.6-8.6-10-10 6.4-1.4 8.6-3.6 10-10z"/>
 </svg>
