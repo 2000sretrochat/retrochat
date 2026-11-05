@@ -23,7 +23,7 @@ const masterNames = () => new Set([...io.sockets.sockets.values()].filter(x => x
 async function masterLc() { try { return new Set((await db.q('select name_lc from users where is_master')).map(r => r.name_lc)); } catch { return masterNames(); } }
 const { DIR, PATH, ADULT_ROOMS, CAT_ORDER } = require('./rooms-dir');
 const ROOMS = {}; for (const [c, rs] of Object.entries(DIR)) for (const r of rs) ROOMS[r] = c;
-const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?' };
+const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?', 'The Lounge':'Good company. No particular agenda.' };
 for (const r of Object.keys(ROOMS)) if (!TOPICS[r]) TOPICS[r] = ADULT_ROOMS.has(r) ? r + ' - adults only (18+)' : 'Welcome to ' + r + ' - chat about ' + r.toLowerCase();
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033','#8b5cf6'];
 const GRACE = new Map(); const users = new Map(); const VERSION = 'v13.4'; // lower(name) -> socket.id

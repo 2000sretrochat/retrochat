@@ -5,7 +5,7 @@ const DIR_TREE = {
   'Business & Finance': { 'Investing': ['Asian Markets', 'Bond Market', 'Stock Watch', 'FinanceVision', 'Real Estate'], 'Business & Careers': ['Career Development', 'Small & Medium Business', 'Work From Home', 'Biotechnology'] },
   'Computers & Internet': { 'Operating Systems': ['Windows', 'Macintosh', 'Linux, FreeBSD, Solaris'], 'Internet & Web': ['Surfing the Web', 'Web Design', 'Auctions Chat'], 'General': ['Computers Lobby', 'Electronics', "Hacker's Lounge", 'Programming', 'Chat Help'] },
   'Cultures & Community': {
-    'General': ['Lobby', 'Friends', 'Chit Chat', 'Late Night', 'Advice Central', 'Cultures and Community Lobby', 'Holiday Happenings'],
+    'General': ['Lobby', 'Friends', 'Chit Chat', 'Late Night', 'The Lounge', 'Advice Central', 'Cultures and Community Lobby', 'Holiday Happenings'],
     'Hangouts': ['Chat Central', "Jerry's Diner", 'The Hot Tub', 'The Ranch', 'The Tiki Lounge'],
     'Countries & Cultures': { 'Africa & Caribbean': ['African-American Chat', 'Afro-Caribbean'], 'Asia': ['Asian American Chat', 'Asian Chat', 'Korean Chat'], 'Middle East': ['Arab American Chat', 'Arab Chat', 'Persian Chat'], 'Americas': ['Hispanic and Latino Chat', 'Indigenous Peoples', 'Native American Chat'] },
     'Groups': ["30's", "40's", "50's", 'Seniors 60+', 'Older and Wiser', 'Generation X', 'Disabled Chat', 'Special Needs Families', 'Expats Everywhere', 'Geek and Proud', 'Ravers and Clubbers', 'The Graveyard', "Women's Room"],
