@@ -288,6 +288,14 @@ io.on('connection', s => {
     if (!s.data.acct) {
       if (!/^[A-Za-z][A-Za-z0-9 _-]{2,19}$/.test(name)) return cb({ error: 'Guest screen names must be 3–20 characters, start with a letter, and use only letters, numbers, spaces, hyphens, or underscores.' });
       if (/razzle/i.test(name)) return cb({ error: 'Guest screen names cannot contain “razzle”.' });
+      const cleanName = name.toLowerCase().replace(/[013457]/g, digit => ({ 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't' })[digit]);
+      const nameWords = cleanName.split(/[ _-]+/);
+      const compactName = nameWords.join('');
+      const profanity = /fuck|fuk|fck|phuck|motherf|sh[iy]t|bullsh|b[iy]tch|b[iy]atch|cunt|kunt|asshole|arsehole|dickhead|cockhead|cocksuck|whore|slut|bastard|pussy|douche|twat|bollocks|wanker|jackass|dumbass|dipshit|retard|faggot|nigg[ae]r?|chink|spic\b|kike|gook|rapist|porn|blowjob|handjob|dildo|cumshot|cumslut|buttplug|suckmy|eatmyass/;
+      const vulgarWord = /^(?:ass|arse|damn|goddamn|hell|crap|piss|dick|cock|prick|cum|jizz|tits?|boobs?|ballsack|fag|dyke|penis|vagina|anal|anus|sex|hoe|skank|jerkoff)\d*$/;
+      if (profanity.test(compactName) || nameWords.some(word => vulgarWord.test(word)) || vulgarWord.test(compactName)) {
+        return cb({ error: 'Choose a guest screen name without profanity or vulgar language.' });
+      }
       if (/^(admin|administrator|moderator|mod|support|system|yappchat|staff|root)/i.test(name) || isBot(name) || MASTER.reserved(name)) return cb({ error: 'That screen name is not available.' });
       if (db.status().ready) { try { if ((await db.q('select 1 from users where name_lc=$1', [name.toLowerCase()])).length) return cb({ error: 'That screen name belongs to a registered user. Pick another guest name or sign in.' }); } catch { } }
       s.data.guest = true;
