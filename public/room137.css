@@ -314,3 +314,7 @@ body.chat-room-active #social-chat-layout { display: none; }
 .room-popout #room-popout, .room-popout body.chat-room-active #social-chat-header,
 .room-popout body.chat-room-active #social-chat-layout { display: none !important; }
 html.room-popout body.chat-room-active #chat[style*="flex"] { inset: 0 !important; }
+
+#login #rlist .guest-room-join:not(.selected-entry) { background: #edf5fc !important; color: #003876 !important; }
+#room-popout-status { margin: 22px; color: var(--ink); font-weight: 650; }
+html.room-popout-pending #social-chat-header, html.room-popout-pending #social-chat-layout { display: none !important; }

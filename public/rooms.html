@@ -166,6 +166,7 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
 @media (max-height:640px){.adph-lb{height:40px}}
 .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 13px var(--sys);color:#00205B;padding:0 10px 0 6px;align-self:center}
 </style><link rel="stylesheet" href="/room137.css"></head><body>
+<p id="room-popout-status" role="status" hidden>Opening your room…</p>
 <header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <label class="social-chat-search"><span aria-hidden="true">⌕</span><input type="search" id="social-chat-search" placeholder="Search chat rooms and topics" aria-label="Search chat rooms and topics"></label>
@@ -197,7 +198,7 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
       <label id="nmw" for="nm">Guest screen name<input type="text" id="nm" placeholder="Type your screen name" maxlength="20" autocomplete="off" aria-describedby="guest-room-selection"></label>
       <button type="button" id="go" hidden>Enter Chat</button>
       <label id="incl" style="display:none"><input type="checkbox" id="incq"> Enter incognito</label>
-      <button type="button" id="mk" disabled title="Sign in to create a room">Create room</button>
+      <button type="button" id="mk" hidden disabled title="Create your own room">Create room</button>
     </div>
     <p id="guest-room-selection" aria-live="polite"></p>
     <div id="err" role="status"></div>
@@ -262,9 +263,23 @@ const savePrefs=()=>localStorage.rcPrefs=JSON.stringify(prefs);
 const escT=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const smile=t=>RCSmileys.replace(t);
 const NCOL=['#c0392b','#0033A0','#8e44ad','#16a085','#d35400','#2c3e50','#27ae60','#b0186b'];const ncol=n=>NCOL[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%NCOL.length];
-const isRoomPopout = new URLSearchParams(location.search).get('popout') === '1' && Boolean(window.opener);
-if (isRoomPopout) document.documentElement.classList.add('room-popout');
-const roomAccountReady = fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;$('go').hidden=!acct;syncRoomEntry();$('mk').disabled=!acct;$('mk').title=acct?'Create your own room':'Sign in to create a room';loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
+const popoutKey = new URLSearchParams(location.hash.slice(1)).get('room-transfer');
+const isRoomPopout = /^[0-9a-f-]{36}$/i.test(popoutKey || '') && typeof BroadcastChannel === 'function';
+const incomingPopout = isRoomPopout ? new BroadcastChannel('razzle-room-' + popoutKey) : null;
+let incomingTimer;
+function finishIncomingPopout(type) {
+ if (!incomingPopout) return;
+ clearTimeout(incomingTimer);
+ incomingPopout.postMessage({ type });
+ incomingPopout.close();
+ $('room-popout-status').hidden = true;
+ document.documentElement.classList.remove('room-popout-pending');
+}
+if (isRoomPopout) {
+ document.documentElement.classList.add('room-popout', 'room-popout-pending');
+ $('room-popout-status').hidden = false;
+}
+const roomAccountReady = fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;$('go').hidden=!acct;syncRoomEntry();$('mk').hidden=!acct;$('mk').disabled=!acct;loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
  if(isRoomPopout)return;
  if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{});
 document.addEventListener('click', event => {
@@ -303,7 +318,7 @@ function syncRoomEntry() {
   if (summary.textContent !== text) summary.textContent = text;
  }
  document.querySelectorAll('#rlist [data-guest-join]').forEach(button => {
-  button.hidden = Boolean(acct) || button.dataset.guestJoin !== room;
+  button.classList.toggle('selected-entry', button.dataset.guestJoin === room);
  });
 }
 function highlightFeaturedRoom(){
@@ -324,7 +339,7 @@ function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=
   <span class="live-room-icon" aria-hidden="true">${YBrowse.icon(r,22)||'▦'}</span>
   <span class="live-room-copy"><strong>${escT(r.name)}</strong>${r.topic?`<span class="live-room-topic">${escT(r.topic)}</span>`:''}</span>
   <span class="live-room-count">${r.count} in room${r.cams?` · ${r.cams} on cam`:''} ${YProf.badge(r.rating)}</span>
- </button>${acct?YBrowse.star(r):`<button type="button" class="guest-room-join" data-guest-join="${escT(r.name)}" aria-label="Continue as guest to ${escT(r.name)}" hidden>Continue as guest <span aria-hidden="true">↗</span></button>`}</div>`;
+ </button>${acct?YBrowse.star(r):''}<button type="button" class="guest-room-join" data-guest-join="${escT(r.name)}" aria-label="Enter ${escT(r.name)}">Enter <span aria-hidden="true">↗</span></button></div>`;
  const lists=[['top','Top Rooms'],['all','Browse Rooms']];
  if(acct)lists.push(['mine','My Rooms']);
  const tabs=`<div class="room-directory-toolbar"><div class="room-directory-tabs" aria-label="Room lists">${lists.map(([key,label])=>`<button type="button" data-rt="${key}" aria-pressed="${rTab===key}">${label}</button>`).join('')}</div><span class="yonline"></span></div>`;
@@ -371,14 +386,22 @@ let INC=false,ANN=false;const mpost=b=>fetch('/api/master/prefs',{method:'POST',
 function incUI(){const a=$('mInc'),b=$('mAnn');if(a)a.textContent=(INC?'\u2713 ':'')+'Incognito';if(b)b.textContent=(ANN?'\u2713 ':'')+'Announce my entry';let t=$('incTag');if(!t&&$('mcon')){t=document.createElement('span');t.id='incTag';t.style.cssText='align-self:center;font-size:11px;opacity:.7;padding:0 6px';$('mcon').after(t)}if(t)t.textContent=INC?'(incognito)':''}
 S.on('inc',d=>{INC=d.on;ANN=d.announce;incUI()});
 S.on('incwarn',d=>{if(confirm("You're incognito \u2014 send visibly?"))S.emit('say',{text:d.text,...st,vis:true})});
-function login(){if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;if(!room)return $('err').textContent='Pick a room from the list first.';if(!acct&&!$('nm').value.trim()){$('err').textContent='Enter a guest screen name to join '+room+'.';$('nm').focus();return}S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error){if(isRoomPopout)window.opener?.postMessage({type:'razzle-room-popout-failed'},location.origin);return $('err').textContent=r.error}if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const a=document.createElement('button');a.onclick=()=>window.openMasterConsole&&openMasterConsole();a.id='mcon';a.className='hb mst';a.title='Master Console (only you can see this)';a.innerHTML=YI.svg('shield',18)+'<span>Master</span>';$('hmst').appendChild(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon class=mst>Master Console</div><div id=mMadm class=mst>Room Admin Console (master)</div><hr>');$('mMadm').onclick=()=>openMod(selName);$('mAbout').insertAdjacentHTML('afterend','<div id=mSite class=mst>Site Moderator Key...</div>');$('mSite').onclick=()=>{const k=prompt('Site moderator key:');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMadm').insertAdjacentHTML('afterend','<div id=mInc class=mst>Incognito</div><div id=mAnn class=mst>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
+function login(){if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;if(!room)return $('err').textContent='Pick a room from the list first.';if(!acct&&!$('nm').value.trim()){$('err').textContent='Enter a guest screen name to join '+room+'.';$('nm').focus();return}S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error){finishIncomingPopout('failed');return $('err').textContent=r.error}if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const a=document.createElement('button');a.onclick=()=>window.openMasterConsole&&openMasterConsole();a.id='mcon';a.className='hb mst';a.title='Master Console (only you can see this)';a.innerHTML=YI.svg('shield',18)+'<span>Master</span>';$('hmst').appendChild(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon class=mst>Master Console</div><div id=mMadm class=mst>Room Admin Console (master)</div><hr>');$('mMadm').onclick=()=>openMod(selName);$('mAbout').insertAdjacentHTML('afterend','<div id=mSite class=mst>Site Moderator Key...</div>');$('mSite').onclick=()=>{const k=prompt('Site moderator key:');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMadm').insertAdjacentHTML('afterend','<div id=mInc class=mst>Incognito</div><div id=mAnn class=mst>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
  me=r.name;try{drawQ()}catch(e){};$('login').style.display='none';$('brand').style.display='none';document.body.classList.add('chat-room-active');$('chat').style.display='flex';
  $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" title="${c=='#8b5cf6'?'Purple':c}" style="background:${c}"></span>`).join('');
  document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;$('msg').style.color=st.color;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
- $('msg').focus();if(isRoomPopout)window.opener?.postMessage({type:'razzle-room-popout-joined'},location.origin);});}
+ $('msg').focus();finishIncomingPopout('joined');});}
 $('rlist').addEventListener('click', event => {
  const button = event.target.closest('[data-guest-join]');
- if (!acct && button && button.dataset.guestJoin === room) login();
+ if (!button) return;
+ room = button.dataset.guestJoin;
+ highlightFeaturedRoom();
+ document.querySelectorAll('#rlist .room[data-r]').forEach(row => {
+  const selected = row.dataset.r === room;
+  row.classList.toggle('sel', selected);
+  row.setAttribute('aria-pressed', String(selected));
+ });
+ login();
 });
 $('go').onclick=login;$('nm').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();login()}});
 // smileys + text style
@@ -404,46 +427,47 @@ $('msg').addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preven
 // menus
 document.querySelectorAll('#menu>div').forEach(m=>m.addEventListener('click',e=>{const was=m.classList.contains('open');document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!was&&!e.target.closest('.dd'))m.classList.add('open')}));
 document.addEventListener('click',e=>{if(!e.target.closest('#menu'))document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!e.target.closest('#smp,#smb,#bSm'))$('smp').classList.remove('open')});
-let popoutWindow = null;
-let popoutTimer = null;
-function clearPopout() {
- clearTimeout(popoutTimer);
- popoutWindow = null;
- $('room-popout').disabled = false;
-}
+let outgoingPopout = null;
 $('room-popout').onclick = () => {
- if (!me || popoutWindow) return;
+ if (!me || outgoingPopout) return;
+ if (typeof BroadcastChannel !== 'function') { toast('This browser does not support moving the room to a separate window.'); return; }
+ const key = crypto.randomUUID();
  const url = new URL('/rooms.html', location.origin);
  url.searchParams.set('room', room);
- url.searchParams.set('popout', '1');
- popoutWindow = window.open(url.href, '_blank', 'popup,width=1050,height=760');
- if (!popoutWindow) { toast('Allow pop-ups to open the room in a separate window.'); return; }
+ url.hash = 'room-transfer=' + key;
+ const channel = new BroadcastChannel('razzle-room-' + key);
+ const popup = window.open(url.href, '_blank', 'popup,width=1050,height=760');
+ if (!popup) { channel.close(); toast('Allow pop-ups to open the room in a separate window.'); return; }
+ outgoingPopout = channel;
  $('room-popout').disabled = true;
- popoutTimer = setTimeout(clearPopout, 15000);
+ const clear = () => {
+  clearTimeout(timer);
+  channel.close();
+  outgoingPopout = null;
+  $('room-popout').disabled = false;
+ };
+ const timer = setTimeout(() => { clear(); toast('The room could not move to the new window.'); }, 25000);
+ channel.onmessage = ({ data }) => {
+  if (data?.type === 'ready') channel.postMessage({ type: 'enter', name: me });
+  if (data?.type === 'joined') { clear(); location.replace('/rooms.html'); }
+  if (data?.type === 'failed') { clear(); toast('The room could not move to the new window.'); }
+ };
 };
-window.addEventListener('message', event => {
- if (event.origin !== location.origin || !event.data) return;
- const { type, name } = event.data;
- if (popoutWindow && event.source === popoutWindow) {
-  if (type === 'razzle-room-popout-ready') {
-   popoutWindow.postMessage({ type: 'razzle-room-popout-enter', name: me }, location.origin);
-  } else if (type === 'razzle-room-popout-joined') {
-   clearPopout();
-   location.replace('/rooms.html');
-  } else if (type === 'razzle-room-popout-failed') {
-   clearPopout();
-   toast('The room could not move. This window is still open.');
-  }
-  return;
- }
- if (isRoomPopout && event.source === window.opener && type === 'razzle-room-popout-enter' && !me) {
+if (incomingPopout) {
+ incomingTimer = setTimeout(() => {
+  finishIncomingPopout('failed');
+  $('err').textContent = 'The room could not move automatically. Your original tab can still be used.';
+ }, 22000);
+ incomingPopout.onmessage = ({ data }) => {
+  if (data?.type !== 'enter' || typeof data.name !== 'string' || data.name.length > 20) return;
+  incomingPopout.onmessage = null;
   roomAccountReady.then(() => {
-   $('nm').value = typeof name === 'string' ? name : '';
+   $('nm').value = data.name;
    login();
   });
- }
-});
-if (isRoomPopout) window.opener.postMessage({ type: 'razzle-room-popout-ready' }, location.origin);
+ };
+ incomingPopout.postMessage({ type: 'ready' });
+}
 const leave=()=>{
  if (!confirm('Leave the chat?')) return;
  if (isRoomPopout) window.close();
