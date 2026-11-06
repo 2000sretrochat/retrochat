@@ -267,8 +267,10 @@ const popoutKey = new URLSearchParams(location.hash.slice(1)).get('room-transfer
 const isRoomPopout = /^[0-9a-f-]{36}$/i.test(popoutKey || '') && typeof BroadcastChannel === 'function';
 const incomingPopout = isRoomPopout ? new BroadcastChannel('razzle-room-' + popoutKey) : null;
 let incomingTimer;
+let incomingPopoutFinished = false;
 function finishIncomingPopout(type) {
- if (!incomingPopout) return;
+ if (!incomingPopout || incomingPopoutFinished) return;
+ incomingPopoutFinished = true;
  clearTimeout(incomingTimer);
  incomingPopout.postMessage({ type });
  incomingPopout.close();
