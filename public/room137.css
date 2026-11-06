@@ -291,3 +291,26 @@ body.chat-room-active #social-chat-layout { display: none; }
  #login .live-room-card:has(.guest-room-join:not([hidden])) { flex-wrap: wrap; }
  #login #rlist .live-room-card:has(.guest-room-join:not([hidden])) .room { flex-basis: 100%; }
 }
+
+#login #nm {
+ min-height: 44px;
+ border: 2px solid #5d8fbc !important;
+ background: var(--card, #fff) !important;
+}
+#login #nm::placeholder { color: var(--muted, #476986); opacity: 1; }
+#login #nm:focus { border-color: #004990 !important; box-shadow: 0 0 0 3px #4d90cd40; }
+#login #rlist .guest-room-join {
+ min-height: 40px; padding: 7px 12px;
+ background: #ffbc76 !important; color: #12345a !important; font-weight: 750 !important;
+}
+#login #rlist .guest-room-join span { margin-left: 4px; }
+#chat > .tbar .room-title-action {
+ flex: 0 0 auto; padding: 5px 8px !important; border-radius: 5px;
+ background: transparent !important; color: #fff !important; border: 1px solid #ffffff65 !important;
+ font-size: 12px; white-space: nowrap;
+}
+#chat > .tbar .room-title-action:hover { background: #ffffff24 !important; }
+#chat > .tbar .room-title-action:focus-visible { outline: 2px solid #ffbc76; outline-offset: 2px; }
+.room-popout #room-popout, .room-popout body.chat-room-active #social-chat-header,
+.room-popout body.chat-room-active #social-chat-layout { display: none !important; }
+html.room-popout body.chat-room-active #chat[style*="flex"] { inset: 0 !important; }
