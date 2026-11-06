@@ -286,7 +286,8 @@ io.on('connection', s => {
   s.on('login', async ({ name, room }, cb) => {
     name = s.data.acct ? s.data.acct.name : String(name || '').trim();
     if (!s.data.acct) {
-      if (!/^[A-Za-z][A-Za-z0-9_.]{2,19}$/.test(name)) return cb({ error: 'Guest names are 3-20 characters, start with a letter, and use letters, numbers, _ or .' });
+      if (!/^[A-Za-z][A-Za-z0-9 _-]{2,19}$/.test(name)) return cb({ error: 'Guest screen names must be 3–20 characters, start with a letter, and use only letters, numbers, spaces, hyphens, or underscores.' });
+      if (/razzle/i.test(name)) return cb({ error: 'Guest screen names cannot contain “razzle”.' });
       if (/^(admin|administrator|moderator|mod|support|system|yappchat|staff|root)/i.test(name) || isBot(name) || MASTER.reserved(name)) return cb({ error: 'That screen name is not available.' });
       if (db.status().ready) { try { if ((await db.q('select 1 from users where name_lc=$1', [name.toLowerCase()])).length) return cb({ error: 'That screen name belongs to a registered user. Pick another guest name or sign in.' }); } catch { } }
       s.data.guest = true;
