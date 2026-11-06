@@ -10,7 +10,7 @@ const RESERVED = /^(admin|administrator|moderator|mod|support|system|yappchat|st
 function parseCookies(h) { const o = {}; String(h || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim()); }); return o; }
 async function userFromCookie(h) {
   const t = parseCookies(h)[COOKIE]; if (!t || !db.status().ready) return null;
-  try { const r = await db.q('select u.id, case when lower(s.display)=u.name_lc then s.display else u.name end as name, u.name as canon from sessions s join users u on u.id=s.user_id where s.token=$1 and s.expires>now() and not u.banned', [sha(t)]); return r[0] || null; } catch { return null; }
+  try { const r = await db.q('select u.id, case when lower(s.display)=u.name_lc then s.display else u.name end as name, u.name as canon from sessions s join users u on u.id=s.user_id where s.token=$1 and s.expires>now() and not u.banned and not coalesce(u.deactivated,false)', [sha(t)]); return r[0] || null; } catch { return null; }
 }
 // simple fixed-window rate limiter
 const hits = new Map();
@@ -57,7 +57,7 @@ function http(app, express, hooks = {}) { H = hooks;
     if (!email) return res.status(400).json({ error: 'An email address is required to sign up.' });
     if (email && (typeof email !== 'string' || email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return res.status(400).json({ error: 'That email address does not look right.' });
     if (H.guestInUse && H.guestInUse(name)) return res.status(409).json({ error: 'That screen name is already taken.' });
-    if (email && await EM.taken(email)) return res.status(409).json({ error: 'That email already has a screen name.' });
+    if (email && await EM.taken(email, name)) return res.status(409).json({ error: 'That email already has a screen name.' });
     const hash = await bcrypt.hash(password, 12);
     try {
       const r = await db.q('insert into users(name,name_lc,pw,email,email_norm) values($1,$2,$3,$4,$5) returning id', [name, name.toLowerCase(), hash, email ? email.trim() : null, email ? EM.norm(email) : null]);
@@ -80,10 +80,11 @@ function http(app, express, hooks = {}) { H = hooks;
     const { name, password, remember } = req.body || {};
     const lc = String(name || '').toLowerCase().slice(0, 40);
     if (limited('li:' + geo.clientIp(req.headers, req.socket.remoteAddress), 20, 900e3) || limited('ln:' + lc, 8, 900e3)) return reply(429, { error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
-    const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw,banned from users where name_lc=$1', [lc]) : [];
+    const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw,banned,deactivated from users where name_lc=$1', [lc]) : [];
     const ok = await bcrypt.compare(String(password || ''), r[0] ? r[0].pw : DUMMY); // constant work either way
     if (!r[0] || !ok) return reply(401, { error: 'Invalid screen name or password.' });
     if (r[0].banned) return reply(403, { error: 'This screen name has been banned.' });
+    if (r[0].deactivated) return reply(403, { error: 'This screen name has been deactivated.' });
     const typed = String(name).trim(), disp = typed.toLowerCase() === r[0].name.toLowerCase() ? typed : r[0].name; // session display = capitalization typed at sign-in
     await newSession(req, res, r[0].id, !!remember, disp); H.seedMaster && await H.seedMaster(r[0].id, r[0].name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'login'); return reply(200, { ok: true, name: disp });
   }

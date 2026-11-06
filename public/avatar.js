@@ -4,6 +4,7 @@ const esc=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const PRE={a1:[':)','#cfe8ff'],a2:['B-)','#ffe0b3'],a3:[';)','#d9f7c8'],a4:[':D','#ffd1dc'],a5:['<):)','#efe0c4'],a6:['O:-)','#e6e0ff'],a7:['>:)','#ffd6cc'],a8:[':ar!','#d4f1f4']};
 // html(name, av, cls): av = 'a1'..'a8' preset | 'c<ver>' custom image | '' default
 function html(name,av,cls=''){const lc=String(name||'').toLowerCase();av=av||'';
+ if(/^bot:[a-z0-9_-]+$/.test(av))return `<img class="av yav ${cls}" data-avn="${esc(lc)}" alt="Bot" title="Bot" loading="lazy" src="/bot-avatars/${av.slice(4)}.svg">`;
  if(/^a\d$/.test(av)&&PRE[av]&&window.RCSmileys){const v=PRE[av];return `<span class="av yav ${cls}" data-avn="${esc(lc)}" style="background:radial-gradient(circle at 40% 30%,#fff,${v[1]})">${RCSmileys.html(v[0])}</span>`}
  const v=/^c[0-9a-z]+$/.test(av)?av:'0';return `<img class="av yav ${cls}" data-avn="${esc(lc)}" alt="" loading="lazy" src="/av/${encodeURIComponent(name)}?v=${v}">`}
 const cache={};

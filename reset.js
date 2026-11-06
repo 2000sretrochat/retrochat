@@ -44,3 +44,7 @@ module.exports = function (app, express) {
     res.json({ ok: true }); });
   return { makeLink, verifyOn };
 };
+
+module.exports.makeLink = makeLink;
+module.exports.send = send;
+module.exports.enabled = enabled;

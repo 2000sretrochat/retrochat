@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Guide bot avatar">
+  <rect width="96" height="96" rx="20" fill="#1877E8"/>
+  <circle cx="48" cy="38" r="16" fill="#fff" opacity=".95"/>
+  <path d="M20 90c5-20 16-28 28-28s23 8 28 28z" fill="#fff" opacity=".95"/>
+  <text x="48" y="44" font-family="Arial,sans-serif" font-weight="700" font-size="16" text-anchor="middle" fill="#1877E8">RG</text>
+  <rect x="28" y="72" width="40" height="14" rx="4" fill="#10234A" opacity=".85"/>
+  <text x="48" y="83" font-family="Arial,sans-serif" font-weight="700" font-size="9" text-anchor="middle" fill="#fff">BOT</text>
+</svg>

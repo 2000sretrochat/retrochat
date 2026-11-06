@@ -122,7 +122,20 @@ const botRooms = () => Object.keys(BOTMOD.byRoom);
 function saveBots() { Promise.resolve().then(() => db.q("insert into kv(k,v) values('bots',$1) on conflict(k) do update set v=$1", [JSON.stringify({ on: botsOn, off: [...botOff] })])).catch(() => {}); botRooms().forEach(r => ROOMS[r] && upd(r)); }
 function setBots(on, room) { if (room !== undefined) { if (!BOTMOD.byRoom[room]) return botsOn; on ? botOff.delete(room) : botOff.add(room); } else botsOn = !!on; saveBots(); return botsOn; }
 const getBots = () => ({ on: botsOn, total: BOTS.length, rooms: botRooms().map(r => ({ room: r, on: !botOff.has(r), bots: BOTMOD.byRoom[r].map(b => b.name) })) });
-(function loadBots(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadBots(n + 1), 2000).unref?.(); Promise.resolve().then(() => db.q("select v from kv where k='bots'")).then(r => { if (r[0]) { const v = r[0].v; if (v === 'on' || v === 'off') botsOn = v !== 'off'; else try { const j = JSON.parse(v); botsOn = j.on !== false; (j.off || []).forEach(x => botOff.add(x)); } catch { } } botRooms().forEach(x => ROOMS[x] && upd(x)); }).catch(() => {}); })(0);
+async function applyBotProfiles() {
+  if (!db.status().ready) return;
+  try {
+    const rows = await db.q('select name,display_name,bio,location,interests,avatar,room from bot_profiles');
+    const by = new Map(rows.map(r => [r.name.toLowerCase(), r]));
+    for (const b of BOTS) {
+      const r = by.get(b.name.toLowerCase()); if (!r) continue;
+      b.display_name = r.display_name; b.bio = r.bio; b.location = r.location; b.interests = r.interests;
+      b.av = r.avatar ? ('bot:' + r.avatar) : (b.av || '');
+      if (r.room) b.room = r.room;
+    }
+  } catch (e) { console.error('[applyBotProfiles]', e.message); }
+}
+(function loadBots(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadBots(n + 1), 2000).unref?.(); Promise.resolve().then(() => db.q("select v from kv where k='bots'")).then(r => { if (r[0]) { const v = r[0].v; if (v === 'on' || v === 'off') botsOn = v !== 'off'; else try { const j = JSON.parse(v); botsOn = j.on !== false; (j.off || []).forEach(x => botOff.add(x)); } catch { } } return applyBotProfiles(); }).then(() => botRooms().forEach(x => ROOMS[x] && upd(x))).catch(() => {}); })(0);
 // each bot room ticks on its own randomized, staggered timer (every ~3-7 min) and only talks while real people are there
 // bots: each room has its own random timer. Faster (40s-2.5min) while people are in the room, slow (4-10 min) while empty so rooms keep recent text.
 const TRIVIA = [
@@ -216,9 +229,14 @@ app.get('/api/social-profile/:name', async (req, res) => {
   } catch { return res.status(503).json({}); }
 });
 app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.name || ''), lc = n.toLowerCase(); res.set('Cache-Control', 'no-store');
-  if (db.status().ready) { try { const r = (await db.q('select name,avatar,display_name,age,location,bio,interests,created from users where name_lc=$1', [lc]))[0];
+  if (db.status().ready) { try {
+    let bp = (await db.q('select name,display_name,bio,location,interests,avatar,room,interactive from bot_profiles where name_lc=$1', [lc]))[0];
+    if (!bp) { const rows = await db.q('select name,display_name,bio,location,interests,avatar,room,interactive from bot_profiles'); bp = rows.find(r => r.name.toLowerCase() === lc || r.name.split(' ')[0].toLowerCase() === lc); }
+    if (bp) return res.json({ name: bp.name, displayName: bp.display_name || bp.name, bio: bp.bio, location: bp.location, interests: bp.interests, avatar: bp.avatar ? ('bot:' + bp.avatar) : '', room: bp.room, bot: true, label: 'Bot', online: botsOn && !botOff.has(bp.room) });
+    const r = (await db.q('select name,avatar,display_name,age,location,bio,interests,created from users where name_lc=$1', [lc]))[0];
     if (r) { const v = await acc.userFromCookie(req.headers.cookie); let hide = false; if (v && v.name.toLowerCase() !== lc) { const [vu] = await db.q('select is_master from users where id=$1', [v.id]); const [tu] = await db.q('select id from users where name_lc=$1', [lc]); hide = !vu?.is_master && await blockedBy(tu.id, v.id); }
     return res.json({ name: r.name, avatar: r.avatar, displayName: r.display_name, age: r.age, location: r.location, bio: r.bio, interests: r.interests, memberSince: r.created, online: !hide && (acc.isOnline(r.name) || roomVisible(lc)) }); } } catch { } }
+  if (isBot(n) || BOTS.some(b => b.name.split(' ')[0].toLowerCase() === lc)) { const b = BOTS.find(x => x.name.toLowerCase() === lc || x.name.split(' ')[0].toLowerCase() === lc); if (b) return res.json({ name: b.name, displayName: b.display_name || b.name, bio: b.bio || b.greet || '', location: b.location || '', interests: b.interests || '', avatar: b.av || '', room: b.room, bot: true, label: 'Bot', online: botsOn && !botOff.has(b.room) }); }
   const id = users.get(lc), x = id && io.sockets.sockets.get(id); if (x && x.data.guest) return res.json({ name: x.data.name, guest: true, online: true, room: x.data.room });
   res.status(404).json({ error: 'No such user.' }); });
 app.post('/api/profile', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in to edit your profile.' });
@@ -539,5 +557,5 @@ io.on('connection', s => {
 });
 acc.sockets(io, AH);
 const RESET = require('./reset')(app, express);
-const MASTER = require('./master')({ resetLink: RESET.makeLink, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, setMicOpts, RATINGS, KICK_MS });
+const MASTER = require('./master')({ resetLink: RESET.makeLink, applyBotProfiles, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, setMicOpts, RATINGS, KICK_MS });
 db.init().then(() => loadURooms()).then(() => MASTER.load()).catch(e => console.error('[master load]', e.message)).finally(() => { if (!db.status().ready) { const t = setInterval(() => { if (db.status().ready) { clearInterval(t); loadURooms().then(() => MASTER.load()).catch(() => {}); } }, 2000); } }).finally(() => server.listen(process.env.PORT || 3000, () => console.log('YappChat on', process.env.PORT || 3000)));

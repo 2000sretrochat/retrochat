@@ -64,7 +64,23 @@ create table if not exists favorites(owner text not null, room text not null, pr
 create table if not exists ignores(owner int not null references users(id) on delete cascade, name_lc text not null, primary key(owner, name_lc));
 alter table users add column if not exists pm_buddies boolean not null default false;
 alter table users add column if not exists archive boolean not null default false;
-create table if not exists guest_log(id serial primary key, name text not null, ip text, loc text, at timestamptz not null default now());`;
+create table if not exists guest_log(id serial primary key, name text not null, ip text, loc text, at timestamptz not null default now());
+alter table users add column if not exists deactivated boolean not null default false;
+create table if not exists master_audit(id bigserial primary key, by_name text not null, action text not null, target text, detail text not null default '', at timestamptz not null default now());
+create index if not exists master_audit_at on master_audit(id desc);
+create table if not exists bot_profiles(
+  name_lc text primary key,
+  name text not null,
+  display_name text not null default '',
+  bio text not null default '',
+  location text not null default '',
+  interests text not null default '',
+  avatar text not null default '',
+  room text not null default '',
+  interactive boolean not null default false,
+  updated timestamptz not null default now(),
+  updated_by text
+);`;
 async function init() {
   if (!process.env.DATABASE_URL) { error = 'DATABASE_URL is not set'; console.warn('[db] ' + error + ' - accounts disabled (maintenance mode)'); return; }
   const local = /localhost|127\.0\.0\.1|\/tmp/.test(process.env.DATABASE_URL);

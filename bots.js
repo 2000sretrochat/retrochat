@@ -50,4 +50,11 @@ const byRoom = {}; for (const b of BOTS) (byRoom[b.room] = byRoom[b.room] || [])
 const EXTRA_BOTS = B('Lobby', 'en', ['RazzleGuide [bot]', 'TriviaTime [bot]', 'GameNight [bot]']).concat(B('Music Lobby', 'en', ['MixtapeBot [bot]']));
 for (const b of EXTRA_BOTS) { b.interactive = true; b.av = ''; BOTS.push(b); (byRoom[b.room] = byRoom[b.room] || []).push(b); }
 for (const b of BOTS) if (b.interactive) { b.greet = 'Hi! Mention me and say help to see what I can do.'; }
-module.exports = { BOTS, byRoom, P, line, reply, greet };
+// Persistent, master-editable profile seeds for the four interactive bots (no login accounts / passwords).
+const PROFILE_SEEDS = [
+  { name: 'RazzleGuide [bot]', display_name: 'RazzleGuide', avatar_key: 'razzleguide', room: 'Lobby', interactive: true, bio: 'Helpful guide for rooms, Contacts, and other bots. Say @RazzleGuide help.', interests: 'help, rooms, contacts' },
+  { name: 'TriviaTime [bot]', display_name: 'TriviaTime', avatar_key: 'triviatime', room: 'Lobby', interactive: true, bio: 'Nostalgia trivia host. Say @TriviaTime trivia to start a round.', interests: 'trivia, quizzes' },
+  { name: 'GameNight [bot]', display_name: 'GameNight', avatar_key: 'gamenight', room: 'Lobby', interactive: true, bio: 'Quick games in chat. Try @GameNight roll or @GameNight 8ball.', interests: 'games, dice, 8ball' },
+  { name: 'MixtapeBot [bot]', display_name: 'MixtapeBot', avatar_key: 'mixtapebot', room: 'Music Lobby', interactive: true, bio: 'Playlist tips and song picks. Say @MixtapeBot recommend.', interests: 'music, playlists' },
+];
+module.exports = { BOTS, byRoom, P, line, reply, greet, PROFILE_SEEDS };
