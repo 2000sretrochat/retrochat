@@ -1,0 +1,107 @@
+/* Shared Social and Chat sidebar. */
+.site-sidebar {
+  align-self: stretch;
+  padding: 20px 14px;
+  background: radial-gradient(ellipse at 50% 48%, #004990 0%, #003b7c 48%, #002658 100%);
+  color: #e7f2ff;
+  border-radius: 0;
+  font: 13px 'Segoe UI', sans-serif;
+}
+.site-sidebar .menu { display: grid; gap: 6px; }
+.site-sidebar .menu > :is(a, button) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 12px;
+  color: #e0effd;
+  font-size: 18px;
+  line-height: normal;
+  border-radius: 1px;
+  text-align: left;
+  text-decoration: none;
+}
+.site-sidebar .menu > :is(a, button) > span:last-of-type { flex: 1; font-size: 14px; }
+.site-sidebar .menu i { font-size: 10px; font-style: normal; }
+.site-sidebar .topic-list { margin-top: 29px; padding-top: 23px; border-top: 1px solid #2465a1; }
+.site-sidebar .topic-list .label { margin: 11px 0 20px; color: #a4c9ec; font-size: 11px; font-weight: 650; letter-spacing: 1.7px; }
+.site-sidebar .featured-room {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 3px;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+.site-sidebar .featured-room small { display: block; margin-top: 5px; color: #b1d1ed; font-size: 11px; }
+.site-sidebar .featured-room .topic {
+  display: grid;
+  place-items: center;
+  flex: 0 0 29px;
+  height: 30px;
+  border-radius: 1px;
+  font-size: 11px;
+  font-weight: 650;
+}
+.site-sidebar .topic-list .t1 { background: #4d90cd; color: #fff; }
+.site-sidebar .topic-list .t2 { background: #0a64b0; color: #fff; }
+.site-sidebar .topic-list .t3 { background: #ff9900; color: #003876; }
+.site-sidebar .featured-room:hover { background: #ffffff14; }
+.site-sidebar :is(.menu .selected, .menu [aria-current="page"], .featured-room[aria-current="page"]) {
+  background: #07599a;
+  color: #fff;
+  box-shadow: inset 3px 0 #ff9900;
+  font-weight: 650;
+}
+.site-sidebar footer { margin: 35px 5px; color: #a3afbe; font-size: 8px; line-height: 2; }
+.site-sidebar footer a { color: inherit; }
+/* Razzle Social shell for the room entry screen */
+#social-chat-header, #social-chat-layout { box-sizing: border-box; }
+#social-chat-header[hidden], #social-chat-layout[hidden] { display: none !important; }
+#social-chat-header {
+ display: flex; align-items: center; gap: 20px; height: 80px; padding: 0 3%;
+ background: #fff; border-bottom: 1px solid #dce6ef; font: 650 14px 'Segoe UI', sans-serif;
+}
+#social-chat-header a { color: #003876; text-decoration: none; }
+.social-chat-brand { display: flex; align-items: center; gap: 8px; font-size: 32px; font-weight: 800; letter-spacing: -1px; white-space: nowrap; }
+.social-chat-brand span { color: #ff9900; margin-left: -8px; }
+.social-chat-search {
+ display: flex; align-items: center; gap: 8px; width: min(100%, 435px); margin-left: auto;
+ padding: 4px 10px; border: 1px solid #dce6ef; border-radius: 6px; background: #f4f8fc;
+}
+.social-chat-search input { width: 100%; min-width: 0; background: transparent; border: 0; color: #173b60; font: inherit; padding: 6px 0; }
+.social-chat-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; padding: 18px 18px 0 0; min-height: calc(100dvh - 80px); background: #fff; }
+.social-chat-main { min-width: 0; }
+.social-chat-main #brand { align-items: flex-start; padding: 10px 0; text-align: left; }
+.social-chat-main #brand .tag { margin: 0; }
+.social-chat-main #login.win { box-sizing: border-box; width: 100%; margin: 8px 0 20px !important; }
+@media (max-width: 799px) {
+ #social-chat-header { height: auto; min-height: 66px; flex-wrap: wrap; gap: 8px 14px; padding: 8px 14px; }
+ .social-chat-brand { font-size: 24px; }
+ .social-chat-brand img { width: 46px; height: 42px; }
+ .social-chat-search { order: 3; width: 100%; margin: 0; }
+ #social-chat-header > a:last-child { margin-left: auto; }
+ .social-chat-layout { grid-template-columns: minmax(0, 1fr); padding: 12px 14px 0; gap: 12px; }
+ .social-chat-layout .topic-list { display: none; }
+}
+
+
+.auth-site-layout { display: contents; }
+.room-signin body { background: #fff !important; }
+.room-signin .auth-site-layout { display: grid; }
+.room-signin .auth-site-sidebar { display: flex; }
+.room-signin .auth-site-sidebar > aside { flex: 1; }
+.room-signin .auth-site-main { padding: 12px 0 28px; }
+.room-signin #mwin {
+ width: min(100%, 440px) !important; margin: 0 !important;
+ border: 0; border-radius: 0; box-shadow: none !important; background: none !important;
+}
+.room-signin #signin { padding: 8px 0 18px !important; background: transparent !important; align-items: flex-start; }
+.room-signin #signin .lgbig { width: auto; height: auto; }
+.room-signin #chat-signin-intro { text-align: left; }
+.room-signin #foot { display: flex; align-items: center; gap: 6px; padding: 8px 0; }
+.auth-browse-link { margin-left: auto; }
+@media (max-width: 799px) {
+ .room-signin .auth-site-main { padding-top: 0; }
+}

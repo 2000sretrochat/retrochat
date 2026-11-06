@@ -53,6 +53,7 @@ function http(app, express, hooks = {}) { H = hooks;
     if (req.body.agree !== true) return res.status(400).json({ error: 'Please agree to the Terms and Rules (18 or older) to sign up.' });
     if (RESERVED.test(name) || (H.reservedName && H.reservedName(name))) return res.status(400).json({ error: 'That screen name is not available.' });
     if (typeof password !== 'string' || password.length < 8 || password.length > 100) return res.status(400).json({ error: 'Passwords must be 8-100 characters.' });
+    if (!email) return res.status(400).json({ error: 'An email address is required to sign up.' });
     if (email && (typeof email !== 'string' || email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return res.status(400).json({ error: 'That email address does not look right.' });
     if (H.guestInUse && H.guestInUse(name)) return res.status(409).json({ error: 'That screen name is already taken.' });
     if (email && await EM.taken(email)) return res.status(409).json({ error: 'That email already has a screen name.' });
