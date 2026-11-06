@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import worker from '../dist/server/index.js';
+const req=new Request('https://example.test/api/country');
+assert.deepEqual(await (await worker.fetch(req)).json(),{country:null});
+Object.defineProperty(req,'cf',{value:{country:'US'}});
+assert.deepEqual(await (await worker.fetch(req)).json(),{country:'US'});
+assert.equal((await worker.fetch(new Request('https://example.test/'))).status,200);
+assert.equal((await worker.fetch(new Request('https://example.test/community.js'))).headers.get('content-type'),'application/javascript; charset=utf-8');
+assert.equal((await worker.fetch(new Request('https://example.test/missing'))).status,404);
+console.log('Country endpoint and embedded asset routing verified');

@@ -1,8 +1,0 @@
-Razzle Social Messenger download handoff (edited)
-
-razzle-social-home.js now sets messengerInstallerUrl to:
-https://github.com/2000sretrochat/retrochat/releases/latest/download/YappChat-Setup.exe
-
-Publish this source change through ChatGPT Sites for the live Social preview.
-The GitHub release asset is YappChat-Setup.exe on tag v13.5.0 (latest).
-Repo must be public (or the release asset otherwise publicly downloadable) for anonymous downloads to work.
