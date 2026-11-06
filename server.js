@@ -156,7 +156,15 @@ app.post('/snapup', express.json({ limit: '80kb' }), async (req, res) => { const
     io.emit('avatar', { name: v.name, av }); res.json({ ok: true }); } catch (e) { console.error('[snap]', e.message); res.status(500).json({ error: 'Could not save the photo.' }); } });
 app.get('/api/online', (q, r) => r.set('Cache-Control', 'no-store').json({ n: onlineTotal() }));
 async function isAdultReq(req) { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return false; try { return !!(await db.q('select adult from users where id=$1', [u.id]))[0]?.adult; } catch { return false; } }
-app.get('/api/rooms', async (q, r) => r.json(await decorate(roomList(await isAdultReq(q)), await userFromReq(q).catch(() => null))));
+app.get('/api/rooms', async (q, r) => {
+  const socialOrigin = 'https://social-chat-preview-jn.fair-mink-5216.chatgpt.site';
+  r.vary('Origin');
+  if (q.get('Origin') === socialOrigin) {
+    r.set('Access-Control-Allow-Origin', socialOrigin);
+    return r.json(await decorate(roomList(false), null));
+  }
+  return r.json(await decorate(roomList(await isAdultReq(q)), await userFromReq(q).catch(() => null)));
+});
 app.post('/api/adult', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in first.' });
   if (req.body?.confirm !== true) return res.status(400).json({ error: 'Confirmation required.' }); await db.q('update users set adult=true where id=$1', [u.id]);
   for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === u.id) x.data.adult = true; res.json({ ok: true }); });
