@@ -191,8 +191,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
   <div>Help<div class="dd"><div id="mHelp">Getting Started</div><div id="mAbout">About</div></div></div>
  </div>
  <div id="signin">
-  <span class=lgbig></span>
-  <div class="logo appname"></div><p id="chat-signin-intro" hidden>Sign in to join the conversation.</p><div class="messenger-signin-copy" style="color:var(--muted);margin-bottom:6px">Messenger</div>
+  <div class="auth-heading"><span class="lgbig"></span><div class="logo appname"></div></div><p id="chat-signin-intro" hidden>Sign in to join the conversation.</p><div class="messenger-signin-copy" style="color:var(--muted);margin-bottom:6px">Messenger</div>
   <div id="maint" class="note" style="display:none"></div>
   <div id="fIn" style="display:contents">
    <label for="iName">Screen name</label><input type="text" id="iName" maxlength="20" autocomplete="username">
@@ -208,7 +207,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
    <label for="uEm">Email</label><input type="email" id="uEm" required maxlength="200" autocomplete="email"><label style="font-weight:normal;display:flex;gap:6px;align-items:flex-start;margin-top:6px"><input type="checkbox" id="uAgree"> <span>I agree to the <a href="/terms" target="_blank">Terms and Rules</a> and I'm 18 or older</span></label>
    <label style="font-weight:normal"><input type="checkbox" id="uRem"> Remember me</label>
    <button class="pri" id="bUp">Create My Screen Name</button><div class="err" id="eUp"></div>
-   <div><a id="toIn">&laquo; Back to Sign In</a></div>
+   <div class="auth-back"><a id="toIn">&laquo; Back to Sign In</a></div>
   </div>
   <div id="chat-signin-footer" hidden><a id="chat-guest-entry" href="/rooms.html">Continue as guest</a><a href="/privacy.html">Privacy</a></div>
   <div class="messenger-signin-copy" style="margin-top:auto;text-align:center">or <a href="/rooms.html" onclick="if(window.YD){event.preventDefault();window.open('/rooms.html','yapprooms')}">Sign in as Guest</a> to visit the Chat Rooms<div class="privacy" style="font-size:11px;color:var(--muted,#667);margin-top:8px">We log IP address and approximate location for safety and moderation.</div></div>
@@ -225,6 +224,18 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  </div>
  <div id="foot"><span class=lgs2></span><span class="brandname appname"></span></div>
 </div>
+<aside class="auth-chat-art" aria-hidden="true">
+  <svg viewBox="0 0 460 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="26" y="22" width="408" height="296" rx="34" fill="#EDF5FC"/>
+    <circle cx="230" cy="170" r="113" fill="#DFEDF9"/>
+    <path d="M183 129h158a31 31 0 0 1 31 31v63a31 31 0 0 1-31 31h-21l-35 31v-31H183a31 31 0 0 1-31-31v-63a31 31 0 0 1 31-31Z" fill="#9FC9EC"/>
+    <path d="M110 79h158a32 32 0 0 1 32 32v58a32 32 0 0 1-32 32h-89l-39 35v-35h-30a32 32 0 0 1-32-32v-58a32 32 0 0 1 32-32Z" fill="#004990"/>
+    <circle cx="135" cy="139" r="7" fill="#fff"/><circle cx="164" cy="139" r="7" fill="#fff"/><circle cx="193" cy="139" r="7" fill="#fff"/>
+    <path d="M336 55c4 16 9 21 25 25-16 4-21 9-25 25-4-16-9-21-25-25 16-4 21-9 25-25Z" fill="#FF9900"/>
+    <path d="M238 217h50m13 0h26" stroke="#004990" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="95" cy="258" r="6" fill="#FF9900"/><circle cx="383" cy="100" r="5" fill="#4D90CD"/>
+  </svg>
+</aside>
 </main></div>
 <div id="brw" class="win"><div class=tbar><span class=lgs></span><span>Browse Chat Rooms</span><span class=sp></span><span class="wb x" id=brX><i data-i=close data-s=16></i></span></div>
  <div class=yonline style="font:bold 12px Tahoma;color:#2a7a2a;padding:4px 8px"></div><div class=tabs><div class=on data-t=mine>My Rooms</div><div data-t=top>Top Rooms</div><div data-t=all>Browse Rooms</div></div>
