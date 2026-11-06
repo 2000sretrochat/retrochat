@@ -271,6 +271,26 @@ document.addEventListener('click', event => {
  link.href = destination.href;
 });
 let rTab='top';
+document.querySelector('.site-sidebar').addEventListener('click', event => {
+ const link = event.target.closest('[data-featured]');
+ if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+ event.preventDefault();
+ const name = link.dataset.featured;
+ if ($('chat').style.display === 'flex') {
+  if (name !== room) joinR(name);
+  return;
+ }
+ room = name;
+ const url = new URL(location.href);
+ url.searchParams.set('room', name);
+ history.replaceState(null, '', url);
+ $('err').textContent = '';
+ $('social-chat-search').value = '';
+ rTab = 'top';
+ highlightFeaturedRoom();
+ if (acct) login();
+ else loadRooms();
+});
 function highlightFeaturedRoom(){
  const featured = Array.from(document.querySelectorAll('[data-featured]'));
  featured.forEach(link => link.toggleAttribute('data-selected', link.dataset.featured===room));
@@ -335,7 +355,7 @@ function incUI(){const a=$('mInc'),b=$('mAnn');if(a)a.textContent=(INC?'\u2713 '
 S.on('inc',d=>{INC=d.on;ANN=d.announce;incUI()});
 S.on('incwarn',d=>{if(confirm("You're incognito \u2014 send visibly?"))S.emit('say',{text:d.text,...st,vis:true})});
 function login(){if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;if(!room)return $('err').textContent='Pick a room from the list first.';S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error)return $('err').textContent=r.error;if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const a=document.createElement('button');a.onclick=()=>window.openMasterConsole&&openMasterConsole();a.id='mcon';a.className='hb mst';a.title='Master Console (only you can see this)';a.innerHTML=YI.svg('shield',18)+'<span>Master</span>';$('hmst').appendChild(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon class=mst>Master Console</div><div id=mMadm class=mst>Room Admin Console (master)</div><hr>');$('mMadm').onclick=()=>openMod(selName);$('mAbout').insertAdjacentHTML('afterend','<div id=mSite class=mst>Site Moderator Key...</div>');$('mSite').onclick=()=>{const k=prompt('Site moderator key:');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMadm').insertAdjacentHTML('afterend','<div id=mInc class=mst>Incognito</div><div id=mAnn class=mst>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
- me=r.name;try{drawQ()}catch(e){};$('login').style.display='none';$('brand').style.display='none';$('social-chat-header').hidden=true;$('social-chat-layout').hidden=true;$('chat').style.display='flex';
+ me=r.name;try{drawQ()}catch(e){};$('login').style.display='none';$('brand').style.display='none';document.body.classList.add('chat-room-active');$('chat').style.display='flex';
  $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" title="${c=='#8b5cf6'?'Purple':c}" style="background:${c}"></span>`).join('');
  document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;$('msg').style.color=st.color;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
  $('msg').focus();});}
@@ -472,7 +492,7 @@ function add(m){const L=$('log'),d=document.createElement('div'),atB=L.scrollHei
  else{let t=smile(m.text);const sty=`color:${m.color};font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
   d.innerHTML=YAv.html(m.name,(ros.find(r=>r.name==m.name)||{}).av??m.av,'')+`<div class=tx>${ts}<span class=n style="color:${ncol(m.name)}${m.role=='owner'?';font-weight:800':''}">${m.name}${m.g?'<span class=gtag> (guest)</span>':''}${roleB(m.role)}:</span> <span style="${sty}">${t}</span></div>`}
  L.appendChild(d);if(atB)L.scrollTop=L.scrollHeight}
-S.on('history',h=>{room=h.room;showAnn(h.ann||'');micMax=h.mics||1;owner=h.owner;history.replaceState(null,'','?room='+encodeURIComponent(h.room));$('rname').innerHTML=escT(h.room)+YProf.badge(h.rating);$('rtopic').textContent=h.topic||'';$('rtile').innerHTML=h.icon?'<span class="rtileic rbig">'+escT(h.icon)+'</span>':YI.room(h.room,48);$('msg').placeholder='Type a message to '+h.room+'...';setHdr();$('topic').innerHTML=`You are in <b>"${escT(h.room)}"</b> <i>( ${escT(h.topic||'')} )</i>`+(h.owner?` <small style="color:#555">- owner: ${escT(h.owner)}</small>`:'');$('log').innerHTML='';h.msgs.forEach(add)});
+S.on('history',h=>{room=h.room;highlightFeaturedRoom();showAnn(h.ann||'');micMax=h.mics||1;owner=h.owner;history.replaceState(null,'','?room='+encodeURIComponent(h.room));$('rname').innerHTML=escT(h.room)+YProf.badge(h.rating);$('rtopic').textContent=h.topic||'';$('rtile').innerHTML=h.icon?'<span class="rtileic rbig">'+escT(h.icon)+'</span>':YI.room(h.room,48);$('msg').placeholder='Type a message to '+h.room+'...';setHdr();$('topic').innerHTML=`You are in <b>"${escT(h.room)}"</b> <i>( ${escT(h.topic||'')} )</i>`+(h.owner?` <small style="color:#555">- owner: ${escT(h.owner)}</small>`:'');$('log').innerHTML='';h.msgs.forEach(add)});
 S.on('msg',add);
 let typers={};S.on('typing',({name})=>{if(ignored.has(name))return;typers[name]=Date.now()+3500;showTyping()});
 function showTyping(){$('typing').textContent=''}
