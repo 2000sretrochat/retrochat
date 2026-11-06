@@ -3,7 +3,10 @@
 const roomSignInParams = new URLSearchParams(location.search);
 const roomSignInName = roomSignInParams.get('chatRoom');
 const isRoomSignIn = Boolean(roomSignInName) || roomSignInParams.get('chat') === '1';
-const returnToSocial = isRoomSignIn && roomSignInParams.get('social') === '1';
+const socialDestination = { '1': 'https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/?view=welcome',
+ pages: 'https://2000sretrochat.github.io/retrochat/?view=welcome' };
+const socialTarget = roomSignInParams.get('social');
+const returnToSocial = isRoomSignIn && Object.hasOwn(socialDestination, socialTarget);
 const roomSignInDestination = new URL('/rooms.html', location.origin);
 if (roomSignInName) roomSignInDestination.searchParams.set('room', roomSignInName);
 if (isRoomSignIn) {
@@ -305,7 +308,7 @@ $('mOut').onclick=$('wx').onclick=signOut;
 // ---------- connect ----------
 function start(){
  if (returnToSocial) {
-  location.replace('https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/?view=welcome');
+  location.replace(socialDestination[socialTarget]);
   return;
  }
  if (isRoomSignIn) {
