@@ -1,9 +1,9 @@
 {
-  "name": "yappchat-desktop",
-  "productName": "YappChat",
-  "version": "13.5.0",
-  "description": "YappChat desktop app",
-  "author": "YappChat",
+  "name": "razzle-messenger-desktop",
+  "productName": "Razzle Messenger",
+  "version": "13.9.0",
+  "description": "Razzle Messenger desktop app",
+  "author": "Razzle Social",
   "license": "UNLICENSED",
   "main": "main.js",
   "scripts": {
@@ -17,9 +17,9 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "app.yappchat.desktop",
-    "productName": "YappChat",
-    "copyright": "YappChat",
+    "appId": "com.razzlesocial.messenger",
+    "productName": "Razzle Messenger",
+    "copyright": "Razzle Social",
     "files": [
       "main.js",
       "preload.js",
@@ -49,13 +49,13 @@
         }
       ],
       "icon": "build/icon.ico",
-      "artifactName": "YappChat-Setup.${ext}"
+      "artifactName": "RazzleMessenger-Setup.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "YappChat",
+      "shortcutName": "Razzle Messenger",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",

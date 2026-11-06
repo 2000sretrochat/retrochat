@@ -16,4 +16,7 @@ jobs:
       - run: npx electron-builder --win nsis --x64 --publish never
         env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
       - uses: actions/upload-artifact@v4
-        with: { name: YappChat-Setup, path: desktop/dist/YappChat-Setup.exe, retention-days: 30 }
+        with:
+          name: RazzleMessenger-Setup
+          path: desktop/dist/RazzleMessenger-Setup.exe
+          retention-days: 30

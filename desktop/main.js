@@ -1,12 +1,13 @@
-// YappChat desktop: loads the live site in its own window.
+// Razzle Messenger desktop: loads the live site in a native Windows window.
 const { app, BrowserWindow, Tray, Menu, shell, session, Notification, nativeImage, desktopCapturer, ipcMain } = require('electron');
 const path = require('path'), fs = require('fs');
 const URL0 = 'https://retrochat-izzg.onrender.com/', ORIGIN = new URL(URL0).origin;
-app.setAppUserModelId('app.yappchat.desktop');
+// Keep legacy AppUserModelId so taskbar pinning / toast continuity matches prior installs.
+app.setAppUserModelId('com.razzlesocial.messenger');
 if (!app.requestSingleInstanceLock()) { app.quit(); return; }
 let win, tray, quitting = false;
 const icon = nativeImage.createFromPath(path.join(__dirname, 'build', process.platform === 'win32' ? 'icon.ico' : 'icon.png'));
-const PRE = { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false };
+const PRE = { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false, spellcheck: true };
 // remembered positions per window kind (messenger, browse, room, im_<name>)
 const stF = () => path.join(app.getPath('userData'), 'windows.json');
 let ST = {}; try { ST = JSON.parse(fs.readFileSync(stF(), 'utf8')) || {}; } catch {}
@@ -19,7 +20,15 @@ const SIZES = { browse: [760, 640], room: [1000, 700], im: [440, 560] };
 function kindOf(url, frame) { if (frame === 'ybrowse') return 'browse'; if (/^yim_/.test(frame || '')) return 'im'; if (/\/rooms\.html/.test(url)) return 'room'; return 'other'; }
 function popupOpts(url, frame) {
   const k = kindOf(url, frame), key = k === 'im' ? frame : k, b = ST[key] || {}, d = SIZES[k] || [900, 680];
-  return { key, o: { x: b.x, y: b.y, width: b.width || d[0], height: b.height || d[1], minWidth: k === 'im' ? 320 : k === 'room' ? 640 : 480, minHeight: k === 'room' ? 480 : 360, icon, title: 'YappChat', autoHideMenuBar: true, menuBarVisible: false, webPreferences: PRE } };
+  return { key, o: {
+    x: b.x, y: b.y, width: b.width || d[0], height: b.height || d[1],
+    minWidth: k === 'im' ? 320 : k === 'room' ? 640 : 480,
+    minHeight: k === 'room' ? 480 : 360,
+    icon, title: 'Razzle Messenger',
+    frame: true, autoHideMenuBar: true, menuBarVisible: false,
+    backgroundColor: '#f4f8fc',
+    webPreferences: PRE
+  } };
 }
 function wire(wc) {
   wc.on('will-navigate', (e, url) => { if (!internal(url)) { e.preventDefault(); if (/^https?:/.test(url)) shell.openExternal(url); } });
@@ -28,20 +37,43 @@ function wire(wc) {
     if (url === 'about:blank' || internal(url)) return { action: 'allow', overrideBrowserWindowOptions: popupOpts(url, frameName).o };
     if (/^(https?|mailto):/.test(url)) shell.openExternal(url); return { action: 'deny' };
   });
-  wc.on('did-create-window', (w, { url, frameName }) => { w.setMenuBarVisibility(false); track(w, popupOpts(url, frameName).key);
-    if (kindOf(url, frameName) === 'room') w.on('page-title-updated', (e, t) => { e.preventDefault(); w.setTitle(/YappChat/.test(t) ? t : 'YappChat - Chat Room'); }); });
+  wc.on('did-create-window', (w, { url, frameName }) => {
+    w.setMenuBarVisibility(false);
+    w.setAutoHideMenuBar(true);
+    track(w, popupOpts(url, frameName).key);
+    if (kindOf(url, frameName) === 'room') w.on('page-title-updated', (e, t) => {
+      e.preventDefault();
+      w.setTitle(/Razzle/.test(t) ? t : 'Razzle Chat - Chat Room');
+    });
+  });
 }
 function create() {
   const s = ST.messenger || {};
-  win = new BrowserWindow({ x: s.x, y: s.y, width: s.width || 320, height: s.height || 640, minWidth: 280, minHeight: 420, title: 'YappChat Messenger', icon, autoHideMenuBar: true, menuBarVisible: false, webPreferences: PRE });
+  win = new BrowserWindow({
+    x: s.x, y: s.y,
+    width: s.width || 320, height: s.height || 640,
+    minWidth: 280, minHeight: 420,
+    title: 'Razzle Messenger',
+    icon,
+    frame: true,
+    autoHideMenuBar: true,
+    menuBarVisible: false,
+    backgroundColor: '#f4f8fc',
+    show: false,
+    webPreferences: PRE
+  });
   win.setMenuBarVisibility(false);
+  win.setAutoHideMenuBar(true);
+  win.once('ready-to-show', () => { if (!win.isDestroyed()) win.show(); });
   win.loadURL(URL0);
-  win.on('page-title-updated', e => { e.preventDefault(); win.setTitle('YappChat Messenger'); });
+  win.on('page-title-updated', e => { e.preventDefault(); win.setTitle('Razzle Messenger'); });
   track(win, 'messenger');
   win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
 }
 app.on('web-contents-created', (_, wc) => wire(wc));
 app.whenReady().then(() => {
+  // Remove Electron's default File/Edit/View menu so the shell feels like a desktop app, not a browser.
+  Menu.setApplicationMenu(null);
   // Auto-update from GitHub releases (silent check; prompts to restart when an update is downloaded)
   if (app.isPackaged) { try { const { autoUpdater } = require('electron-updater'); autoUpdater.autoDownload = true; autoUpdater.on('error', () => {}); autoUpdater.checkForUpdatesAndNotify().catch(() => {}); setInterval(() => autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 3600 * 1000); } catch (e) {} }
   const ses = session.defaultSession;
@@ -52,13 +84,25 @@ app.whenReady().then(() => {
   ses.setDisplayMediaRequestHandler((req, cb) => desktopCapturer.getSources({ types: ['screen', 'window'] }).then(src => cb({ video: src[0], audio: 'loopback' })).catch(() => cb({})), { useSystemPicker: true });
   create();
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
-  tray.setToolTip('YappChat');
-  tray.setContextMenu(Menu.buildFromTemplate([{ label: 'Open YappChat', click: show }, { type: 'separator' }, { label: 'Quit', click: () => { quitting = true; app.quit(); } }]));
+  tray.setToolTip('Razzle Messenger');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Open Razzle Messenger', click: show },
+    { type: 'separator' },
+    { label: 'Quit', click: () => { quitting = true; app.quit(); } }
+  ]));
   tray.on('click', show);
 });
 // web Notifications from the page are native already; also flash the taskbar and offer a tray balloon when hidden
 const MICVOL = require('./micvol');
 ipcMain.handle('yc-micvol', (_, d) => (d ? MICVOL.step(d) : MICVOL.get()));
-ipcMain.on('yc-notify', (_, t, b) => { if (win && !win.isFocused()) { win.flashFrame(true); if (Notification.isSupported() && !win.isVisible()) { const n = new Notification({ title: String(t || 'YappChat'), body: String(b || ''), icon }); n.on('click', show); n.show(); } } });
+ipcMain.on('yc-notify', (_, t, b) => {
+  if (win && !win.isFocused()) {
+    win.flashFrame(true);
+    if (Notification.isSupported() && !win.isVisible()) {
+      const n = new Notification({ title: String(t || 'Razzle Messenger'), body: String(b || ''), icon });
+      n.on('click', show); n.show();
+    }
+  }
+});
 app.on('before-quit', () => { quitting = true; });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

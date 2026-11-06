@@ -1,4 +1,4 @@
-// Desktop app mode: real native windows instead of in-page windows (only when running inside the YappChat app).
+// Desktop app mode: real native windows instead of in-page windows (only when running inside the Razzle Messenger desktop app).
 (function(){const D=!!(window.YappDesktop&&window.YappDesktop.isDesktop);window.YD=D;if(!D){window.ydPop=()=>null;window.ydFind=()=>null;return}
  const popped=new Set();window.ydFind=id=>{for(const el of popped){if(el.id==id)return el;const f=el.querySelector('#'+CSS.escape(id));if(f)return f}return null};
  document.documentElement.classList.add('yd');
@@ -8,8 +8,8 @@
  html.yd body>.win>.tbar,html.yd body>#mwin>.tbar{display:none!important}
  html.yd.ydpop .im,html.yd.ydpop #brw{position:fixed!important;display:flex!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
  html.yd.ydpop .im>.tbar,html.yd.ydpop #brw>.tbar{display:none!important}html.yd.ydpop .im .log{flex:1;height:auto!important}
- .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 13px system-ui,Segoe UI,Arial;color:#00205B;padding:0 10px 0 6px;align-self:center}html.yd #menu{display:flex;align-items:center}`;
- const addLogo=()=>document.querySelectorAll('#menu').forEach(m=>{if(m.querySelector('.ydlogo')||!window.YI)return;const b=document.createElement('span');b.className='ydlogo';b.innerHTML='<img src="/razzle-social.svg" width="22" height="22" alt="" style="display:block">'+'<span>Razzle</span>';m.prepend(b)});document.readyState=='loading'?document.addEventListener('DOMContentLoaded',addLogo):setTimeout(addLogo);
+ .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 12px system-ui,Segoe UI,Arial;color:#00205B;padding:0 10px 0 6px;align-self:center;white-space:nowrap}html.yd #menu{display:flex;align-items:center}`;
+ const addLogo=()=>document.querySelectorAll('#menu').forEach(m=>{if(m.querySelector('.ydlogo')||!window.YI)return;const b=document.createElement('span');b.className='ydlogo';b.innerHTML='<img src="/razzle-social.svg" width="22" height="22" alt="" style="display:block">'+'<span>Razzle Messenger</span>';m.prepend(b)});document.readyState=='loading'?document.addEventListener('DOMContentLoaded',addLogo):setTimeout(addLogo);
  const st=document.createElement('style');st.id='ydcss';st.textContent=css;document.head.appendChild(st);
  // Move an element into its own native window. It keeps running in this page (same socket, same session).
  window.ydPop=function(el,name,w,h,title,onClose){let pw=null;try{pw=window.open('about:blank',name,'width='+w+',height='+h)}catch(e){}if(!pw)return null;

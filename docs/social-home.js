@@ -1,7 +1,7 @@
 const liveMessenger = 'https://retrochat-izzg.onrender.com/';
 const liveRooms = liveMessenger + 'rooms.html';
 const socialBase = new URL('./', document.baseURI).pathname;
-const messengerInstallerUrl = 'https://github.com/2000sretrochat/retrochat/releases/download/v13.5.0/YappChat-Setup.exe';
+const messengerInstallerUrl = 'https://github.com/2000sretrochat/retrochat/releases/latest/download/RazzleMessenger-Setup.exe';
 const joinSocialUrl = liveMessenger + '?chat=1&signup=1&social=pages';
 const signInSocialUrl = liveMessenger + '?chat=1&social=pages';
 const previewSignedIn = false;
@@ -310,7 +310,7 @@ function updateOwnerProfile() {
 
 function showMessengerDownload() {
   if (messengerInstallerUrl) { location.assign(messengerInstallerUrl); return; }
-  modal(`<h2>Download Messenger</h2><p>The desktop download is coming soon. You can open Messenger in your browser today.</p><a class="text-action" href="${liveMessenger}">Open Messenger in your browser →</a>`);
+  modal(`<h2>Download for Windows</h2><p>The desktop download is coming soon. You can open Messenger in your browser today.</p><a class="text-action" href="${liveMessenger}">Open Messenger in your browser →</a>`);
 }
 
 function renderSignedOutHome() {
@@ -326,7 +326,7 @@ function renderSignedOutHome() {
         <a class="home-cta welcome-guest" href="rooms.html">Browse chat rooms</a>
       </div>
 
-      <button type="button" class="messenger-download" onclick="showMessengerDownload()">Download Messenger</button>
+      <button type="button" class="messenger-download" onclick="showMessengerDownload()">Download for Windows</button>
       <div class="welcome-privacy"><strong>Start with a screen name.</strong> You choose how much of your offline life to share.</div>
     </section>
   <div class="welcome-features">
@@ -388,7 +388,7 @@ function showSocialHome() {
     <div class="home-actions">
       <section><span class="home-card-icon" aria-hidden="true">☷</span><h2>Your feed</h2><p>Catch up on photos, links, and thoughts from people you follow.</p><button class="text-action" onclick="show('feed')">Open your feed →</button></section>
       <section><span class="home-card-icon" aria-hidden="true">◈</span><h2>Your space</h2><p>Make your profile yours and share something with your circle.</p><button class="text-action" onclick="profile('Zainy')">Open your space →</button></section>
-      <section><span class="home-card-icon" aria-hidden="true"><img src="bubbles.svg" alt=""></span><h2>Messenger</h2><p>Keep the conversation going with familiar screen names.</p><a class="text-action" href="${liveMessenger}">Open Messenger →</a><button type="button" class="messenger-download" onclick="showMessengerDownload()">Download Messenger</button></section>
+      <section><span class="home-card-icon" aria-hidden="true"><img src="bubbles.svg" alt=""></span><h2>Messenger</h2><p>Keep the conversation going with familiar screen names.</p><a class="text-action" href="${liveMessenger}">Open Messenger →</a><button type="button" class="messenger-download" onclick="showMessengerDownload()">Download for Windows</button></section>
     </div>
     <p class="home-demo">You’re exploring the Social preview. <a href="?view=welcome">View the welcome page →</a></p>
   </div>`;
