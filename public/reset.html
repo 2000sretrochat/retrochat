@@ -1,8 +1,60 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset password - YappChat</title><link rel="stylesheet" href="/modern.css"><script src="/theme.js"></script>
-<style>body{font:14px Tahoma,Arial;max-width:420px;margin:40px auto;padding:0 16px}input{width:100%;padding:8px;margin:6px 0;box-sizing:border-box}button{padding:8px 16px}#m{margin-top:10px}</style></head><body>
-<h2>YappChat password reset</h2><div id=f></div><div id=m></div><p><a href="/">Back to YappChat</a></p>
-<script>const t=new URLSearchParams(location.search).get('t'),f=document.getElementById('f'),m=document.getElementById('m');
-const post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
-if(t){f.innerHTML='<label>New password<input type=password id=p1 maxlength=100 autocomplete=new-password></label><label>Confirm<input type=password id=p2 maxlength=100 autocomplete=new-password></label><button id=b>Set password</button>';
- b.onclick=async()=>{if(p1.value!==p2.value)return m.textContent='Passwords do not match.';const r=await post('/api/reset',{t,password:p1.value});m.textContent=r.error||'Password changed. You can sign in now.';if(r.ok)f.innerHTML=''}}
-else{f.innerHTML='<label>Screen name or email<input id=n maxlength=100></label><button id=b>Send reset link</button>';b.onclick=async()=>{const r=await post('/api/forgot',{name:n.value});m.textContent=r.error||r.text}}</script></body></html>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reset password · Razzle Social</title><link rel="icon" href="/razzle-social.svg"><link rel="stylesheet" href="/chat-account.css">
+<style>
+*{box-sizing:border-box}body{margin:0;color:#173b60;background:#fff;font:15px/1.5 'Segoe UI',sans-serif}a{color:#004990}#social-chat-header{border:0}.reset-main{padding:clamp(16px,4vw,48px);min-width:0}.reset-card{max-width:460px;padding:clamp(16px,4vw,28px);background:#f4f8fc;border:1px solid #dce6ef;border-radius:12px}.reset-card h1{margin:0;color:#003876;font-size:clamp(24px,5vw,34px)}.reset-card form{display:grid;gap:8px;margin-top:16px}.reset-card input{width:100%;min-height:42px;padding:8px;border:1px solid #9ab8d3;border-radius:6px;font:inherit}.reset-card button{justify-self:start;padding:9px 14px;border:0;border-radius:6px;color:#fff;background:#004990;font:inherit;cursor:pointer}.reset-card button:disabled{opacity:.6;cursor:default}.reset-card footer{margin-top:16px;font-size:13px}.reset-card [role=status]{min-height:1.4em}
+</style></head>
+<body><header class="social-chat-header" id="social-chat-header">
+  <a class="social-chat-brand" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
+  <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
+
+</header>
+<div class="social-chat-layout"><aside class="site-sidebar">
+    <nav class="menu" aria-label="Razzle navigation">
+      <a href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/">⌂ <span>Social</span></a>
+      <a href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/#people">✧ <span>Find your people</span></a>
+      <a href="/rooms.html" aria-current="page">▦ <span>Chat</span></a>
+    </nav>
+    <div class="topic-list"><p class="label">FEATURED ROOMS</p>
+      <a class="featured-room" data-featured="Lobby" href="/rooms.html?room=Lobby"><span class="topic t1" aria-hidden="true">☕</span><span>Lobby<small>Pull up a chair and say hi.</small></span></a>
+      <a class="featured-room" data-featured="Late Night" href="/rooms.html?room=Late%20Night"><span class="topic t2" aria-hidden="true">☾</span><span>Late Night<small>For the night owls.</small></span></a>
+      <a class="featured-room" data-featured="The Lounge" href="/rooms.html?room=The%20Lounge"><span class="topic t3" aria-hidden="true">✧</span><span>The Lounge<small>Good company. No particular agenda.</small></span></a>
+    </div>
+  </aside>
+<main class="reset-main"><section class="reset-card"><h1 id="reset-title">Reset your password</h1>
+<p id="reset-help">Enter your screen name or email to request a reset link.</p><form id="reset-form"></form>
+<p id="reset-status" role="status" aria-live="polite"></p><footer><a href="/?chat=1&amp;social=pages">Back to sign in</a></footer></section></main></div>
+<script>
+const token = new URLSearchParams(location.search).get('t');
+const form = document.querySelector('#reset-form');
+const status = document.querySelector('#reset-status');
+const help = document.querySelector('#reset-help');
+if (token) {
+  document.querySelector('#reset-title').textContent = 'Choose a new password';
+  help.textContent = 'Use at least eight characters.';
+  form.innerHTML = '<label for="password">New password</label><input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="100"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirmation" type="password" autocomplete="new-password" required minlength="8" maxlength="100"><button>Save new password</button>';
+} else {
+  form.innerHTML = '<label for="name">Screen name or email</label><input id="name" name="name" autocomplete="username" maxlength="200" required><button>Send reset link</button>';
+  fetch('/api/reset/config').then(r => r.json()).then(config => {
+    if (config.email === false) status.textContent = 'Reset email is currently unavailable. Use Report in a chat room to ask a moderator for a reset link.';
+  }).catch(() => {});
+}
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  const fields = form.elements;
+  if (token && fields.password.value !== fields.confirmation.value) { status.textContent = 'Passwords do not match.'; return; }
+  const submit = form.querySelector('button');
+  submit.disabled = true;
+  status.textContent = token ? 'Saving password…' : 'Requesting a reset link…';
+  try {
+    const response = await fetch(token ? '/api/reset' : '/api/forgot', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(token ? { t: token, password: fields.password.value } : { name: fields.name.value.trim() }),
+    });
+    const result = await response.json();
+    status.textContent = result.error || (token && result.ok ? 'Password changed. You can sign in now.' : result.text || 'Please try again later.');
+    if (token && result.ok) form.replaceChildren();
+  } catch { status.textContent = 'The account service could not be reached. Try again shortly.'; }
+  finally { submit.disabled = false; }
+});
+</script></body></html>
