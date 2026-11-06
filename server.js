@@ -117,7 +117,8 @@ const STAT = { day: '', peak: 0 }; const onlineNow = () => new Set([...io.socket
 setInterval(() => { const d = new Date().toISOString().slice(0, 10), n = onlineNow(); if (STAT.day !== d) { STAT.day = d; STAT.peak = 0; } if (n > STAT.peak) { STAT.peak = n; Promise.resolve().then(() => db.q('insert into stats_day(d,peak) values($1,$2) on conflict(d) do update set peak=greatest(stats_day.peak,$2)', [d, n])).catch(() => {}); } }, 15e3).unref();
 const BOTMOD = require('./bots'), BOTS = BOTMOD.BOTS; let botsOn = true; const botOff = new Set(); // rooms with bots switched off
 const botsIn = room => botsOn && !botOff.has(room) ? (BOTMOD.byRoom[room] || []) : [];
-const isBot = n => BOTS.some(b => b.name.toLowerCase() === String(n || '').toLowerCase());
+const BOT_LEGACY = new Set(BOTS.flatMap(b => (b.legacy || []).map(x => x.toLowerCase())));
+const isBot = n => { const lc = String(n || '').toLowerCase(); return BOTS.some(b => b.name.toLowerCase() === lc) || BOT_LEGACY.has(lc); };
 const botRooms = () => Object.keys(BOTMOD.byRoom);
 function saveBots() { Promise.resolve().then(() => db.q("insert into kv(k,v) values('bots',$1) on conflict(k) do update set v=$1", [JSON.stringify({ on: botsOn, off: [...botOff] })])).catch(() => {}); botRooms().forEach(r => ROOMS[r] && upd(r)); }
 function setBots(on, room) { if (room !== undefined) { if (!BOTMOD.byRoom[room]) return botsOn; on ? botOff.delete(room) : botOff.add(room); } else botsOn = !!on; saveBots(); return botsOn; }
@@ -125,57 +126,51 @@ const getBots = () => ({ on: botsOn, total: BOTS.length, rooms: botRooms().map(r
 async function applyBotProfiles() {
   if (!db.status().ready) return;
   try {
-    const rows = await db.q('select name,display_name,bio,location,interests,avatar,room from bot_profiles');
-    const by = new Map(rows.map(r => [r.name.toLowerCase(), r]));
+    const rows = await db.q('select bot_id,name,display_name,bio,location,interests,avatar,room from bot_profiles');
+    const by = new Map(rows.map(r => [r.bot_id || r.name.toLowerCase(), r]));
     for (const b of BOTS) {
-      const r = by.get(b.name.toLowerCase()); if (!r) continue;
-      b.display_name = r.display_name; b.bio = r.bio; b.location = r.location; b.interests = r.interests;
-      b.av = r.avatar ? ('bot:' + r.avatar) : (b.av || '');
-      if (r.room) b.room = r.room;
+      const r = by.get(b.id); if (!r) continue;
+      b.display_name = r.display_name; b.bio = r.bio; b.location = r.location; b.interests = r.interests; b.avatar_key = r.avatar || '';
+      if (r.room && ROOMS[r.room] && r.room !== b.room) b.room = r.room;
     }
+    for (const k of Object.keys(BOTMOD.byRoom)) delete BOTMOD.byRoom[k];
+    for (const b of BOTS) (BOTMOD.byRoom[b.room] = BOTMOD.byRoom[b.room] || []).push(b);
   } catch (e) { console.error('[applyBotProfiles]', e.message); }
 }
 (function loadBots(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadBots(n + 1), 2000).unref?.(); Promise.resolve().then(() => db.q("select v from kv where k='bots'")).then(r => { if (r[0]) { const v = r[0].v; if (v === 'on' || v === 'off') botsOn = v !== 'off'; else try { const j = JSON.parse(v); botsOn = j.on !== false; (j.off || []).forEach(x => botOff.add(x)); } catch { } } return applyBotProfiles(); }).then(() => botRooms().forEach(x => ROOMS[x] && upd(x))).catch(() => {}); })(0);
 // each bot room ticks on its own randomized, staggered timer (every ~3-7 min) and only talks while real people are there
 // bots: each room has its own random timer. Faster (40s-2.5min) while people are in the room, slow (4-10 min) while empty so rooms keep recent text.
-const TRIVIA = [
- { q: 'Which Messenger feature shook your buddy’s window?', a: ['nudge','buzz'] },
- { q: 'What does PM stand for?', a: ['private message','private msg'] },
- { q: 'What color is the Razzle Social star?', a: ['orange'] },
- { q: 'Complete the phrase: You’ve Got ___!', a: ['mail'] },
- { q: 'What was the classic yellow Messenger status called when you stepped away?', a: ['away'] }
-];
 const GAMES = { roll: () => 'rolled a ' + (1 + Math.floor(Math.random() * 6)) + '.', '8ball': () => 'The Magic 8 Ball says: ' + ['Signs point to yes.', 'Ask again later.', 'Outlook good.', 'Cannot predict now.'][Math.floor(Math.random() * 4)] };
-const triviaRoom = new Map();
-function interactiveBotReply(b, room, who, text, t) {
- const handle = t.match(/@([a-z]+)/)?.[1];
- const wanted = ({ razzleguide: 'RazzleGuide', triviatime: 'TriviaTime', trivia: 'TriviaTime', gamenight: 'GameNight', game: 'GameNight', mixtapebot: 'MixtapeBot', music: 'MixtapeBot' })[handle];
- if (wanted && b.name.split(' ')[0].toLowerCase() !== wanted.toLowerCase()) return null;
- const clean = t.replace(/^@[a-z]+[,:]?\s*/, '').trim();
- const cur = triviaRoom.get(room);
- if (cur && Date.now() < cur.until && cur.a.some(a => clean === a || clean.includes(a))) { triviaRoom.delete(room); return b.name.startsWith('TriviaTime') ? who + ' got it! The answer was ' + cur.q + ' — ' + cur.a[0] + '.' : null; }
- if (/\bhelp\b/.test(clean)) return b.name.startsWith('RazzleGuide') ? 'Try @RazzleGuide help, @TriviaTime trivia, @GameNight roll or 8ball, or @MixtapeBot recommend. Open Contacts to manage friend requests.' : 'Mention me and say help for my commands.';
- if (/\b(hi|hello|hey)\b/.test(clean)) return 'Hi ' + who + '! Say @' + b.name.split(' ')[0] + ' help to see my commands.';
- if (b.name.startsWith('TriviaTime') && /\btrivia\b|\bstart\b/.test(clean)) { const q = TRIVIA[Math.floor(Math.random() * TRIVIA.length)]; triviaRoom.set(room, { ...q, until: Date.now() + 60000 }); return 'Trivia for 60 seconds: ' + q.q; }
- if (b.name.startsWith('GameNight') && /\b8ball\b/.test(clean)) return who + ' ' + GAMES['8ball']();
- if (b.name.startsWith('GameNight') && /\broll\b/.test(clean)) return who + ' ' + GAMES.roll();
- if (b.name.startsWith('MixtapeBot') && /\b(recommend|music|song)\b/.test(clean)) return 'Try a nostalgia playlist: The Killers — Mr. Brightside, Avril Lavigne — Complicated, and Coldplay — Yellow.';
- if (b.name.startsWith('RazzleGuide')) return 'I can help you find rooms, use Contacts, or try the other bots. Mention me with help!';
+const TRIVIAMOD = require('./trivia');
+const triviaStore = (() => { const mem = TRIVIAMOD.memoryStore(), dbs = TRIVIAMOD.dbStore(db); const pick = () => db.status().ready ? dbs : mem;
+  return { add: (n, k) => pick().add(n, k), get: n => pick().get(n), top: n => pick().top(n) }; })();
+const TRIVIA_GAME = TRIVIAMOD.createTrivia({ say: (room, b, text) => botsIn(room).includes(b) && botSay(room, b, text), store: triviaStore, stepMs: +process.env.TRIVIA_STEP_MS || 20000 });
+// Non-trivia interactive replies (guide, music, dice). Trivia is handled by TRIVIA_GAME.
+function interactiveBotReply(b, room, who, clean) {
+ if (/\bhelp\b/.test(clean)) { const hosts = botsIn(room).filter(x => x.trivia).map(x => '@' + x.name.split('_')[0] + ' trivia');
+   return b.id === 'razzleguide' ? 'Try ' + (hosts[0] || '@Jenna trivia') + ' for a question (I\'ll keep your score), @Marcus roll or 8ball, or @Mel recommend. Open Contacts to manage friend requests.'
+     : b.trivia ? 'Say "trivia" to me for a question, "hint" for a hint, "score" for your points, or "top" for the leaderboard.' + (b.games ? ' I also do roll and 8ball.' : '') : 'ask me to recommend some songs!'; }
+ if (b.games && /\b8ball\b/.test(clean)) return who + ' ' + GAMES['8ball']();
+ if (b.games && /\broll\b/.test(clean)) return who + ' ' + GAMES.roll();
+ if (b.music && /\b(recommend|music|song|songs)\b/.test(clean)) return 'ok try this: The Killers - Mr. Brightside, Avril Lavigne - Complicated, and Coldplay - Yellow.';
+ if (/\b(hi|hello|hey)\b/.test(clean)) return 'hey ' + who + '!' + (b.trivia ? ' want a trivia question? just say trivia' : '');
+ if (b.id === 'razzleguide') return 'I can help you find rooms, use Contacts, or start trivia. Mention me with help!';
  return null;
 }
 const botSay = (room, b, text) => push(room, { name: b.name, av: b.av || '', role: '', text: esc(text), color: b.color || '#000080', b: false, i: false, u: false, f: b.font || 'Arial', t: Date.now() });
 const lastBot = {};
 function botTick(room) { const busy = socks(room).length > 0; setTimeout(() => botTick(room), (busy ? 40 + Math.random() * 110 : 240 + Math.random() * 360) * 1000).unref?.();
-  const bs = botsIn(room); if (!bs.length) return; const b = bs[Math.floor(Math.random() * bs.length)];
+  const bs = botsIn(room).filter(b => !(TRIVIA_GAME.active(room) && b.trivia)); if (!bs.length) return; const b = bs[Math.floor(Math.random() * bs.length)];
   const line = BOTMOD.line(b, room, lastBot[room]); lastBot[room] = line; botSay(room, b, line);
   // sometimes a second bot answers a moment later, so it reads like a conversation
   if (bs.length > 1 && Math.random() < 0.35) { const o = bs.filter(x => x !== b)[Math.floor(Math.random() * (bs.length - 1))]; setTimeout(() => botsIn(room).includes(o) && botSay(room, o, BOTMOD.reply(o, b.name)), 6000 + Math.random() * 14000).unref?.(); } }
-// a bot may greet a person who says hi or mentions it
-function botHear(room, who, text) { const bs = botsIn(room); if (!bs.length) return; const t = String(text).toLowerCase();
-  if (/^@/.test(t) || triviaRoom.has(room)) {
-    const inter = bs.filter(b => b.interactive);
-    for (const b of inter) { const r = interactiveBotReply(b, room, who, text, t); if (r) { botSay(room, b, r); return; } }
-  }
+// a bot may greet a person who says hi or mentions it; trivia answers are recognized from normal chat
+async function botHear(room, who, text) { const bs = botsIn(room); if (!bs.length) return; const t = String(text).toLowerCase();
+  const handle = t.match(/@([a-z0-9_]+)/)?.[1]; const target = handle ? BOTMOD.byAlias(handle) : null; const host = target && bs.includes(target) ? target : null;
+  const clean = t.replace(/@[a-z0-9_]+[,:]?\s*/g, '').trim();
+  if (TRIVIA_GAME.active(room) || (host && host.trivia)) { if (await TRIVIA_GAME.hear(room, who, text, host && host.trivia ? host : null)) return; }
+  if (host && host.interactive) { const r = interactiveBotReply(host, room, who, clean); if (r) { botSay(room, host, r); return; } }
+  if (host) return void setTimeout(() => botsIn(room).includes(host) && botSay(room, host, BOTMOD.greet(host, who)), 2000 + Math.random() * 4000).unref?.();
   const named = bs.find(b => t.includes(b.name.toLowerCase())); const hi = /\b(hi|hey|hello|hola|sup|yo|wassup|anyone)\b/.test(t);
   if (!named && !(hi && Math.random() < 0.6)) return; const b = named || bs[Math.floor(Math.random() * bs.length)];
   setTimeout(() => botsIn(room).includes(b) && botSay(room, b, BOTMOD.greet(b, who)), 3000 + Math.random() * 6000).unref?.(); }
@@ -228,15 +223,26 @@ app.get('/api/social-profile/:name', async (req, res) => {
     return row ? res.json({ name: row.name }) : res.status(404).json({});
   } catch { return res.status(503).json({}); }
 });
+// Public, read-only bot profiles keyed by stable bot id (bots are not login accounts).
+async function botProfile(b) { let r = null; if (db.status().ready) { try { r = (await db.q('select name,display_name,bio,location,interests,room from bot_profiles where bot_id=$1', [b.id]))[0]; } catch { } }
+  r = r || { name: b.name, display_name: b.display_name, bio: b.bio, location: b.location, interests: b.interests, room: b.room };
+  const seed = BOTMOD.PROFILE_SEEDS.find(x => x.id === b.id) || {};
+  return { id: b.id, name: b.name, displayName: r.display_name || seed.display_name || b.name, bio: r.bio ?? seed.bio ?? '', location: r.location ?? seed.location ?? '', interests: r.interests ?? seed.interests ?? '', avatar: 'bot:' + b.id, room: b.room, bot: true, online: botsIn(b.room).includes(b) }; }
+app.get('/api/bot-profile/:id', async (req, res) => { res.set('Cache-Control', 'no-store'); const b = BOTMOD.byId(req.params.id); if (!b) return res.status(404).json({ error: 'No such user.' }); res.json(await botProfile(b)); });
+// Bot avatars: master-uploaded image (DB) > master-chosen asset key > generated initials placeholder.
+const BOT_AV_DIR = require('path').join(__dirname, 'public', 'bot-avatars');
+app.get('/bot-av/:id', async (req, res) => { const b = BOTMOD.byId(req.params.id); if (!b) return res.status(404).end(); res.set('Cache-Control', 'no-cache');
+  if (db.status().ready) { try { const [r] = await db.q('select mime,data from bot_avatars where bot_id=$1', [b.id]); if (r) return res.type(r.mime).send(r.data); } catch { } }
+  const key = String(b.avatar_key || '').replace(/[^a-z0-9_-]/g, ''); const f = key && require('path').join(BOT_AV_DIR, key + '.svg');
+  if (f && require('fs').existsSync(f)) return res.type('image/svg+xml').sendFile(f);
+  const ini = esc(String(b.display_name || BOTMOD.PROFILE_SEEDS.find(x => x.id === b.id)?.display_name || b.name).trim().slice(0, 1).toUpperCase());
+  res.type('image/svg+xml').send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" rx="14" fill="${b.color || '#4b6cb7'}"/><text x="48" y="62" font-family="Tahoma,Arial" font-size="44" font-weight="700" text-anchor="middle" fill="#fff">${ini}</text></svg>`); });
 app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.name || ''), lc = n.toLowerCase(); res.set('Cache-Control', 'no-store');
+  { const b = BOTS.find(x => x.name.toLowerCase() === lc || (x.legacy || []).some(y => y.toLowerCase() === lc)); if (b) return res.json(await botProfile(b)); }
   if (db.status().ready) { try {
-    let bp = (await db.q('select name,display_name,bio,location,interests,avatar,room,interactive from bot_profiles where name_lc=$1', [lc]))[0];
-    if (!bp) { const rows = await db.q('select name,display_name,bio,location,interests,avatar,room,interactive from bot_profiles'); bp = rows.find(r => r.name.toLowerCase() === lc || r.name.split(' ')[0].toLowerCase() === lc); }
-    if (bp) return res.json({ name: bp.name, displayName: bp.display_name || bp.name, bio: bp.bio, location: bp.location, interests: bp.interests, avatar: bp.avatar ? ('bot:' + bp.avatar) : '', room: bp.room, bot: true, label: 'Bot', online: botsOn && !botOff.has(bp.room) });
     const r = (await db.q('select name,avatar,display_name,age,location,bio,interests,created from users where name_lc=$1', [lc]))[0];
     if (r) { const v = await acc.userFromCookie(req.headers.cookie); let hide = false; if (v && v.name.toLowerCase() !== lc) { const [vu] = await db.q('select is_master from users where id=$1', [v.id]); const [tu] = await db.q('select id from users where name_lc=$1', [lc]); hide = !vu?.is_master && await blockedBy(tu.id, v.id); }
     return res.json({ name: r.name, avatar: r.avatar, displayName: r.display_name, age: r.age, location: r.location, bio: r.bio, interests: r.interests, memberSince: r.created, online: !hide && (acc.isOnline(r.name) || roomVisible(lc)) }); } } catch { } }
-  if (isBot(n) || BOTS.some(b => b.name.split(' ')[0].toLowerCase() === lc)) { const b = BOTS.find(x => x.name.toLowerCase() === lc || x.name.split(' ')[0].toLowerCase() === lc); if (b) return res.json({ name: b.name, displayName: b.display_name || b.name, bio: b.bio || b.greet || '', location: b.location || '', interests: b.interests || '', avatar: b.av || '', room: b.room, bot: true, label: 'Bot', online: botsOn && !botOff.has(b.room) }); }
   const id = users.get(lc), x = id && io.sockets.sockets.get(id); if (x && x.data.guest) return res.json({ name: x.data.name, guest: true, online: true, room: x.data.room });
   res.status(404).json({ error: 'No such user.' }); });
 app.post('/api/profile', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in to edit your profile.' });
@@ -439,7 +445,7 @@ io.on('connection', s => {
     if (s.data.inc) { if (m.vis !== true) { stamps.pop(); return s.emit('incwarn', { text }); } s.data.inc = false; upd(s.data.room); s.emit('inc', { on: false, announce: !!s.data.announce }); }
     const FONTS = ['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'];
     push(s.data.room, { name: esc(s.data.name), av: s.data.av || '', role: s.data.master ? '' : roleOf(s, s.data.room), ...(s.data.guest && !s.data.master ? { g: true } : {}), text: esc(text), color: COLORS.includes(m.color) ? m.color : '#000000', b: !!m.b, i: !!m.i, u: !!m.u, f: FONTS.includes(m.f) ? m.f : 'Arial', t: now });
-    if (!s.data.inc) botHear(s.data.room, s.data.name, text);
+    if (!s.data.inc) botHear(s.data.room, s.data.name, text).catch(e => console.error("[botHear]", e.message));
   });
   function mediaReset() {
     const room = s.data.room; if (!room) return;
@@ -557,7 +563,7 @@ io.on('connection', s => {
 });
 acc.sockets(io, AH);
 const RESET = require('./reset')(app, express);
-const MASTER = require('./master')({ resetLink: RESET.makeLink, applyBotProfiles, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, setMicOpts, RATINGS, KICK_MS });
+const MASTER = require('./master')({ BOTMOD, resetLink: RESET.makeLink, applyBotProfiles, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, setMicOpts, RATINGS, KICK_MS });
 // ADMIN_KEY: verify/grant exact authorized masters (t228u/t229u). No password changes.
 app.get('/api/admin/masters', async (req, res) => {
   if (!keyOk(req.get('x-admin-key'))) return res.status(401).json({ error: 'Unauthorized' });

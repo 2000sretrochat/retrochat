@@ -4,11 +4,11 @@ function win(title,html){document.querySelectorAll('.yprof').forEach(x=>x.remove
  w.innerHTML=`<div class=tbar>${E(title)}<span class=sp></span><span class=x title=Close>X</span></div><div class=pb>${html}</div>`;document.body.appendChild(w);w.querySelector('.x').onclick=()=>w.remove();
  const t=w.querySelector('.tbar');t.onmousedown=e=>{if(e.target.closest('.x'))return;const r=w.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;const m=ev=>{w.style.left=ev.clientX-dx+'px';w.style.top=ev.clientY-dy+'px';w.style.transform='none'};const u=()=>{removeEventListener('mousemove',m);removeEventListener('mouseup',u)};addEventListener('mousemove',m);addEventListener('mouseup',u)};return w}
 async function show(name,opts={}){let p;try{const r=await fetch('/api/profile/'+encodeURIComponent(name));p=await r.json();if(!r.ok)throw p}catch(e){return alert((e&&e.error)||'Could not load that profile.')}
- const avSrc=/^bot:[a-z0-9_-]+$/.test(p.avatar||'')?('/bot-avatars/'+p.avatar.slice(4)+'.svg'):(`/av/${encodeURIComponent(p.name)}?v=${encodeURIComponent(p.avatar||'0')}`); const av=`<img class=pav src="${avSrc}" alt="${p.bot?'Bot':''}">`;
+ const avSrc=/^bot:[a-z0-9_-]+$/.test(p.avatar||'')?('/bot-av/'+p.avatar.slice(4)):(`/av/${encodeURIComponent(p.name)}?v=${encodeURIComponent(p.avatar||'0')}`); const av=`<img class=pav src="${avSrc}" alt="">`;
  if(p.guest)return win(p.name+' – Profile',`<div class=ph>${av}<div><div class=pn>${E(p.name)}</div><div class=pg>${p.online?'online now':'offline'}</div></div></div><p class=pm>This member has a minimal profile.</p>`);
  const row=(k,v)=>v?`<tr><th>${k}</th><td>${E(v)}</td></tr>`:'';const since=p.memberSince?new Date(p.memberSince).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}):'';
- const botTag=p.bot?' <span class=tag style="background:#e3eef9;color:#12345a;border-radius:3px;padding:1px 6px;font-size:11px">Bot</span>':'';
- const w=win(p.name+' – Profile',`<div class=ph>${av}<div><div class=pn>${E(p.displayName||p.name)}${botTag}</div><div class=pg>@${E(p.name)} &middot; ${p.online?'<span class="sdot available"></span> online':'offline'}${p.bot?' &middot; read-only':''}</div></div></div>
+ const botTag='';
+ const w=win(p.name+' – Profile',`<div class=ph>${av}<div><div class=pn>${E(p.displayName||p.name)}${botTag}</div><div class=pg>@${E(p.name)} &middot; ${p.online?'<span class="sdot available"></span> online':'offline'}</div></div></div>
  ${p.bio?`<p class=pbio>${E(p.bio)}</p>`:''}<table class=pt>${row('Age',p.age)}${p.location?`<tr><th>Location</th><td>${window.YFlag?YFlag(p.location)+' ':''}${E(p.location)}</td></tr>`:''}${row('Interests',p.interests)}${p.bot?row('Room',p.room):''}${row('Member since',since)}</table>
  ${!p.bot&&opts.me&&opts.me.toLowerCase()==p.name.toLowerCase()?'<div class=pbtn><button class="btn pri" id=pEdit>Edit Profile</button></div>':''}`);
  const b=w.querySelector('#pEdit');if(b)b.onclick=()=>edit(p)}

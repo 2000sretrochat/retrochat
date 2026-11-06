@@ -73,17 +73,30 @@ module.exports = function (C) {
     } catch (e) { console.error('[shared-email]', e.message); }
     try { await seedBotProfiles(); } catch (e) { console.error('[bot-profiles]', e.message); }
   }
+  // Seeds a profile for EVERY bot. Never overwrites master edits: inserts use ON CONFLICT and only fill a missing bot_id.
+  // Legacy "[bot]" rows (TriviaTime/GameNight/...) are renamed in place so their edits/avatars survive; only untouched legacy defaults are refreshed.
   async function seedBotProfiles() {
     if (!ready()) return;
-    const BOTMOD = require('./bots');
-    const defs = (BOTMOD.PROFILE_SEEDS || BOTMOD.BOTS.filter(b => b.interactive)).map(b => ({
-      name: b.name, display_name: b.display_name || b.name.replace(/\s*\[bot\]\s*$/i, ''), bio: b.bio || (b.greet || 'Interactive room bot.'), location: b.location || '', interests: b.interests || 'help',
-      avatar: b.avatar_key || (b.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')), room: b.room || '', interactive: !!b.interactive
-    }));
-    for (const d of defs) {
-      await db.q(`insert into bot_profiles(name_lc,name,display_name,bio,location,interests,avatar,room,interactive)
-        values($1,$2,$3,$4,$5,$6,$7,$8,$9)
-        on conflict(name_lc) do nothing`, [d.name.toLowerCase(), d.name, d.display_name, d.bio, d.location, d.interests, d.avatar, d.room, d.interactive]);
+    const BOTMOD = C.BOTMOD || require('./bots');
+    for (const d of BOTMOD.PROFILE_SEEDS) {
+      const lc = d.name.toLowerCase();
+      for (const old of d.legacy || []) {
+        const olc = old.toLowerCase(); if (olc === lc) continue;
+        const has = (await db.q('select 1 from bot_profiles where name_lc=$1', [lc])).length;
+        if (has) { await db.q('update bot_profiles set bot_id=null where name_lc=$1 and bot_id=$2', [olc, d.id]); continue; }
+        const r = await db.q('update bot_profiles set name_lc=$2, name=$3, bot_id=$4 where name_lc=$1 returning display_name,bio,room', [olc, lc, d.name, d.id]);
+        if (r.length) {
+          if (r[0].display_name === BOTMOD.LEGACY_DEFAULT_DISPLAY[d.id] || r[0].display_name === '') await db.q('update bot_profiles set display_name=$2 where name_lc=$1', [lc, d.display_name]);
+          if (r[0].bio === BOTMOD.LEGACY_DEFAULT_BIO[d.id] || r[0].bio === '') await db.q('update bot_profiles set bio=$2, interests=$3, location=$4 where name_lc=$1', [lc, d.bio, d.interests, d.location]);
+          if (BOTMOD.LEGACY_DEFAULT_ROOM[d.id] && r[0].room === BOTMOD.LEGACY_DEFAULT_ROOM[d.id]) await db.q('update bot_profiles set room=$2 where name_lc=$1', [lc, d.room]);
+          // old default "BOT"-badged SVG -> initials placeholder (a master-chosen different key or upload is kept)
+          await db.q("update bot_profiles set avatar='' where name_lc=$1 and avatar=$2", [lc, d.id]);
+          await audit('system', 'bot-rename', old, d.name);
+        }
+      }
+      await db.q(`insert into bot_profiles(name_lc,name,display_name,bio,location,interests,avatar,room,interactive,bot_id)
+        values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        on conflict(name_lc) do update set bot_id=coalesce(bot_profiles.bot_id, excluded.bot_id)`, [lc, d.name, d.display_name, d.bio, d.location, d.interests, d.avatar_key || '', d.room || '', d.interactive, d.id]);
     }
     if (typeof C.applyBotProfiles === 'function') await C.applyBotProfiles();
   }
@@ -195,25 +208,42 @@ module.exports = function (C) {
     if (remove) await q('delete from watch where owner=$1 and target=$2', [me.id, u.id]); else await q('insert into watch(owner,target) values($1,$2) on conflict do nothing', [me.id, u.id]); res.json({ ok: true }); }));
 
   app.get('/api/master/audit', guard(async (req, res) => res.json(await q('select id,by_name,action,target,detail,at from master_audit order by id desc limit 200'))));
+  const botAssets = () => { try { return require('fs').readdirSync(path.join(__dirname, 'public', 'bot-avatars')).filter(f => /^[a-z0-9_-]+\.svg$/.test(f)).map(f => f.slice(0, -4)).sort(); } catch { return []; } };
+  const BOTSRC = () => C.BOTMOD || require('./bots');
+  const findBotRow = async b => { const id = String(b.id || '').toLowerCase(), lc = String(b.name || '').trim().toLowerCase();
+    return (await q('select name_lc,bot_id,name from bot_profiles where ' + (id ? 'bot_id=$1' : 'name_lc=$1'), [id || lc]))[0]; };
   app.get('/api/master/bot-profiles', guard(async (req, res) => {
-    const rows = await q('select name,display_name,bio,location,interests,avatar,room,interactive,updated,updated_by from bot_profiles order by name_lc');
-    res.json({ bots: rows, assets: ['razzleguide', 'triviatime', 'gamenight', 'mixtapebot'], note: 'Bots have no login passwords. Edit profiles here only.' });
+    const rows = await q('select p.bot_id as id,p.name,p.display_name,p.bio,p.location,p.interests,p.avatar,p.room,p.interactive,p.updated,p.updated_by,(a.bot_id is not null) as uploaded from bot_profiles p left join bot_avatars a on a.bot_id=p.bot_id order by p.interactive desc, p.room, p.name_lc');
+    const live = new Set(BOTSRC().BOTS.map(b => b.id));
+    res.json({ bots: rows.map(r => ({ ...r, live: live.has(r.id) })), assets: botAssets(), note: 'Bots have no login passwords. Edit profiles here only. Upload a PNG/JPG/WebP (max 600 KB) to replace an avatar.' });
   }));
   app.post('/api/master/bot-profiles', express.json(), guard(async (req, res, me) => {
-    const b = req.body || {}; const name = String(b.name || '').trim(); if (!name) return res.status(400).json({ error: 'Bot name required.' });
-    const lc = name.toLowerCase(); const existing = (await q('select name from bot_profiles where name_lc=$1', [lc]))[0];
-    if (!existing) return res.status(404).json({ error: 'Unknown bot profile. Seed interactive bots first.' });
-    const display_name = PCLEAN(b.displayName != null ? b.displayName : b.display_name, 40);
-    const bio = PCLEAN(b.bio, 300), location = PCLEAN(b.location, 50), interests = PCLEAN(b.interests, 150);
-    const avatar = String(b.avatar || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+    const b = req.body || {}; if (!b.id && !String(b.name || '').trim()) return res.status(400).json({ error: 'Bot id or name required.' });
+    const existing = await findBotRow(b);
+    if (!existing) return res.status(404).json({ error: 'Unknown bot profile.' });
+    const cur = (await q('select display_name,bio,location,interests,avatar from bot_profiles where name_lc=$1', [existing.name_lc]))[0];
+    const pick = (v, alt, n) => v === undefined ? alt : PCLEAN(v, n);
+    const display_name = pick(b.displayName !== undefined ? b.displayName : b.display_name, cur.display_name, 40);
+    const bio = pick(b.bio, cur.bio, 300), location = pick(b.location, cur.location, 50), interests = pick(b.interests, cur.interests, 150);
+    const avatar = b.avatar === undefined ? cur.avatar : String(b.avatar || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
     const room = PCLEAN(b.room, 60);
     await q(`update bot_profiles set display_name=$2, bio=$3, location=$4, interests=$5, avatar=$6, room=coalesce(nullif($7,''),room), updated=now(), updated_by=$8 where name_lc=$1`,
-      [lc, display_name, bio, location, interests, avatar, room, me.name]);
+      [existing.name_lc, display_name, bio, location, interests, avatar, room, me.name]);
     if (typeof C.applyBotProfiles === 'function') await C.applyBotProfiles();
-    await audit(me.name, 'bot-profile', name, avatar || display_name);
-    const row = (await q('select name,display_name,bio,location,interests,avatar,room,interactive,updated,updated_by from bot_profiles where name_lc=$1', [lc]))[0];
+    await audit(me.name, 'bot-profile', existing.name, avatar || display_name);
+    const row = (await q('select bot_id as id,name,display_name,bio,location,interests,avatar,room,interactive,updated,updated_by from bot_profiles where name_lc=$1', [existing.name_lc]))[0];
     res.json({ ok: true, bot: row });
   }));
+  // Avatar replacement (e.g. images made in ChatGPT): data URL upload stored in DB, served at /bot-av/<id>.
+  app.post('/api/master/bot-avatar', express.json({ limit: '1mb' }), guard(async (req, res, me) => {
+    const b = req.body || {}; const row = await findBotRow(b); if (!row || !row.bot_id) return res.status(404).json({ error: 'Unknown bot profile.' });
+    if (b.remove) { await q('delete from bot_avatars where bot_id=$1', [row.bot_id]); await audit(me.name, 'bot-avatar-remove', row.name, ''); return res.json({ ok: true, removed: true }); }
+    const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(b.data || ''));
+    if (!m) return res.status(400).json({ error: 'Upload a PNG, JPG, or WebP image.' });
+    const buf = Buffer.from(m[2], 'base64'); if (!buf.length || buf.length > 600 * 1024) return res.status(400).json({ error: 'Image must be under 600 KB.' });
+    await q('insert into bot_avatars(bot_id,mime,data,updated_by) values($1,$2,$3,$4) on conflict(bot_id) do update set mime=$2,data=$3,updated=now(),updated_by=$4', [row.bot_id, m[1], buf, me.name]);
+    await audit(me.name, 'bot-avatar', row.name, m[1] + ' ' + buf.length + 'B'); res.json({ ok: true, bytes: buf.length });
+  }));
 
-  return { reserved, ipBanned: ip => IPBAN.has(ip), seedMaster, ensureAuthorizedMasters, AUTHORIZED_MASTERS, load, saveRating, saveMics, saveMeta, saveMod, report, EXAMPLE_BLOCKED };
+  return { seedBotProfiles, reserved, ipBanned: ip => IPBAN.has(ip), seedMaster, ensureAuthorizedMasters, AUTHORIZED_MASTERS, load, saveRating, saveMics, saveMeta, saveMod, report, EXAMPLE_BLOCKED };
 };

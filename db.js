@@ -80,7 +80,11 @@ create table if not exists bot_profiles(
   interactive boolean not null default false,
   updated timestamptz not null default now(),
   updated_by text
-);`;
+);
+alter table bot_profiles add column if not exists bot_id text;
+create unique index if not exists bot_profiles_bot_id on bot_profiles(bot_id);
+create table if not exists bot_avatars(bot_id text primary key, mime text not null, data bytea not null, updated timestamptz not null default now(), updated_by text);
+create table if not exists trivia_scores(name_lc text primary key, name text not null, points int not null default 0, updated timestamptz not null default now());`;
 async function init() {
   if (!process.env.DATABASE_URL) { error = 'DATABASE_URL is not set'; console.warn('[db] ' + error + ' - accounts disabled (maintenance mode)'); return; }
   const local = /localhost|127\.0\.0\.1|\/tmp/.test(process.env.DATABASE_URL);

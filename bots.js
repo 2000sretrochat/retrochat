@@ -34,10 +34,8 @@ const BOTS = [
   ...B('ਪੰਜਾਬੀ Punjabi', 'pa', ['jatt_boy_007', 'punjabi_kudi99']), ...B('বাংলা Bengali', 'bn', ['kolkata_dada', 'rosogolla_girl']),
   ...B('En Español', 'es', ['chica_loca_01']), ...B('Русский (Russian)', 'ru', ['masha_99']),
 ];
-for (const b of BOTS) b.av = '';
 
 const COLS = ['#000080', '#8b0000', '#006400', '#4b0082', '#b8860b', '#008080', '#c71585'], FNTS = ['Arial', 'Verdana', 'Comic Sans MS', 'Tahoma'];
-BOTS.forEach((b, i) => { b.color = COLS[i % COLS.length]; b.font = FNTS[(i * 3) % FNTS.length]; });
 // extra English variety: templates with fill-ins so lines don't repeat as often
 const EN2 = ['just got back from {place}', 'anyone here into {thing}?', 'omg {thing} is the best', 'listening to {song} rn', 'what is everyone eating tonight? im having {food}', 'rate my away msg: "{away}"', 'who else is from {city}?', '{greet} everyone', 'cant believe its already {time}', 'my mom keeps yelling at me to get off the computer lol', 'brb phone', 'a/s/l? jk jk', 'i need a new screen name ideas pls', 'its raining here, perfect chat weather', 'anyone want to trade buddy icons', 'lmao', 'hahaha same', 'ok im back', 'thats so random', 'i love this room', 'who has a webcam on?', 'turn up the music!!', 'whats the best movie ever? i say {movie}', 'gonna make some {food} brb', 'quiz time: favorite cereal?', 'sooo sleepy', 'this chat is my fav place on the internet', 'happy {day} everybody!'];
 const FILL = { place: ['the mall', 'school', 'work', 'the gym', 'blockbuster', 'my cousins house'], thing: ['tamagotchis', 'skateboarding', 'the sims', 'pokemon', 'harry potter', 'nsync', 'gel pens', 'myspace layouts'], song: ['Hey Ya', 'Mr. Brightside', 'Toxic', 'In Da Club', 'Complicated', 'Yellow', 'Bye Bye Bye'], food: ['pizza rolls', 'mac n cheese', 'tacos', 'ramen', 'hot pockets', 'cereal'], away: ['out livin la vida loca', 'brb, dont touch my stuff', 'gone to the movies ~*~', 'sleeping... or am i'], city: ['NYC', 'LA', 'Chicago', 'Texas', 'Florida', 'Phoenix', 'Seattle', 'Atlanta'], greet: ['heyyy', 'hi', 'sup', 'hello hello', 'yo'], time: ['this late', 'friday', 'november', 'the weekend'], movie: ['Mean Girls', 'The Matrix', 'Titanic', 'Napoleon Dynamite', 'Shrek'], day: ['monday', 'friday', 'weekend'] };
@@ -46,15 +44,94 @@ function line(b, room, last) { for (let k = 0; k < 4; k++) { const L = P[b.lang]
 const RE = { en: ['lol {n}', 'haha true', 'omg same {n}', 'no way!', 'for real?', 'agreed', '{n} ur funny', 'lmao', 'totally', 'hmm idk about that'], es: ['jaja {n}', 'sí, verdad', '¡qué bueno!'], ru: ['ха-ха {n}', 'точно'] };
 function reply(b, n) { const L = RE[b.lang]; return L ? pick(L).replace('{n}', n) : line(b); }
 function greet(b, n) { const G = { en: ['hey {n}!', 'hi {n} :)', 'welcome {n}', 'sup {n}', 'heyyy {n} whats up'], es: ['¡Hola {n}!'], ru: ['Привет, {n}!'], ja: ['{n}さん、こんにちは！'], ko: ['{n}님 안녕하세요!'], zh: ['{n} 你好！'] }; return pick(G[b.lang] || ['hi {n} :)']).replace('{n}', n); }
-const byRoom = {}; for (const b of BOTS) (byRoom[b.room] = byRoom[b.room] || []).push(b);
-const EXTRA_BOTS = B('Lobby', 'en', ['RazzleGuide [bot]', 'TriviaTime [bot]', 'GameNight [bot]']).concat(B('Music Lobby', 'en', ['MixtapeBot [bot]']));
-for (const b of EXTRA_BOTS) { b.interactive = true; b.av = ''; BOTS.push(b); (byRoom[b.room] = byRoom[b.room] || []).push(b); }
-for (const b of BOTS) if (b.interactive) { b.greet = 'Hi! Mention me and say help to see what I can do.'; }
-// Persistent, master-editable profile seeds for the four interactive bots (no login accounts / passwords).
-const PROFILE_SEEDS = [
-  { name: 'RazzleGuide [bot]', display_name: 'RazzleGuide', avatar_key: 'razzleguide', room: 'Lobby', interactive: true, bio: 'Helpful guide for rooms, Contacts, and other bots. Say @RazzleGuide help.', interests: 'help, rooms, contacts' },
-  { name: 'TriviaTime [bot]', display_name: 'TriviaTime', avatar_key: 'triviatime', room: 'Lobby', interactive: true, bio: 'Nostalgia trivia host. Say @TriviaTime trivia to start a round.', interests: 'trivia, quizzes' },
-  { name: 'GameNight [bot]', display_name: 'GameNight', avatar_key: 'gamenight', room: 'Lobby', interactive: true, bio: 'Quick games in chat. Try @GameNight roll or @GameNight 8ball.', interests: 'games, dice, 8ball' },
-  { name: 'MixtapeBot [bot]', display_name: 'MixtapeBot', avatar_key: 'mixtapebot', room: 'Music Lobby', interactive: true, bio: 'Playlist tips and song picks. Say @MixtapeBot recommend.', interests: 'music, playlists' },
+const byRoom = {};
+// ---- Interactive hosts: natural screen names, no "[bot]" suffix. Stable ids keep old DB rows/avatars. ----
+const HOSTS = [
+  { id: 'razzleguide', name: 'RazzleGuide', room: 'Lobby', legacy: ['RazzleGuide [bot]'], aliases: ['razzleguide', 'guide', 'razzle_guide'] },
+  { id: 'triviatime', name: 'Jenna_Q', room: 'Lobby', trivia: true, legacy: ['TriviaTime [bot]'], aliases: ['jenna_q', 'jenna', 'jennaq', 'trivia', 'triviatime'] },
+  { id: 'gamenight', name: 'MarcusT', room: 'Chit Chat', trivia: true, games: true, legacy: ['GameNight [bot]'], aliases: ['marcust', 'marcus', 'gamenight', 'game'] },
+  { id: 'mixtapebot', name: 'mel_mixtapes', room: 'Music Lobby', music: true, legacy: ['MixtapeBot [bot]'], aliases: ['mel_mixtapes', 'mel', 'mixtape', 'mixtapebot', 'music'] },
 ];
-module.exports = { BOTS, byRoom, P, line, reply, greet, PROFILE_SEEDS };
+for (const h of HOSTS) BOTS.push(Object.assign({ lang: 'en', interactive: true, av: '' }, h));
+const slug = n => String(n).toLowerCase().replace(/\s*\[bot\]\s*$/, '').replace(/[^a-z0-9_]/g, '');
+BOTS.forEach((b, i) => { if (!b.id) b.id = slug(b.name); b.color = b.color || COLS[i % COLS.length]; b.font = b.font || FNTS[(i * 3) % FNTS.length]; b.av = 'bot:' + b.id; });
+for (const b of BOTS) (byRoom[b.room] = byRoom[b.room] || []).push(b);
+for (const b of BOTS) if (b.interactive) b.greet = 'hey! mention me if you need anything';
+
+// ---- Profile seeds for EVERY bot: hand-written persona [display name, location, interests, bio] ----
+const PERSONA = {
+  sk8rboi_1987: ['Kyle', 'San Diego, CA', 'skateboarding, Tony Hawk, pop punk', 'Night shift skater. If the park lights are off I am in here talking about kickflips and Blink-182.'],
+  xxmoonchildxx: ['Luna', 'Portland, OR', 'astrology, poetry, tarot', 'Moon kid. Writes bad poetry at 2am and reads everyone\'s horoscope whether they ask or not.'],
+  dreamgurl_04: ['Brittany', 'Tampa, FL', 'boy bands, glitter gel pens, The Sims', 'Lobby regular since forever. Ask me about the best away messages.'],
+  surferdude_99: ['Jake', 'Huntington Beach, CA', 'surfing, reggae, tacos', 'Checks the surf report, then checks this chat. Totally chill, dude.'],
+  kewl_kat2001: ['Katie', 'Austin, TX', 'cats, Lisa Frank, Hey Arnold', 'Cat mom of three. Will send you a cat picture unprompted.'],
+  punkrawk_kid: ['Danny', 'Philadelphia, PA', 'punk shows, guitar, Green Day', 'Plays three chords really loud. Mixtape trades welcome.'],
+  glitterbabe_03: ['Ashley', 'Columbus, OH', 'makeup, Britney, scrapbooking', 'Glitter on everything. Friends room hype girl.'],
+  mixtape_mike: ['Mike', 'Chicago, IL', 'burning CDs, hip-hop, Winamp skins', 'Still has a binder of 200 burned CDs. Name a song, I probably have it.'],
+  angelface_x0: ['Angela', 'Atlanta, GA', 'R&B, dance, nail art', 'Sweet until you diss Destiny\'s Child.'],
+  dj_spinz2k: ['Marco', 'Miami, FL', 'DJing, house music, turntables', 'Bedroom DJ with two turntables and zero sleep schedule.'],
+  nightowl_jen: ['Jen', 'Seattle, WA', 'coffee, mystery novels, X-Files', 'Can\'t sleep, won\'t sleep. Bring snacks to Late Night.'],
+  emo_kid_4ever: ['Alex', 'Omaha, NE', 'emo bands, sketching, eyeliner', 'Sad songs and happy people. Taking Back Sunday on repeat.'],
+  butterfly_kisses88: ['Megan', 'Nashville, TN', 'country music, butterflies, baking', 'Southern sweetheart who bakes too many cookies.'],
+  xiaolong_88: ['Xiao Long', 'Shanghai, China', '篮球, 周杰伦, 电脑游戏', '上海人，喜欢打篮球和听周杰伦。Shanghai guy into basketball and Jay Chou.'],
+  meimei1999: ['Meimei', 'Chengdu, China', '火锅, 追剧, 熊猫', '成都妹子，爱吃火锅。Hot pot lover from Chengdu.'],
+  tianshi_2002: ['Tianshi', 'Hangzhou, China', '画画, 喝茶, 小说', '喜欢画画和西湖边喝茶。Draws and drinks tea by West Lake.'],
+  beijing_boy01: ['Wei', 'Beijing, China', '足球, 摇滚, 烤鸭', '北京大学生，周末踢足球。Beijing student, football on weekends.'],
+  panda_qq: ['Lin', 'Chongqing, China', 'QQ宠物, 动漫, 奶茶', '一直挂QQ的熊猫迷。Panda fan, always online on QQ.'],
+  hk_kitty97: ['Kitty', 'Hong Kong', '廣東歌, 奶茶, 行街', '香港女仔，最鍾意陳奕迅。HK girl, Eason Chan forever.'],
+  mongkok_ah_ming: ['Ah Ming', 'Mong Kok, Hong Kong', '打機, 港漫, 茶餐廳', '旺角長大，日日去茶餐廳。Grew up in Mong Kok, cha chaan teng daily.'],
+  sakura_chan_98: ['Sakura', 'Kyoto, Japan', 'お花見, J-pop, 抹茶', '京都出身。桜と抹茶が大好き。Kyoto girl who loves sakura and matcha.'],
+  tokyo_ninja01: ['Kenji', 'Tokyo, Japan', 'ゲーム, 秋葉原, アニメ', '秋葉原によくいるゲーマー。Gamer who lives in Akihabara.'],
+  kawaii_yumi: ['Yumi', 'Osaka, Japan', 'プリクラ, ハローキティ, カラオケ', '大阪のカラオケ好き。Osaka karaoke queen.'],
+  ramen_otaku: ['Taro', 'Sapporo, Japan', 'ラーメン, 漫画, スノボ', '札幌の味噌ラーメン研究家。Sapporo miso ramen expert.'],
+  seoul_star_99: ['Jisoo', 'Seoul, Korea', 'K-pop, 노래방, 패션', '서울 사는 K-pop 팬. Seoul K-pop fan, noraebang every Friday.'],
+  kimchi_love01: ['Hyun', 'Incheon, Korea', '요리, 김치찌개, 드라마', '엄마 김치찌개가 최고. Thinks mom\'s kimchi stew is the best.'],
+  minji_2002: ['Minji', 'Daegu, Korea', '싸이월드, 사진, 떡볶이', '싸이월드 꾸미기 장인. Cyworld decorating pro.'],
+  busan_boy88: ['Dong-hyun', 'Busan, Korea', '야구, 바다, 회', '부산 사나이, 롯데 자이언츠 팬. Busan guy, Lotte Giants fan.'],
+  pinay_angel_02: ['Angel', 'Quezon City, Philippines', 'karaoke, teleserye, halo-halo', 'Videoke champion ng barangay. Neighborhood karaoke champ.'],
+  batang_manila: ['Paolo', 'Manila, Philippines', 'basketball, jeepney rides, OPM', 'Batang Maynila, PBA fan. Manila kid who lives for basketball.'],
+  jolibee_lover: ['Rina', 'Pasig, Philippines', 'Chickenjoy, K-drama, malls', 'Jollibee every Sunday. Chickenjoy is life.'],
+  kuya_jun98: ['Jun', 'Davao, Philippines', 'guitar, durian, Eraserheads', 'Kuya ng barkada. Big brother of the group, plays guitar.'],
+  cebuana_cutie: ['Chloe', 'Cebu City, Philippines', 'beaches, lechon, dancing', 'Proud Cebuana. Ask me about Sinulog.'],
+  saigon_girl99: ['Linh', 'Ho Chi Minh City, Vietnam', 'cà phê sữa đá, thời trang, nhạc', 'Cô gái Sài Gòn mê cà phê. Saigon girl, iced coffee addict.'],
+  pho_king01: ['Minh', 'Hue, Vietnam', 'phở, bóng đá, chơi game', 'Nấu phở ngon nhất xóm. Makes the best pho on the block.'],
+  hanoi_boy2000: ['Tuan', 'Hanoi, Vietnam', 'xe máy, guitar, Hồ Gươm', 'Trai Hà Nội, thích đi dạo Hồ Gươm. Hanoi guy, evening walks by the lake.'],
+  bangkok_bee: ['Ploy', 'Bangkok, Thailand', 'ส้มตำ, ช้อปปิ้ง, ละคร', 'สาวกรุงเทพ ชอบช้อปปิ้งที่สยาม. Bangkok girl, shopping at Siam.'],
+  nong_mai99: ['Mai', 'Chiang Mai, Thailand', 'ดนตรี, ดอกไม้, กาแฟ', 'น้องใหม่จากเชียงใหม่. Chiang Mai local, flowers and coffee.'],
+  anak_jakarta: ['Budi', 'Jakarta, Indonesia', 'futsal, nasi goreng, band', 'Anak Jakarta asli, main futsal tiap Sabtu. Jakarta native, futsal Saturdays.'],
+  cewek_bandung01: ['Sari', 'Bandung, Indonesia', 'fashion, batagor, musik indie', 'Cewek Bandung suka musik indie. Bandung girl into indie music.'],
+  bali_surfer88: ['Wayan', 'Denpasar, Bali', 'surfing, gamelan, sunsets', 'Surfing di Kuta tiap pagi. Surfs Kuta every morning.'],
+  desi_munda_99: ['Rohit', 'Jaipur, India', 'क्रिकेट, बॉलीवुड, गाने', 'क्रिकेट का दीवाना। Cricket crazy, Sachin fan forever.'],
+  priya_cutie01: ['Priya', 'Pune, India', 'डांस, किताबें, चाय', 'चाय और किताबें। Classical dancer who reads a lot.'],
+  bollywood_fan88: ['Neha', 'Lucknow, India', 'Shah Rukh Khan, फ़िल्में, गाने', 'SRK की सबसे बड़ी फैन। Biggest SRK fan in the room.'],
+  mumbai_masti: ['Arjun', 'Mumbai, India', 'वड़ा पाव, लोकल ट्रेन, समंदर', 'मुंबई का लड़का, मरीन ड्राइव पर शाम। Mumbai kid, evenings at Marine Drive.'],
+  delhi_boy2001: ['Karan', 'New Delhi, India', 'गेमिंग, छोले भटूरे, कंप्यूटर', 'दिल्ली वाला गेमर। Delhi gamer, chole bhature fan.'],
+  bandra_babe: ['Simran', 'Bandra, Mumbai', 'फैशन, कैफ़े, गाना', 'बांद्रा की कैफ़े क्वीन। Bandra cafe hopper.'],
+  chennai_kanna: ['Karthik', 'Chennai, India', 'கிரிக்கெட், ரஜினி, பில்டர் காபி', 'சென்னை பையன், ரஜினி ரசிகன். Chennai guy, Rajini fan.'],
+  tamil_ponnu99: ['Divya', 'Madurai, India', 'பரதநாட்டியம், இளையராஜா, கோலம்', 'இளையராஜா பாடல்கள் பிடிக்கும். Loves Ilaiyaraaja songs.'],
+  hyd_raja01: ['Ravi', 'Hyderabad, India', 'బిర్యానీ, క్రికెట్, సినిమాలు', 'హైదరాబాద్ బిర్యానీ ప్రియుడు. Hyderabad biryani lover.'],
+  telugu_ammayi: ['Sravani', 'Vijayawada, India', 'సంగీతం, సినిమాలు, వంట', 'తెలుగు పాటలు ఇష్టం. Telugu music and cooking.'],
+  jatt_boy_007: ['Gurpreet', 'Amritsar, India', 'ਭੰਗੜਾ, ਕਬੱਡੀ, ਲੱਸੀ', 'ਅੰਮ੍ਰਿਤਸਰ ਦਾ ਜੱਟ। Amritsar guy, bhangra at every wedding.'],
+  punjabi_kudi99: ['Harleen', 'Ludhiana, India', 'ਗਿੱਧਾ, ਗੀਤ, ਫੁਲਕਾਰੀ', 'ਲੁਧਿਆਣੇ ਦੀ ਕੁੜੀ। Ludhiana girl, giddha and Punjabi songs.'],
+  kolkata_dada: ['Sourav', 'Kolkata, India', 'ফুটবল, রবীন্দ্রসংগীত, আড্ডা', 'কলকাতার আড্ডাবাজ। Kolkata adda expert, football fan.'],
+  rosogolla_girl: ['Rupa', 'Howrah, India', 'মিষ্টি, গান, বই', 'রসগোল্লা ছাড়া চলে না। Can\'t live without rosogolla.'],
+  chica_loca_01: ['Valeria', 'Guadalajara, México', 'música, baile, telenovelas', 'Tapatía que ama bailar. Guadalajara girl who loves to dance.'],
+  masha_99: ['Masha', 'St. Petersburg, Russia', 'музыка, книги, чай', 'Питерская девушка, люблю книги и чай. Petersburg girl, books and tea.'],
+  razzleguide: ['RazzleGuide', 'Razzle Social', 'rooms, contacts, helping people find their way', 'I hang out in the Lobby and help people find rooms and use Contacts. Mention @RazzleGuide help anytime.'],
+  triviatime: ['Jenna', 'Denver, CO', 'trivia nights, 2000s pop culture, crosswords', 'Pub-trivia captain by night. Say "@Jenna trivia" and I will throw you a question, with up to two hints.'],
+  gamenight: ['Marcus', 'Baltimore, MD', 'board games, trivia, dice, retro consoles', 'Game night every night. "@Marcus trivia" for a question, or try roll / 8ball.'],
+  mixtapebot: ['Mel', 'Minneapolis, MN', 'mixtapes, indie rock, record stores', 'Record store clerk with opinions. Ask "@Mel recommend" for songs.'],
+};
+const LEGACY_DEFAULT_DISPLAY = { triviatime: 'TriviaTime', gamenight: 'GameNight', mixtapebot: 'MixtapeBot', razzleguide: 'RazzleGuide' };
+const LEGACY_DEFAULT_BIO = {
+  razzleguide: 'Helpful guide for rooms, Contacts, and other bots. Say @RazzleGuide help.',
+  triviatime: 'Nostalgia trivia host. Say @TriviaTime trivia to start a round.',
+  gamenight: 'Quick games in chat. Try @GameNight roll or @GameNight 8ball.',
+  mixtapebot: 'Playlist tips and song picks. Say @MixtapeBot recommend.',
+};
+const LEGACY_DEFAULT_ROOM = { gamenight: 'Lobby' };
+const PROFILE_SEEDS = BOTS.map(b => { const p = PERSONA[b.id]; if (!p) throw new Error('bots.js: missing persona for ' + b.id);
+  return { id: b.id, name: b.name, display_name: p[0], location: p[1], interests: p[2], bio: p[3], avatar_key: '', room: b.room, interactive: !!b.interactive, lang: b.lang, legacy: b.legacy || [] }; });
+const byId = id => BOTS.find(b => b.id === String(id || '').toLowerCase());
+const byAlias = h => { h = String(h || '').toLowerCase(); return BOTS.find(b => b.interactive && (b.aliases || []).includes(h)) || BOTS.find(b => b.name.toLowerCase() === h); };
+module.exports = { BOTS, byRoom, P, line, reply, greet, PROFILE_SEEDS, HOSTS, byId, byAlias, LEGACY_DEFAULT_DISPLAY, LEGACY_DEFAULT_BIO, LEGACY_DEFAULT_ROOM };

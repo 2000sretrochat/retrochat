@@ -71,18 +71,11 @@ test('shared email allowlist: only zainy + zainyochka may share zainyochka@gmail
   }
 });
 
-test('interactive bot profile seeds and avatar assets exist; no bot passwords', () => {
+test('every bot has a profile seed; no bot passwords; no "[bot]" suffix', () => {
   const { PROFILE_SEEDS, BOTS } = require('../bots');
-  assert.equal(PROFILE_SEEDS.length, 4);
-  const keys = PROFILE_SEEDS.map(b => b.avatar_key).sort();
-  assert.deepEqual(keys, ['gamenight', 'mixtapebot', 'razzleguide', 'triviatime']);
-  for (const b of PROFILE_SEEDS) {
-    const f = path.join(root, 'public', 'bot-avatars', b.avatar_key + '.svg');
-    assert.ok(fs.existsSync(f), 'missing avatar ' + b.avatar_key);
-    assert.equal('password' in b, false);
-    assert.equal('pw' in b, false);
-  }
-  assert.ok(BOTS.some(b => b.interactive && b.name.includes('[bot]')));
+  assert.equal(PROFILE_SEEDS.length, BOTS.length);
+  for (const b of PROFILE_SEEDS) { assert.equal('password' in b, false); assert.equal('pw' in b, false); }
+  assert.equal(BOTS.some(b => /\[bot\]/i.test(b.name)), false);
   const src = fs.readFileSync(path.join(root, 'master.js'), 'utf8') + fs.readFileSync(path.join(root, 'master.html'), 'utf8');
   assert.equal(/master password for bots|login as (the )?bots? with/i.test(src), false);
   assert.match(src, /no login passwords|not.*login accounts|There is no universal bot password/i);
