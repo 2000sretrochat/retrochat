@@ -194,11 +194,12 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
     <h2 id="room-entry-title">Join a room</h2>
     <div id="who"><p>Choose a guest screen name for this visit. <a href="/?chat=1" data-chat-signin>Sign in</a> or <a href="/?chat=1&amp;signup=1" data-chat-signin>sign up</a>.</p></div>
     <div class="room-entry-actions">
-      <label id="nmw" for="nm">Guest screen name<input type="text" id="nm" maxlength="20" autocomplete="off"></label>
-      <button type="button" id="go">Continue as guest</button>
+      <label id="nmw" for="nm">Guest screen name<input type="text" id="nm" maxlength="20" autocomplete="off" aria-describedby="guest-room-selection"></label>
+      <button type="button" id="go" hidden>Enter Chat</button>
       <label id="incl" style="display:none"><input type="checkbox" id="incq"> Enter incognito</label>
       <button type="button" id="mk" disabled title="Sign in to create a room">Create room</button>
     </div>
+    <p id="guest-room-selection" aria-live="polite"></p>
     <div id="err" role="status"></div>
     <h3 class="room-chooser-title">Room directory</h3>
     <div id="rlist"></div>
@@ -261,7 +262,7 @@ const savePrefs=()=>localStorage.rcPrefs=JSON.stringify(prefs);
 const escT=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const smile=t=>RCSmileys.replace(t);
 const NCOL=['#c0392b','#0033A0','#8e44ad','#16a085','#d35400','#2c3e50','#27ae60','#b0186b'];const ncol=n=>NCOL[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%NCOL.length];
-fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;$('mk').disabled=!acct;$('mk').title=acct?'Create your own room':'Sign in to create a room';loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
+fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;$('go').hidden=!acct;syncRoomEntry();$('mk').disabled=!acct;$('mk').title=acct?'Create your own room':'Sign in to create a room';loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
  if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{});
 document.addEventListener('click', event => {
  const link = event.target.closest('[data-chat-signin]');
@@ -291,7 +292,19 @@ document.querySelector('.site-sidebar').addEventListener('click', event => {
  if (acct) login();
  else loadRooms();
 });
+function syncRoomEntry() {
+ const summary = $('guest-room-selection');
+ summary.hidden = Boolean(acct);
+ if (!acct) {
+  const text = room ? 'You’ll enter ' + room + ' as a guest.' : 'Select a room below to continue as a guest.';
+  if (summary.textContent !== text) summary.textContent = text;
+ }
+ document.querySelectorAll('#rlist [data-guest-join]').forEach(button => {
+  button.hidden = Boolean(acct) || button.dataset.guestJoin !== room;
+ });
+}
 function highlightFeaturedRoom(){
+ syncRoomEntry();
  const featured = Array.from(document.querySelectorAll('[data-featured]'));
  featured.forEach(link => link.toggleAttribute('data-selected', link.dataset.featured===room));
  featured.forEach(link => {
@@ -308,7 +321,7 @@ function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=
   <span class="live-room-icon" aria-hidden="true">${YBrowse.icon(r,22)||'▦'}</span>
   <span class="live-room-copy"><strong>${escT(r.name)}</strong>${r.topic?`<span class="live-room-topic">${escT(r.topic)}</span>`:''}</span>
   <span class="live-room-count">${r.count} in room${r.cams?` · ${r.cams} on cam`:''} ${YProf.badge(r.rating)}</span>
- </button>${acct?YBrowse.star(r):''}</div>`;
+ </button>${acct?YBrowse.star(r):`<button type="button" class="guest-room-join" data-guest-join="${escT(r.name)}" aria-label="Continue as guest to ${escT(r.name)}" hidden>Continue as guest</button>`}</div>`;
  const lists=[['top','Top Rooms'],['all','Browse Rooms']];
  if(acct)lists.push(['mine','My Rooms']);
  const tabs=`<div class="room-directory-toolbar"><div class="room-directory-tabs" aria-label="Room lists">${lists.map(([key,label])=>`<button type="button" data-rt="${key}" aria-pressed="${rTab===key}">${label}</button>`).join('')}</div><span class="yonline"></span></div>`;
@@ -328,6 +341,7 @@ function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=
   const matching=rooms.filter(r=>[r.name,r.topic,r.cat].some(value=>String(value||'').toLowerCase().includes(query)));
   $('rlist').innerHTML=tabs+(matching.length?YBrowse.tree(matching,acct&&String(acct.name||acct).toLowerCase(),rr,query,''):'<p class="room-list-note">No matching rooms.</p>')+(adultOk||query?'':'<button type="button" id="show18">Show R-rated rooms (18+)</button>');
  }
+ syncRoomEntry();
  document.querySelectorAll('[data-rt]').forEach(e=>e.onclick=ev=>{ev.preventDefault();rTab=e.dataset.rt;loadRooms()});
  document.querySelectorAll('#rlist [data-fav]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();if(!acct)return;const r=rooms.find(x=>x.name==e.dataset.fav);YBrowse.toggle(r.name,!r.fav,true).then(ok=>ok?loadRooms():alert('Could not save favorite.'))});
  $('show18')&&($('show18').onclick=e=>{e.stopPropagation();ask18(loadRooms)});
@@ -354,11 +368,15 @@ let INC=false,ANN=false;const mpost=b=>fetch('/api/master/prefs',{method:'POST',
 function incUI(){const a=$('mInc'),b=$('mAnn');if(a)a.textContent=(INC?'\u2713 ':'')+'Incognito';if(b)b.textContent=(ANN?'\u2713 ':'')+'Announce my entry';let t=$('incTag');if(!t&&$('mcon')){t=document.createElement('span');t.id='incTag';t.style.cssText='align-self:center;font-size:11px;opacity:.7;padding:0 6px';$('mcon').after(t)}if(t)t.textContent=INC?'(incognito)':''}
 S.on('inc',d=>{INC=d.on;ANN=d.announce;incUI()});
 S.on('incwarn',d=>{if(confirm("You're incognito \u2014 send visibly?"))S.emit('say',{text:d.text,...st,vis:true})});
-function login(){if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;if(!room)return $('err').textContent='Pick a room from the list first.';S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error)return $('err').textContent=r.error;if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const a=document.createElement('button');a.onclick=()=>window.openMasterConsole&&openMasterConsole();a.id='mcon';a.className='hb mst';a.title='Master Console (only you can see this)';a.innerHTML=YI.svg('shield',18)+'<span>Master</span>';$('hmst').appendChild(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon class=mst>Master Console</div><div id=mMadm class=mst>Room Admin Console (master)</div><hr>');$('mMadm').onclick=()=>openMod(selName);$('mAbout').insertAdjacentHTML('afterend','<div id=mSite class=mst>Site Moderator Key...</div>');$('mSite').onclick=()=>{const k=prompt('Site moderator key:');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMadm').insertAdjacentHTML('afterend','<div id=mInc class=mst>Incognito</div><div id=mAnn class=mst>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
+function login(){if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;if(!room)return $('err').textContent='Pick a room from the list first.';if(!acct&&!$('nm').value.trim()){$('err').textContent='Enter a guest screen name to join '+room+'.';$('nm').focus();return}S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error)return $('err').textContent=r.error;if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const a=document.createElement('button');a.onclick=()=>window.openMasterConsole&&openMasterConsole();a.id='mcon';a.className='hb mst';a.title='Master Console (only you can see this)';a.innerHTML=YI.svg('shield',18)+'<span>Master</span>';$('hmst').appendChild(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon class=mst>Master Console</div><div id=mMadm class=mst>Room Admin Console (master)</div><hr>');$('mMadm').onclick=()=>openMod(selName);$('mAbout').insertAdjacentHTML('afterend','<div id=mSite class=mst>Site Moderator Key...</div>');$('mSite').onclick=()=>{const k=prompt('Site moderator key:');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMadm').insertAdjacentHTML('afterend','<div id=mInc class=mst>Incognito</div><div id=mAnn class=mst>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
  me=r.name;try{drawQ()}catch(e){};$('login').style.display='none';$('brand').style.display='none';document.body.classList.add('chat-room-active');$('chat').style.display='flex';
  $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" title="${c=='#8b5cf6'?'Purple':c}" style="background:${c}"></span>`).join('');
  document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;$('msg').style.color=st.color;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
  $('msg').focus();});}
+$('rlist').addEventListener('click', event => {
+ const button = event.target.closest('[data-guest-join]');
+ if (!acct && button && button.dataset.guestJoin === room) login();
+});
 $('go').onclick=login;$('nm').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();login()}});
 // smileys + text style
 $('smb').innerHTML=RCSmileys.html(':)');

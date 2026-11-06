@@ -275,3 +275,19 @@ body.chat-room-active #social-chat-layout { display: none; }
   inset: 98px 18px 12px 260px !important;
  }
 }
+
+#login [hidden] { display: none !important; }
+#guest-room-selection { margin: 8px 0 0; color: var(--ink); font-weight: 650; line-height: 1.5; }
+#login #rlist .guest-room-join {
+ flex: 0 0 auto;
+ min-height: 36px;
+ padding: 6px 10px;
+ border-radius: 7px;
+ background: #004990 !important;
+ color: #fff !important;
+ white-space: nowrap;
+}
+@media (max-width: 580px) {
+ #login .live-room-card:has(.guest-room-join:not([hidden])) { flex-wrap: wrap; }
+ #login #rlist .live-room-card:has(.guest-room-join:not([hidden])) .room { flex-basis: 100%; }
+}
