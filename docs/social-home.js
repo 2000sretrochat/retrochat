@@ -1,8 +1,7 @@
 const liveMessenger = 'https://retrochat-izzg.onrender.com/';
 const liveRooms = liveMessenger + 'rooms.html';
 const socialBase = new URL('./', document.baseURI).pathname;
-// Set to a public HTTPS installer URL when the release is ready.
-const messengerInstallerUrl = '';
+const messengerInstallerUrl = 'https://github.com/2000sretrochat/retrochat/releases/download/v13.5.0/YappChat-Setup.exe';
 const joinSocialUrl = liveMessenger + '?chat=1&signup=1&social=pages';
 const signInSocialUrl = liveMessenger + '?chat=1&social=pages';
 const previewSignedIn = false;
