@@ -1,4 +1,5 @@
 const EM = require('./emails');
+const mailer = require('./mail');
 // Accounts (HTTP) + Messenger (Socket.IO) for YappChat.
 const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db'), geo = require('./geo');
 const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{2,19}$/, STATUSES = ['available', 'busy', 'away', 'brb', 'invisible'];
@@ -61,7 +62,12 @@ function http(app, express, hooks = {}) { H = hooks;
     try {
       const r = await db.q('insert into users(name,name_lc,pw,email,email_norm) values($1,$2,$3,$4,$5) returning id', [name, name.toLowerCase(), hash, email ? email.trim() : null, email ? EM.norm(email) : null]);
       await db.q("insert into groups(owner,name) values($1,'Friends') on conflict do nothing", [r[0].id]);
-      await newSession(req, res, r[0].id, !!remember); H.seedMaster && await H.seedMaster(r[0].id, name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'signup'); res.json({ ok: true, name });
+      await newSession(req, res, r[0].id, !!remember); H.seedMaster && await H.seedMaster(r[0].id, name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'signup');
+      if (email) {
+        const site = (process.env.PUBLIC_URL || ((req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.headers.host));
+        mailer.sendWelcome(email.trim(), name, site).catch(e => console.error('welcome mail', e.message));
+      }
+      res.json({ ok: true, name });
     } catch (e) { if (e.code === '23505') return res.status(409).json({ error: 'That screen name is already taken.' }); console.error(e); res.status(500).json({ error: 'Sign up failed.' }); }
   });
   app.post('/api/login', async (req, res) => {
