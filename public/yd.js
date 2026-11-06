@@ -8,9 +8,9 @@
  html.yd #yfoot,html.yd #ad-slot{display:none!important}
  html.yd body>.win:not(.im):not(#brw),html.yd body>#mwin{position:fixed!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important}
  html.yd body>.win>.tbar,html.yd body>#mwin>.tbar{display:none!important}
- /* Desktop close (X): deep ink, not Windows red — leaves .err/#c00 validation alone */
- html.yd .wb.x,html.yd .tbar .wb.x,html.yd .tbar .x,html.yd .wctl.x,html.yd.ydpop .wb.x,html.yd.ydpop .tbar .x{background:#003876!important;border-color:#003876!important;color:#fff!important}
- html.yd .tbar .wb.x:hover,html.yd .tbar .x:hover,html.yd .wctl.x:hover,html.yd.ydpop .tbar .wb.x:hover,html.yd.ydpop .tbar .x:hover{background:#002a5c!important;color:#fff!important}
+ /* In-app window X: neutral controls in desktop; keep Windows' red hover convention */
+ html.yd .wb.x,html.yd .tbar .wb.x,html.yd .tbar .x,html.yd .wctl.x,html.yd.ydpop .wb.x,html.yd.ydpop .tbar .x{background:var(--card,#fff)!important;border-color:#aab4c2!important;color:#424950!important}
+ html.yd .tbar .wb.x:hover,html.yd .tbar .x:hover,html.yd .wctl.x:hover,html.yd.ydpop .tbar .wb.x:hover,html.yd.ydpop .tbar .x:hover{background:var(--bg,#eef5fc)!important;color:#424950!important}
  html.yd.ydpop .im,html.yd.ydpop #brw{position:fixed!important;display:flex!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
  html.yd.ydpop .im>.tbar,html.yd.ydpop #brw>.tbar{display:none!important}html.yd.ydpop .im .log{flex:1;height:auto!important}
  .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 12px system-ui,Segoe UI,Arial;color:#00205B;padding:0 10px 0 6px;align-self:center;white-space:nowrap}html.yd #menu{display:flex;align-items:center;justify-content:flex-start;padding-left:4px!important}
