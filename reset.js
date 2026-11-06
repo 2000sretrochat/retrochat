@@ -1,16 +1,16 @@
 // Password reset: token link (1 hour). Email goes out via Resend when RESEND_API_KEY + MAIL_FROM are set;
 // otherwise masters can generate a reset link in Master Control.
 const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db');
+const mailer = require('./mail');
 const TTL = 3600e3, sha = t => crypto.createHash('sha256').update(t).digest('hex');
-const enabled = () => !!(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
+const enabled = mailer.enabled;
 const base = req => (process.env.PUBLIC_URL || (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.headers.host).replace(/\/$/, '');
 async function makeLink(req, uid) { const t = crypto.randomBytes(32).toString('base64url'); await db.q('delete from pw_resets where user_id=$1 or expires < now()', [uid]);
   await db.q('insert into pw_resets(token,user_id,expires) values($1,$2,$3)', [sha(t), uid, new Date(Date.now() + TTL)]); return base(req) + '/reset.html?t=' + t; }
-async function send(to, name, link) { const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ from: process.env.MAIL_FROM, to: [to], subject: 'Reset your YappChat password', text: 'Hi ' + name + ',\n\nUse this link within 1 hour to choose a new YappChat password:\n' + link + '\n\nIf you did not ask for this, ignore this email.\n\n- YappChat' }) });
-  if (!r.ok) throw new Error('mail ' + r.status); }
-async function mail(to, subject, text) { const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ from: process.env.MAIL_FROM, to: [to], subject, text }) }); if (!r.ok) throw new Error('mail ' + r.status); }
+async function send(to, name, link) {
+  await mailer.sendMail({ to, subject: 'Reset your YappChat password', text: 'Hi ' + name + ',\n\nUse this link within 1 hour to choose a new YappChat password:\n' + link + '\n\nIf you did not ask for this, ignore this email.\n\n- YappChat' });
+}
+async function mail(to, subject, text, html) { await mailer.sendMail({ to, subject, text, html }); }
 const verifyOn = () => enabled() && process.env.EMAIL_VERIFY !== 'off';
 const hits = new Map(), vhits = new Map();
 module.exports = function (app, express) {
