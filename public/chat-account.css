@@ -105,3 +105,40 @@
 @media (max-width: 799px) {
  .room-signin .auth-site-main { padding-top: 0; }
 }
+
+.auth-heading { display: contents; }
+.auth-chat-art { display: none; }
+.room-signin #social-chat-header { border-bottom: 0; }
+.room-signin .auth-site-main {
+ display: grid;
+ grid-template-columns: minmax(0, 460px) minmax(0, 420px);
+ align-items: start;
+ gap: clamp(24px, 5vw, 72px);
+ padding: clamp(18px, 3vw, 42px) clamp(14px, 3vw, 38px) 48px;
+}
+.room-signin #mwin { width: 100% !important; }
+.room-signin #signin {
+ padding: 16px clamp(12px, 4vw, 38px) 22px !important;
+ gap: 12px !important;
+}
+.room-signin .auth-heading {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 10px;
+ width: 100%;
+}
+.room-signin .auth-heading .lgbig { display: flex; }
+.room-signin .auth-heading .lgbig img { width: 46px; height: 46px; }
+.room-signin #chat-signin-intro { width: 100%; text-align: center; margin: 0 0 10px; }
+.room-signin #fUp { gap: 8px !important; }
+.room-signin #signin input:not([type=checkbox]) { max-width: 100%; }
+.room-signin .auth-back { width: 100%; text-align: center; margin-top: 8px; }
+.room-signin #chat-signin-footer { width: 100%; justify-content: center; }
+.room-signin #foot { justify-content: center; padding: 10px 18px 18px; }
+.room-signin .auth-chat-art { display: block; align-self: start; margin-top: 42px; }
+.auth-chat-art svg { display: block; width: 100%; height: auto; }
+@media (max-width: 1030px) {
+ .room-signin .auth-site-main { grid-template-columns: minmax(0, 460px); justify-content: center; }
+ .room-signin .auth-chat-art { display: none; }
+}
