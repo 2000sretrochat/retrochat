@@ -240,15 +240,15 @@ app.get('/bot-av/:id', async (req, res) => { const b = BOTMOD.byId(req.params.id
 app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.name || ''), lc = n.toLowerCase(); res.set('Cache-Control', 'no-store');
   { const b = BOTS.find(x => x.name.toLowerCase() === lc || (x.legacy || []).some(y => y.toLowerCase() === lc)); if (b) return res.json(await botProfile(b)); }
   if (db.status().ready) { try {
-    const r = (await db.q('select name,avatar,display_name,age,location,bio,interests,created from users where name_lc=$1', [lc]))[0];
+    const r = (await db.q('select name,avatar,display_name,age,location,bio,interests,sex,profile_status,created from users where name_lc=$1', [lc]))[0];
     if (r) { const v = await acc.userFromCookie(req.headers.cookie); let hide = false; if (v && v.name.toLowerCase() !== lc) { const [vu] = await db.q('select is_master from users where id=$1', [v.id]); const [tu] = await db.q('select id from users where name_lc=$1', [lc]); hide = !vu?.is_master && await blockedBy(tu.id, v.id); }
-    return res.json({ name: r.name, avatar: r.avatar, displayName: r.display_name, age: r.age, location: r.location, bio: r.bio, interests: r.interests, memberSince: r.created, online: !hide && (acc.isOnline(r.name) || roomVisible(lc)) }); } } catch { } }
+    return res.json({ name: r.name, avatar: r.avatar, displayName: r.display_name, age: r.age, location: r.location, bio: r.bio, interests: r.interests, sex: r.sex, profileStatus: r.profile_status, memberSince: r.created, online: !hide && (acc.isOnline(r.name) || roomVisible(lc)) }); } } catch { } }
   const id = users.get(lc), x = id && io.sockets.sockets.get(id); if (x && x.data.guest) return res.json({ name: x.data.name, guest: true, online: true, room: x.data.room });
   res.status(404).json({ error: 'No such user.' }); });
 app.post('/api/profile', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in to edit your profile.' });
   const b = req.body || {}; let age = b.age === '' || b.age == null ? null : parseInt(b.age, 10);
   if (age !== null && !(age >= 18 && age <= 120)) return res.status(400).json({ error: 'Age must be between 18 and 120 (or left blank). YappChat is for adults 18+.' });
-  await db.q('update users set display_name=$2, age=$3, location=$4, bio=$5, interests=$6 where id=$1', [u.id, PCLEAN(b.displayName, 30), age, PCLEAN(b.location, 50), PCLEAN(b.bio, 300), PCLEAN(b.interests, 150)]);
+  await db.q('update users set display_name=$2, age=$3, location=$4, bio=$5, interests=$6, sex=coalesce($7,sex), profile_status=coalesce($8,profile_status) where id=$1', [u.id, PCLEAN(b.displayName, 30), age, PCLEAN(b.location, 50), PCLEAN(b.bio, 300), PCLEAN(b.interests, 150), b.sex == null ? null : PCLEAN(b.sex, 40), b.profileStatus == null ? null : PCLEAN(b.profileStatus, 70)]);
   res.json({ ok: true }); });
 // ---- site admin: room ratings / closing (ADMIN_KEY) ----
 app.get('/api/admin/rooms', (req, res) => { if (!keyOk(req.get('x-admin-key'))) return res.status(401).json({ error: 'Unauthorized' }); res.json(roomList(true).map(r => ({ ...r, official: OFFICIAL.has(r.name) }))); });

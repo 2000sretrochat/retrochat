@@ -395,7 +395,7 @@ main:has(.bot-space) .bot-space { margin-top: 0; }
 
 main:has(.owner-profile-view) > .intro { display: none; }
 .owner-profile-view { margin-top: 0; }
-.owner-profile-view .space-card .handle { font-size: 19px; font-weight: 750; color: var(--space-ink, #173b60); }
+.owner-profile-view .space-card .handle { font-size: 22px; font-weight: 750; color: var(--space-ink, #173b60); }
 .owner-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
 .owner-details dt { font-size: 11px; color: #476986; }
 .owner-details dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
@@ -495,12 +495,12 @@ body > .app > .social-footer {
 
 /* Shared page introductions from the user's chosen ChatGPT layout. */
 .intro > div > .label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: .06em;
 }
 
 .intro #subheading {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.45;
 }
