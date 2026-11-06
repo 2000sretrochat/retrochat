@@ -9,7 +9,7 @@
  html.yd.ydpop .im,html.yd.ydpop #brw{position:fixed!important;display:flex!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
  html.yd.ydpop .im>.tbar,html.yd.ydpop #brw>.tbar{display:none!important}html.yd.ydpop .im .log{flex:1;height:auto!important}
  .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 13px system-ui,Segoe UI,Arial;color:#00205B;padding:0 10px 0 6px;align-self:center}html.yd #menu{display:flex;align-items:center}`;
- const addLogo=()=>document.querySelectorAll('#menu').forEach(m=>{if(m.querySelector('.ydlogo')||!window.YI)return;const b=document.createElement('span');b.className='ydlogo';b.innerHTML=YI.logo(22)+'<span>YappChat</span>';m.prepend(b)});document.readyState=='loading'?document.addEventListener('DOMContentLoaded',addLogo):setTimeout(addLogo);
+ const addLogo=()=>document.querySelectorAll('#menu').forEach(m=>{if(m.querySelector('.ydlogo')||!window.YI)return;const b=document.createElement('span');b.className='ydlogo';b.innerHTML='<img src="/razzle-social.svg" width="22" height="22" alt="" style="display:block">'+'<span>Razzle</span>';m.prepend(b)});document.readyState=='loading'?document.addEventListener('DOMContentLoaded',addLogo):setTimeout(addLogo);
  const st=document.createElement('style');st.id='ydcss';st.textContent=css;document.head.appendChild(st);
  // Move an element into its own native window. It keeps running in this page (same socket, same session).
  window.ydPop=function(el,name,w,h,title,onClose){let pw=null;try{pw=window.open('about:blank',name,'width='+w+',height='+h)}catch(e){}if(!pw)return null;
