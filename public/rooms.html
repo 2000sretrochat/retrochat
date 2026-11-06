@@ -195,7 +195,7 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
     <h2 id="room-entry-title">Join a room</h2>
     <div id="who"><p>Choose a guest screen name for this visit. <a href="/?chat=1" data-chat-signin>Sign in</a> or <a href="/?chat=1&amp;signup=1" data-chat-signin>sign up</a>.</p></div>
     <div class="room-entry-actions">
-      <label id="nmw" for="nm">Guest screen name<input type="text" id="nm" placeholder="Type your screen name" maxlength="20" autocomplete="off" aria-describedby="guest-room-selection"></label>
+      <label id="nmw" for="nm">Guest screen name<input type="text" id="nm" placeholder="Type your screen name" maxlength="20" autocomplete="off" aria-describedby="guest-name-rules guest-room-selection"><small id="guest-name-rules">3–20 characters. Start with a letter. Spaces, hyphens, and underscores are allowed.</small></label>
       <button type="button" id="go" hidden>Enter Chat</button>
       <label id="incl" style="display:none"><input type="checkbox" id="incq"> Enter incognito</label>
       <button type="button" id="mk" hidden disabled title="Create your own room">Create room</button>
