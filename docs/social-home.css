@@ -246,7 +246,7 @@ body:has(#live-chat-view) > .app > .right { display: none; }
 .chat-messenger-card .eyebrow { font-size: 10px; letter-spacing: .08em; }
 .intro #heading {
   color: #00205b;
-  font-size: clamp(20px, 2.1vw, 27px);
+  font-size: clamp(19px, 2vw, 24px);
   font-weight: 700;
   letter-spacing: normal;
   line-height: 1.2;
@@ -491,4 +491,16 @@ body > .app > .social-footer {
     grid-row: 3;
     padding-inline: 0;
   }
+}
+
+/* Shared page introductions from the user's chosen ChatGPT layout. */
+.intro > div > .label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+.intro #subheading {
+  font-size: 15px;
+  line-height: 1.45;
 }
