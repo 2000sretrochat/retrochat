@@ -358,7 +358,7 @@ io.on('connection', s => {
       if (profanity.test(compactName) || nameWords.some(word => vulgarWord.test(word)) || vulgarWord.test(compactName)) {
         return cb({ error: 'Choose a guest screen name without profanity or vulgar language.' });
       }
-      if (/^(admin|administrator|moderator|mod|support|system|yappchat|staff|root)/i.test(name) || isBot(name) || MASTER.reserved(name)) return cb({ error: 'That screen name is not available.' });
+      if (/^(admin|administrator|moderator|mod|support|system|yappchat|razzle|staff|root)/i.test(name) || isBot(name) || MASTER.reserved(name)) return cb({ error: 'That screen name is not available.' });
       if (db.status().ready) { try { if ((await db.q('select 1 from users where name_lc=$1', [name.toLowerCase()])).length) return cb({ error: 'That screen name belongs to a registered user. Pick another guest name or sign in.' }); } catch { } }
       s.data.guest = true;
     }

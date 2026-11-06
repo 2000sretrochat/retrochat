@@ -2,11 +2,16 @@
 const path = require('path');
 module.exports = function (C) {
   const { app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, upd, history, closeRoom, setRating, setTopic, modAct, esc, MICS, setMics, micsOf } = C;
-  const NAMES = [...new Set(String((process.env.MASTER_NAMES || 'yappchat') + ',' + (process.env.MASTER_RESERVED || 'tony,yappchat')).split(',').map(x => x.trim().toLowerCase()).filter(Boolean))];
-  const RESV = String(process.env.MASTER_RESERVED || 'tony,yappchat').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  // Default master screen name is razzle. Env MASTER_NAMES may list legacy names (e.g. yappchat) but those are NOT auto-promoted; is_master in DB is authoritative.
+  const DEFAULT_MASTER = 'razzle';
+  const DEFAULT_RESERVED = 'tony,razzle,yappchat';
+  const splitNames = s => String(s || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  const RESV = [...new Set(splitNames(process.env.MASTER_RESERVED || DEFAULT_RESERVED).concat([DEFAULT_MASTER, 'yappchat']))];
+  // Seedable names: only the default master. Env MASTER_NAMES=yappchat alone is NOT seedable (collision guard); DB is_master remains authoritative.
+  const NAMES = [DEFAULT_MASTER]; // env MASTER_NAMES legacy values are ignored for seeding
   // Demo/example names used in marketing screenshots — blocked for signup and guest, never seeded as masters.
   const EXAMPLE_BLOCKED = ['lumakite', 'pixelorchard', 'mosscomet'];
-  const reserved = n => { const lc = String(n || '').trim().toLowerCase(); return RESV.includes(lc) || EXAMPLE_BLOCKED.includes(lc); };
+  const reserved = n => { const lc = String(n || '').trim().toLowerCase(); return RESV.includes(lc) || EXAMPLE_BLOCKED.includes(lc) || lc === 'razzle' || lc === 'yappchat'; };
   const IPBAN = new Set();
   const ready = () => db.status().ready;
   const q = (...a) => ready() ? db.q(...a) : Promise.resolve([]);
@@ -21,8 +26,10 @@ module.exports = function (C) {
   const PCLEAN = (t, n) => String(t ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 
   async function seedMaster(id, name) { // first time a seeded name is seen, grant; later revokes stick
-    if (!ready() || !NAMES.includes(String(name).toLowerCase())) return;
-    const r = await db.q("insert into kv(k,v) values($1,'1') on conflict do nothing returning k", ['seed:' + String(name).toLowerCase()]);
+    const lc = String(name || '').toLowerCase();
+    // Collision guard: never newly promote a legacy env-configured name that is not the default master identity.
+    if (!ready() || lc !== DEFAULT_MASTER || !NAMES.includes(lc)) return;
+    const r = await db.q("insert into kv(k,v) values($1,'1') on conflict do nothing returning k", ['seed:' + lc]);
     if (r.length) await db.q('update users set is_master=true where id=$1', [id]);
   }
   async function load() {
@@ -127,7 +134,9 @@ module.exports = function (C) {
   app.post('/api/master/create-reserved', express.json(), guard(async (req, res) => { const n = String(req.body?.name || '').trim(), pw = req.body?.password;
     if (!RESV.includes(n.toLowerCase())) return res.status(400).json({ error: 'Only names on the master seed list can be created here.' }); if (typeof pw !== 'string' || pw.length < 8 || pw.length > 100) return res.status(400).json({ error: 'Passwords must be 8-100 characters.' });
     if ((await q('select 1 from users where name_lc=$1', [n.toLowerCase()])).length) return res.status(409).json({ error: 'That account already exists.' });
-    const r = await q('insert into users(name,name_lc,pw) values($1,$2,$3) returning id', [n, n.toLowerCase(), await require('bcryptjs').hash(pw, 12)]); await seedMaster(r[0].id, n); res.json({ ok: true, name: n }); }));
+    const r = await q('insert into users(name,name_lc,pw,is_master) values($1,$2,$3,true) returning id', [n, n.toLowerCase(), await require('bcryptjs').hash(pw, 12)]);
+    await q("insert into kv(k,v) values($1,'1') on conflict do nothing", ['seed:' + n.toLowerCase()]);
+    res.json({ ok: true, name: n }); }));
   app.post('/api/master/reset-link', express.json(), guard(async (req, res, me) => {
     const u = (await q('select id,name,email from users where name_lc=$1', [String(req.body?.name || '').trim().toLowerCase()]))[0]; if (!u) return res.status(404).json({ error: 'No such user.' });
     const link = await C.resetLink(req, u.id); let sent = false;

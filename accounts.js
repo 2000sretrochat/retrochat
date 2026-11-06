@@ -6,7 +6,7 @@ const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{2,19}$/, STATUSES = [
 const AVATARS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sha = t => crypto.createHash('sha256').update(t).digest('hex');
-const RESERVED = /^(admin|administrator|moderator|mod|support|system|yappchat|staff|root|guest)/i;
+const RESERVED = /^(admin|administrator|moderator|mod|support|system|yappchat|razzle|staff|root|guest)/i;
 function parseCookies(h) { const o = {}; String(h || '').split(';').forEach(p => { const i = p.indexOf('='); if (i > 0) o[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim()); }); return o; }
 async function userFromCookie(h) {
   const t = parseCookies(h)[COOKIE]; if (!t || !db.status().ready) return null;

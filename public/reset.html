@@ -34,10 +34,19 @@ if (token) {
   help.textContent = 'Use at least eight characters.';
   form.innerHTML = '<label for="password">New password</label><input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="100"><label for="confirm-password">Confirm password</label><input id="confirm-password" name="confirmation" type="password" autocomplete="new-password" required minlength="8" maxlength="100"><button>Save new password</button>';
 } else {
-  form.innerHTML = '<label for="name">Screen name or email</label><input id="name" name="name" autocomplete="username" maxlength="200" required><button>Send reset link</button>';
   fetch('/api/reset/config').then(r => r.json()).then(config => {
-    if (config.email === false) status.textContent = 'Reset email is currently unavailable. Use Report in a chat room to ask a moderator for a reset link.';
-  }).catch(() => {});
+    if (config.email === false) {
+      document.querySelector('#reset-title').textContent = 'Password reset';
+      help.textContent = 'Email reset is not configured on this site.';
+      form.replaceChildren();
+      status.textContent = 'Ask a site master to create a one-hour reset link from the Master Console, or use Report in a chat room to ask a moderator. This page only accepts a reset link after a master issues one — it does not create or email reset links by itself.';
+    } else {
+      form.innerHTML = '<label for="name">Screen name or email</label><input id="name" name="name" autocomplete="username" maxlength="200" required><button>Send reset link</button>';
+    }
+  }).catch(() => {
+    form.replaceChildren();
+    status.textContent = 'Ask a site master to create a one-hour reset link from the Master Console, or use Report in a chat room to ask a moderator.';
+  });
 }
 form.addEventListener('submit', async event => {
   event.preventDefault();

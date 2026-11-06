@@ -8,7 +8,7 @@ const base = req => (process.env.PUBLIC_URL || (req.headers['x-forwarded-proto']
 async function makeLink(req, uid) { const t = crypto.randomBytes(32).toString('base64url'); await db.q('delete from pw_resets where user_id=$1 or expires < now()', [uid]);
   await db.q('insert into pw_resets(token,user_id,expires) values($1,$2,$3)', [sha(t), uid, new Date(Date.now() + TTL)]); return base(req) + '/reset.html?t=' + t; }
 async function send(to, name, link) {
-  await mailer.sendMail({ to, subject: 'Reset your YappChat password', text: 'Hi ' + name + ',\n\nUse this link within 1 hour to choose a new YappChat password:\n' + link + '\n\nIf you did not ask for this, ignore this email.\n\n- YappChat' });
+  await mailer.sendMail({ to, subject: 'Reset your Razzle Social password', text: 'Hi ' + name + ',\n\nUse this link within 1 hour to choose a new Razzle Social password:\n' + link + '\n\nIf you did not ask for this, ignore this email.\n\n- Razzle Social' });
 }
 async function mail(to, subject, text, html) { await mailer.sendMail({ to, subject, text, html }); }
 const verifyOn = () => enabled() && process.env.EMAIL_VERIFY !== 'off';
@@ -25,13 +25,13 @@ module.exports = function (app, express) {
     const n = (vhits.get(v.r.id) || []).filter(t => Date.now() - t < 3600e3); if (n.length >= 3) return res.status(429).json({ error: 'Too many verification emails. Try again later.' }); n.push(Date.now()); vhits.set(v.r.id, n);
     const t = crypto.randomBytes(32).toString('base64url'); await db.q('delete from email_verify where user_id=$1 or expires < now()', [v.r.id]);
     await db.q('insert into email_verify(token,user_id,expires) values($1,$2,$3)', [sha(t), v.r.id, new Date(Date.now() + 24 * TTL)]);
-    await mail(v.r.email, 'Verify your YappChat email', 'Hi ' + v.r.name + ',\n\nConfirm your email for YappChat with this link (valid 24 hours):\n' + base(req) + '/api/verify?t=' + t + '\n\nIf you didn\'t sign up, ignore this email.');
+    await mail(v.r.email, 'Verify your Razzle Social email', 'Hi ' + v.r.name + ',\n\nConfirm your email for Razzle Social with this link (valid 24 hours):\n' + base(req) + '/api/verify?t=' + t + '\n\nIf you didn\'t sign up, ignore this email.');
     res.json({ ok: true, sent: true }); } catch (e) { console.error('verify send', e.message); res.status(500).json({ error: 'Could not send the email right now.' }); } });
   app.get('/api/verify', async (req, res) => { const t = String(req.query.t || ''); const r = t ? (await db.q('delete from email_verify where token=$1 returning user_id, expires', [sha(t)]).catch(() => []))[0] : null;
     if (!r || new Date(r.expires) < new Date()) return res.redirect('/?verified=0'); await db.q('update users set verified=true where id=$1', [r.user_id]).catch(() => {}); res.redirect('/?verified=1'); });
   app.get('/api/reset/config', (req, res) => res.json({ email: enabled() }));
   app.post('/api/forgot', express.json(), async (req, res) => { const ip = require('./geo').clientIp(req.headers, req.socket.remoteAddress), n = (hits.get(ip) || []).filter(t => Date.now() - t < 3600e3); if (n.length >= 5) return res.status(429).json({ error: 'Too many requests. Try again later.' }); n.push(Date.now()); hits.set(ip, n);
-    if (!enabled()) return res.json({ ok: true, email: false, text: 'Email reset is not available yet. Use the Report button in a chat room to ask a moderator for a reset link.' });
+    if (!enabled()) return res.json({ ok: true, email: false, text: 'Email reset is not available yet. Ask a site master for a one-hour reset link from the Master Console, or use Report in a chat room to ask a moderator.' });
     const k = String(req.body?.name || '').trim().toLowerCase().slice(0, 100); const generic = { ok: true, email: true, text: 'If that account has an email address on file, a reset link is on its way. It expires in 1 hour.' };
     if (!k) return res.json(generic); { const kn = (hits.get('n:' + k) || []).filter(t => Date.now() - t < 3600e3); if (kn.length >= 3) return res.json(generic); kn.push(Date.now()); hits.set('n:' + k, kn); }
     try { const u = (await db.q('select id,name,email from users where name_lc=$1 or lower(email)=$1 limit 1', [k]))[0]; if (u && u.email) await send(u.email, u.name, await makeLink(req, u.id)); } catch (e) { console.error('forgot', e.message); }
