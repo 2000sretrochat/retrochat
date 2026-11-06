@@ -290,7 +290,7 @@ function renderSignedOutHome() {
             <input id="welcome-screen-name" placeholder="yappchat" aria-describedby="welcome-preview-hint" required maxlength="20">
             <label for="welcome-password">Password</label>
             <input id="welcome-password" type="password" aria-describedby="welcome-preview-hint" required maxlength="100">
-            <p id="welcome-preview-hint">Demo only. Use <strong>yappchat</strong> and <strong>razzle-demo</strong>.</p>
+            <p id="welcome-preview-hint">Use your real Razzle account. Demo passwords are disabled.</p>
             <p class="welcome-form-error" role="status"></p>
             <button class="secondary home-cta welcome-signin" type="submit">Sign in to preview</button>
           </form>
@@ -318,11 +318,11 @@ function renderSignedOutHome() {
     const form = event.currentTarget;
     const name = form.querySelector('#welcome-screen-name');
     const password = form.querySelector('#welcome-password');
-    if (name.value.trim().toLowerCase() === 'yappchat' && password.value === 'razzle-demo') {
+    if (false && name.value.trim().toLowerCase() === 'yappchat' && password.value === 'razzle-demo') { // disabled: use live Render auth
       openPreviewAccount();
       return;
     }
-    form.querySelector('.welcome-form-error').textContent = 'Use the demo screen name and password shown above.';
+    form.querySelector('.welcome-form-error').textContent = 'Use your real Razzle screen name and password at retrochat-izzg.onrender.com';
     password.value = '';
     password.focus();
   });

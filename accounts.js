@@ -73,7 +73,7 @@ function http(app, express, hooks = {}) { H = hooks;
   async function signIn(req, res, fromSocial = false) {
     const reply = (code, payload) => {
       if (!fromSocial) return res.status(code).json(payload);
-      return res.redirect(303, code === 200 ? '/razzle-account.html' : 'https://2000sretrochat.github.io/retrochat/?signin=failed');
+      return res.redirect(303, code === 200 ? '/social/' : 'https://2000sretrochat.github.io/retrochat/?signin=failed');
     };
     if (!db.status().ready) return reply(503, { error: 'Accounts are temporarily unavailable.' });
     if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return reply(403, { error: 'Sign-ins from your network are not allowed.' });

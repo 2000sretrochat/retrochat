@@ -5,7 +5,7 @@
  const markBody=()=>{if(document.body)document.body.classList.add('desktop-app');};
  document.body?markBody():document.addEventListener('DOMContentLoaded',markBody);
  const css=`html.yd,html.yd body{margin:0!important;padding:0!important;height:100%;overflow:hidden;background:var(--card,#fff)!important;font-family:Tahoma,Verdana,Arial,sans-serif}
-html.yd #yfoot,html.yd #ad-slot,html.yd #pwaInstall{display:none!important}
+html.yd #yfoot,html.yd #ad-slot,html.yd #adRoom,html.yd .adph,html.yd #pwaInstall{display:none!important}
 /* Hide Social website chrome — desktop is one native app window, not a page-in-a-page */
 html.yd .auth-site-header,html.yd .auth-site-sidebar,html.yd .auth-chat-art,
 html.yd #social-chat-header,html.yd .social-chat-header,html.yd .site-sidebar,
@@ -18,13 +18,15 @@ html.yd #mwin,html.yd #chat{position:fixed!important;left:0!important;top:0!impo
 /* Messenger only: hide fake window chrome (min/max/×). */
 html.yd #mwin>.tbar{display:none!important}
 /* Desktop room: hide blue #chat>.tbar (duplicates native OS title). Menus + full rich rhead/chat stay. Leave via Room menu. */
-html.yd #chat{display:flex!important;flex-direction:column!important}
+html.yd #chat{display:flex!important;flex-direction:column!important;overflow:hidden!important}
 html.yd #chat>.tbar{display:none!important}
-html.yd #chat #main{flex:1 1 auto!important;min-height:0!important}
-html.yd #chat #lpane{min-height:0!important;display:flex!important;flex-direction:column!important}
-html.yd #chat #log{flex:1 1 auto!important;height:auto!important;min-height:80px!important}
-html.yd #chat #mpane{min-height:0!important;overflow:auto!important}
-html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,html.yd #chat #rhead{flex:none!important}
+/* Grow middle: messages + People. Never collapse under messenger signed-out rules. */
+html.yd #chat #main{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:auto!important;overflow:hidden!important}
+html.yd #chat #lpane{flex:1 1 auto!important;min-height:0!important;min-width:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+html.yd #chat #log{flex:1 1 auto!important;height:auto!important;min-height:80px!important;overflow:auto!important}
+html.yd #chat #mpane{flex:none!important;width:220px!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+html.yd #chat #mem{flex:1 1 auto!important;min-height:0!important;height:auto!important;overflow:auto!important}
+html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,html.yd #chat #rhead,html.yd #chat #sty,html.yd #chat #hq,html.yd #chat #camstrip{flex:none!important}
 html.yd #pwaInstall,html.yd .pwa-install{display:none!important}
 /* In real popups (IM/Browse/dialogs) keep one native OS title; hide duplicate web tbar; neutral X */
 html.yd .wb.x,html.yd .tbar .wb.x,html.yd .tbar .x,html.yd .wctl.x,html.yd.ydpop .wb.x,html.yd.ydpop .tbar .x{background:var(--card,#fff)!important;border-color:#aab4c2!important;color:#424950!important}
@@ -34,18 +36,20 @@ html.yd.ydpop .im>.tbar,html.yd.ydpop #brw>.tbar,html.yd.ydpop .yae>.tbar,html.y
 .ydlogo{display:none!important}html.yd #menu{display:flex;align-items:center;justify-content:flex-start;padding-left:4px!important;min-height:28px}
 
 /* ===== Signed-out: compact centered classic Messenger form (no buddy chrome) ===== */
-html.yd:not(.yd-in) #main,
-html.yd:not(.yd-in) #me,
-html.yd:not(.yd-in) #search,
-html.yd:not(.yd-in) #list,
-html.yd:not(.yd-in) #reqs,
-html.yd:not(.yd-in) #bottom,
-html.yd:not(.yd-in) #bAdd,
-html.yd:not(.yd-in) #bRooms,
-html.yd:not(.yd-in) #foot,
-html.yd:not(.yd-in) #tabs,
-html.yd:not(.yd-in) #avpick,
-html.yd:not(.yd-in) .yonline{display:none!important}
+/* Messenger signed-out gate ONLY (#mwin). Do NOT target rooms.html #main (log+People). */
+html.yd:not(.yd-in) #mwin #main,
+html.yd:not(.yd-in) #mwin #me,
+html.yd:not(.yd-in) #mwin #search,
+html.yd:not(.yd-in) #mwin #list,
+html.yd:not(.yd-in) #mwin #reqs,
+html.yd:not(.yd-in) #mwin #bottom,
+html.yd:not(.yd-in) #mwin #bAdd,
+html.yd:not(.yd-in) #mwin #bRooms,
+html.yd:not(.yd-in) #mwin #foot,
+html.yd:not(.yd-in) #mwin #tabs,
+html.yd:not(.yd-in) #mwin #avpick,
+html.yd:not(.yd-in) #mwin .yonline{display:none!important}
+html.yd body>#foot{display:none!important}
 html.yd #signin{padding:18px 28px 20px!important;gap:6px!important;justify-content:center!important;align-items:center!important;overflow:hidden!important;min-height:0;background:#fff!important}
 html.yd #signin .auth-heading{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 6px}
 html.yd #signin .lgbig img{width:56px!important;height:56px!important}
@@ -68,7 +72,7 @@ html.yd #chat-signin-footer a:not(#chat-guest-entry){display:none}
 
 /* ===== Classic Messenger buddy list (signed-in desktop only) ===== */
 html.yd.yd-in #signin{display:none!important}
-html.yd.yd-in #main{display:flex!important;flex-direction:column;flex:1;min-height:0;background:#f7fafc!important}
+html.yd.yd-in #mwin #main{display:flex!important;flex-direction:column;flex:1;min-height:0;background:#f7fafc!important}
 html.yd.yd-in #me{display:flex!important;flex-direction:row!important;align-items:flex-start!important;gap:12px!important;padding:14px 14px 10px!important;background:#fff!important;border-bottom:1px solid #d7e4f3!important}
 html.yd.yd-in #myav,html.yd.yd-in #me .av{width:56px!important;height:56px!important;border-radius:12px!important;border:1px solid #c9daf0!important;box-shadow:none!important;overflow:hidden;background:#fff}
 html.yd.yd-in #me .nm{font:700 18px Tahoma,Verdana,Arial!important;color:#003876!important;letter-spacing:-.2px}

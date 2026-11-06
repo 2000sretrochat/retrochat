@@ -81,7 +81,24 @@ test('preview 17: no blue strip; native title → menus → rich Late Night; fic
 
 test('messenger signed-out gate still present', () => {
   assert.match(index, /id="mwin" class="win"/);
-  assert.match(yd, /html\.yd:not\(\.yd-in\) #bAdd/);
+  assert.match(yd, /html\.yd:not\(\.yd-in\) #mwin #bAdd/);
   assert.match(yd, /classList\.toggle\('yd-in'/);
   assert.match(yd, /html\.yd #mwin>\.tbar\{display:none/);
+});
+
+test('desktop signed-out rules must not hide rooms #main (chat log + People)', () => {
+  // Root cause of white blank region: html.yd:not(.yd-in) #main { display:none }
+  assert.doesNotMatch(yd, /html\.yd:not\(\.yd-in\) #main,/);
+  assert.match(yd, /html\.yd:not\(\.yd-in\) #mwin #main/);
+  assert.match(yd, /html\.yd #chat #main\{display:flex!important/);
+  assert.match(rooms, /html\.yd #chat #main\{display:flex/);
+});
+
+test('desktop hides all ad placeholders (.adph / #adRoom / #ad-slot)', () => {
+  assert.match(yd, /html\.yd #adRoom/);
+  assert.match(yd, /html\.yd \.adph/);
+  assert.match(rooms, /html\.yd #ad-slot,html\.yd #adRoom,html\.yd \.adph/);
+  // Web placeholders remain in HTML for non-desktop
+  assert.match(rooms, /id=adRoom>Advertisement/);
+  assert.match(index, /adph/);
 });

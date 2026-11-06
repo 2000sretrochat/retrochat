@@ -158,12 +158,15 @@ html,body{min-width:728px}
 .invp{width:400px;max-width:94vw}.invp .pb{box-sizing:border-box}.invp .pb input#ivq{width:100%;box-sizing:border-box}.invp .pbtn{flex-wrap:wrap}#vrow>label,#micn{white-space:nowrap}.ivl{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:8px 0}.ivr{display:flex!important;align-items:center;gap:8px;padding:6px 10px;font-weight:400!important;cursor:pointer;border-bottom:1px solid var(--line)}.ivr input{width:auto!important;display:inline!important;margin:0}.ivr.off{opacity:.5;cursor:default}.ivr .yav,.ivr .av{width:26px;height:26px;border-radius:50%;overflow:hidden}.ivn{flex:1}.ivs{font-size:11px;color:var(--muted)}.ivs.available{color:#1a9a3a}.ivs.in{color:#0033A0}.ivm{padding:16px;text-align:center;color:var(--muted)}
 /* responsive full-height room window */
 #chat{display:none;flex-direction:column}
-html.yd #chat{display:flex;flex-direction:column}
+html.yd #chat{display:flex;flex-direction:column;overflow:hidden}
 html.yd #chat>.tbar{display:none!important} /* desktop: native OS title only; no duplicate blue strip */
 html.yd #social-chat-header,html.yd #social-chat-layout .site-sidebar,html.yd #brand{display:none!important}
 html.yd #social-chat-layout{display:block!important;padding:0!important;margin:0!important;min-height:0!important;background:transparent!important}
-html.yd #chat #main{flex:1;min-height:0}html.yd #chat #lpane{min-height:0}html.yd #chat #log{flex:1;height:auto!important;min-height:80px}
-html.yd #chat #mpane{min-height:0;overflow:auto}
+/* Desktop: no ad placeholders (web ads untouched). Keep messenger #mwin #main hide out of rooms #main. */
+html.yd #ad-slot,html.yd #adRoom,html.yd .adph,html.yd #yfoot,html.yd body>#foot{display:none!important}
+html.yd #chat #main{display:flex;flex:1;min-height:0;overflow:hidden}html.yd #chat #lpane{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}html.yd #chat #log{flex:1;height:auto!important;min-height:80px;overflow:auto}
+html.yd #chat #mpane{flex:none;width:220px;min-height:0;display:flex;flex-direction:column;overflow:hidden}html.yd #chat #mem{flex:1;min-height:0;height:auto!important;overflow:auto}
+html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,html.yd #chat #rhead,html.yd #chat #sty,html.yd #chat #hq,html.yd #chat #camstrip{flex:none}
 #rhead{flex-wrap:nowrap;min-width:0}#rhead>div{min-width:0}#rhead .rn,#rhead .rt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:900px){#rhead .hb span{display:none}#rhead .hb.inv span{display:inline}#avb span{display:none}}
 @media (max-height:640px){.adph-lb{height:40px}}
@@ -171,15 +174,15 @@ html.yd #chat #mpane{min-height:0;overflow:auto}
 </style><link rel="stylesheet" href="/room137.css"></head><body>
 <p id="room-popout-status" role="status" hidden>Opening your room…</p>
 <header class="social-chat-header" id="social-chat-header">
-  <a class="social-chat-brand" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
+  <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <label class="social-chat-search"><span aria-hidden="true">⌕</span><input type="search" id="social-chat-search" placeholder="Search chat rooms and topics" aria-label="Search chat rooms and topics"></label>
   <a href="/?chat=1" data-chat-signin>Sign in</a>
 </header>
 <div class="social-chat-layout" id="social-chat-layout">
   <aside class="site-sidebar">
     <nav class="menu" aria-label="Razzle navigation">
-      <a href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/">⌂ <span>Social</span></a>
-      <a href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/#people">✧ <span>Find your people</span></a>
+      <a href="/social/">⌂ <span>Social</span></a>
+      <a href="/social/">✧ <span>Find your people</span></a>
       <a href="/rooms.html" aria-current="page">▦ <span>Chat</span></a>
     </nav>
     <div class="topic-list"><p class="label">FEATURED ROOMS</p>

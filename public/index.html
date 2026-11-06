@@ -3,8 +3,8 @@
 const roomSignInParams = new URLSearchParams(location.search);
 const roomSignInName = roomSignInParams.get('chatRoom');
 const isRoomSignIn = Boolean(roomSignInName) || roomSignInParams.get('chat') === '1';
-const socialDestination = { '1': 'https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/?view=welcome',
- pages: '/razzle-account.html' };
+const socialDestination = { '1': '/social/',
+ pages: '/social/' };
 const socialTarget = roomSignInParams.get('social');
 const returnToSocial = isRoomSignIn && Object.hasOwn(socialDestination, socialTarget);
 const roomSignInDestination = new URL('/rooms.html', location.origin);
@@ -188,13 +188,13 @@ html.yd #frMenu{padding:4px 8px}
 </style>
 <link rel="stylesheet" href="/chat-account.css"></head><body>
 <div class="auth-site-header" hidden><header class="social-chat-header" id="social-chat-header">
-  <a class="social-chat-brand" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
+  <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
 
 </header></div><div class="social-chat-layout auth-site-layout"><div class="auth-site-sidebar" hidden><aside class="site-sidebar">
     <nav class="menu" aria-label="Razzle navigation">
-      <a href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/">⌂ <span>Social</span></a>
-      <a href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/#people">✧ <span>Find your people</span></a>
+      <a href="/social/">⌂ <span>Social</span></a>
+      <a href="/social/">✧ <span>Find your people</span></a>
       <a href="/rooms.html" aria-current="page">▦ <span>Chat</span></a>
     </nav>
     <div class="topic-list"><p class="label">FEATURED ROOMS</p>
