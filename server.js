@@ -159,8 +159,9 @@ async function isAdultReq(req) { const u = await acc.userFromCookie(req.headers.
 app.get('/api/rooms', async (q, r) => {
   const socialOrigin = 'https://social-chat-preview-jn.fair-mink-5216.chatgpt.site';
   r.vary('Origin');
-  if (q.get('Origin') === socialOrigin) {
-    r.set('Access-Control-Allow-Origin', socialOrigin);
+  const origin = q.get('Origin');
+  if (origin === socialOrigin || origin === 'https://2000sretrochat.github.io') {
+    r.set('Access-Control-Allow-Origin', origin);
     return r.json(await decorate(roomList(false), null));
   }
   return r.json(await decorate(roomList(await isAdultReq(q)), await userFromReq(q).catch(() => null)));
@@ -171,6 +172,19 @@ app.post('/api/adult', express.json(), async (req, res) => { const u = await acc
 const roomVisible = lc => { const id = users.get(lc), x = id && io.sockets.sockets.get(id); return !!x && !x.data.inc; };
 // ---- profiles (typed by the user; never derived from IP) ----
 const PCLEAN = (t, n) => String(t ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+app.get('/api/social-profile/:name', async (req, res) => {
+  res.vary('Origin').set('Cache-Control', 'no-store');
+  if (req.get('Origin') === 'https://2000sretrochat.github.io') {
+    res.set('Access-Control-Allow-Origin', 'https://2000sretrochat.github.io');
+  }
+  const name = String(req.params.name || '').toLowerCase();
+  if (!/^[a-z][a-z0-9_.-]{2,19}$/.test(name)) return res.status(404).json({});
+  if (!db.status().ready) return res.status(503).json({});
+  try {
+    const [row] = await db.q('select name from users where name_lc=$1', [name]);
+    return row ? res.json({ name: row.name }) : res.status(404).json({});
+  } catch { return res.status(503).json({}); }
+});
 app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.name || ''), lc = n.toLowerCase(); res.set('Cache-Control', 'no-store');
   if (db.status().ready) { try { const r = (await db.q('select name,avatar,display_name,age,location,bio,interests,created from users where name_lc=$1', [lc]))[0];
     if (r) { const v = await acc.userFromCookie(req.headers.cookie); let hide = false; if (v && v.name.toLowerCase() !== lc) { const [vu] = await db.q('select is_master from users where id=$1', [v.id]); const [tu] = await db.q('select id from users where name_lc=$1', [lc]); hide = !vu?.is_master && await blockedBy(tu.id, v.id); }
