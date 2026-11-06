@@ -263,3 +263,15 @@ html.ydpop,html.ydpop body{min-width:0!important}
  #login #rlist .live-room-card .room { grid-template-columns: 36px minmax(0, 1fr); gap: 3px 9px; }
  .live-room-count { grid-column: 2; text-align: left; }
 }
+
+/* Keep the directory shell in place when a desktop browser enters a room. */
+body.chat-room-active #social-chat-header,
+body.chat-room-active #social-chat-layout { display: none; }
+@media (min-width: 1100px) {
+ html:not(.ydpop) body.chat-room-active #social-chat-header { display: flex; }
+ html:not(.ydpop) body.chat-room-active #social-chat-layout { display: grid; }
+ html:not(.ydpop) body.chat-room-active .social-chat-search { visibility: hidden; }
+ html:not(.ydpop) body.chat-room-active #chat[style*="flex"] {
+  inset: 98px 18px 12px 260px !important;
+ }
+}
