@@ -4,11 +4,13 @@ module.exports = function (C) {
   const { app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, upd, history, closeRoom, setRating, setTopic, modAct, esc, MICS, setMics, micsOf } = C;
   // Default master screen name is razzle. Env MASTER_NAMES may list legacy names (e.g. yappchat) but those are NOT auto-promoted; is_master in DB is authoritative.
   const DEFAULT_MASTER = 'razzle';
-  const DEFAULT_RESERVED = 'tony,razzle,yappchat';
+  const DEFAULT_RESERVED = 'zainy,tony,razzle,zainyochka,yappchat';
   const splitNames = s => String(s || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
   const RESV = [...new Set(splitNames(process.env.MASTER_RESERVED || DEFAULT_RESERVED).concat([DEFAULT_MASTER, 'yappchat']))];
   // Seedable names: only the default master. Env MASTER_NAMES=yappchat alone is NOT seedable (collision guard); DB is_master remains authoritative.
   const NAMES = [DEFAULT_MASTER]; // env MASTER_NAMES legacy values are ignored for seeding
+  // Exact authorized masters (t228u/t229u). DB is_master only for these; no broad env auto-promote.
+  const AUTHORIZED_MASTERS = ['zainy', 'tony', 'razzle', 'zainyochka'];
   // Demo/example names used in marketing screenshots — blocked for signup and guest, never seeded as masters.
   const EXAMPLE_BLOCKED = ['lumakite', 'pixelorchard', 'mosscomet'];
   const reserved = n => { const lc = String(n || '').trim().toLowerCase(); return RESV.includes(lc) || EXAMPLE_BLOCKED.includes(lc) || lc === 'razzle' || lc === 'yappchat'; };
@@ -32,9 +34,30 @@ module.exports = function (C) {
     const r = await db.q("insert into kv(k,v) values($1,'1') on conflict do nothing returning k", ['seed:' + lc]);
     if (r.length) await db.q('update users set is_master=true where id=$1', [id]);
   }
+  /** Grant is_master to exactly AUTHORIZED_MASTERS (name_lc). Skips missing/banned/deactivated. Does not create accounts (except razzle via create-reserved elsewhere). Does not change passwords/sessions. */
+  async function ensureAuthorizedMasters() {
+    const out = { targets: AUTHORIZED_MASTERS.slice(), accounts: {}, granted: [], skipped: [], missing: [] };
+    if (!ready()) { out.error = 'db_not_ready'; return out; }
+    for (const n of AUTHORIZED_MASTERS) {
+      const u = (await db.q('select id,name,name_lc,is_master,banned,coalesce(deactivated,false) as deactivated from users where name_lc=$1', [n]))[0];
+      if (!u) { out.missing.push(n); out.accounts[n] = { exists: false, is_master: false }; out.skipped.push({ n, reason: 'not_found' }); continue; }
+      if (u.banned) { out.accounts[n] = { exists: true, name: u.name, is_master: !!u.is_master, banned: true, deactivated: !!u.deactivated }; out.skipped.push({ n, reason: 'banned' }); continue; }
+      if (u.deactivated) { out.accounts[n] = { exists: true, name: u.name, is_master: !!u.is_master, banned: false, deactivated: true }; out.skipped.push({ n, reason: 'deactivated' }); continue; }
+      if (!u.is_master) {
+        await db.q('update users set is_master=true where id=$1 and name_lc=$2 and not banned and not coalesce(deactivated,false)', [u.id, n]);
+        await audit('system', 'grant', n, 't228u/t229u authorized exact four-account master grant');
+        out.granted.push(n);
+      }
+      const after = (await db.q('select name,is_master,banned,coalesce(deactivated,false) as deactivated from users where name_lc=$1', [n]))[0];
+      out.accounts[n] = { exists: true, name: after.name, is_master: !!after.is_master, banned: !!after.banned, deactivated: !!after.deactivated };
+    }
+    console.log('[master] ensureAuthorizedMasters', JSON.stringify({ granted: out.granted, missing: out.missing, skipped: out.skipped, masters: Object.fromEntries(Object.entries(out.accounts).map(([k,v]) => [k, !!v.is_master])) }));
+    return out;
+  }
   async function load() {
     if (!ready()) return;
     for (const n of NAMES) { const u = (await db.q('select id,name from users where name_lc=$1', [n]))[0]; if (u) await seedMaster(u.id, u.name); }
+    try { await ensureAuthorizedMasters(); } catch (e) { console.error('[master] ensureAuthorizedMasters', e.message); }
     (await db.q('select ip from ip_bans')).forEach(r => IPBAN.add(r.ip));
     for (const r of await db.q('select room,rating,mics,hq,mtimer,mann from room_meta')) { if (!ROOMS[r.room]) continue; if (r.rating) RATE[r.room] = r.rating; if (r.mics) MICS[r.room] = r.mics; if (r.hq) C.HQ[r.room] = true; if (r.mtimer) C.MTIMER[r.room] = r.mtimer; if (r.mann && C.MANN) C.MANN[r.room] = r.mann; }
     for (const r of await db.q('select room,name_lc,kind,until from room_mod')) { if (!ROOMS[r.room]) continue; const m = mod(r.room);
@@ -192,5 +215,5 @@ module.exports = function (C) {
     res.json({ ok: true, bot: row });
   }));
 
-  return { reserved, ipBanned: ip => IPBAN.has(ip), seedMaster, load, saveRating, saveMics, saveMeta, saveMod, report, EXAMPLE_BLOCKED };
+  return { reserved, ipBanned: ip => IPBAN.has(ip), seedMaster, ensureAuthorizedMasters, AUTHORIZED_MASTERS, load, saveRating, saveMics, saveMeta, saveMod, report, EXAMPLE_BLOCKED };
 };

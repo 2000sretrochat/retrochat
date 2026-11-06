@@ -558,4 +558,22 @@ io.on('connection', s => {
 acc.sockets(io, AH);
 const RESET = require('./reset')(app, express);
 const MASTER = require('./master')({ resetLink: RESET.makeLink, applyBotProfiles, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, setMicOpts, RATINGS, KICK_MS });
+// ADMIN_KEY: verify/grant exact authorized masters (t228u/t229u). No password changes.
+app.get('/api/admin/masters', async (req, res) => {
+  if (!keyOk(req.get('x-admin-key'))) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const r = await MASTER.ensureAuthorizedMasters();
+    res.set('Cache-Control', 'no-store');
+    res.json({
+      ok: true,
+      targets: r.targets,
+      accounts: r.accounts,
+      granted: r.granted,
+      missing: r.missing,
+      skipped: r.skipped,
+      all_master: !!(r.targets && r.targets.length && r.targets.every(n => r.accounts[n] && r.accounts[n].is_master)),
+    });
+  } catch (e) { console.error('[admin/masters]', e.message); res.status(500).json({ error: 'Server error' }); }
+});
+
 db.init().then(() => loadURooms()).then(() => MASTER.load()).catch(e => console.error('[master load]', e.message)).finally(() => { if (!db.status().ready) { const t = setInterval(() => { if (db.status().ready) { clearInterval(t); loadURooms().then(() => MASTER.load()).catch(() => {}); } }, 2000); } }).finally(() => server.listen(process.env.PORT || 3000, () => console.log('YappChat on', process.env.PORT || 3000)));
