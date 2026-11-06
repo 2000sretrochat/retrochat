@@ -30,8 +30,37 @@ const samplePeopleDetails = {
 
 function renderPeopleDirectory() {
   $('#heading').textContent = 'Find your people';
-  $('#subheading').textContent = 'Look up a registered chatter by screen name.';
-  $('#content').innerHTML = '<section class="directory"><h2>Profiles</h2><form id="public-profile-search" class="social-editor"><label>Screen name<input name="name" required maxlength="20" autocomplete="off"></label><button class="primary">Find profile</button></form></section>';
+  $('#subheading').textContent = 'Look for a shared interest or discover someone nearby.';
+  $('#content').innerHTML = `<section class="directory"><h2>Profiles</h2>
+    <form class="people-filters" id="people-filters">
+      <label>Screen name<input name="screenName" placeholder="Any screen name"></label>
+      <label>Age<select name="age"><option value="">Any age</option><option value="18-24">18–24</option><option value="25-34">25–34</option><option value="35-44">35–44</option><option value="45-120">45 and up</option></select></label>
+      <label>Sex<select name="sex"><option value="">Any</option><option>Male</option><option>Female</option></select></label>
+      <label>Location<input name="location" placeholder="City, state, or country"></label>
+      <label>Interest<select name="interest"><option value="">Any interest</option>${interestChoices.map(interest => `<option>${esc(interest)}</option>`).join('')}</select></label>
+    </form>
+    <div id="people-matches" aria-live="polite"></div><p class="preview-limit">These filters show sample profiles. To find a registered chatter, search by their exact screen name.</p><form id="public-profile-search" class="social-editor"><label>Registered screen name<input name="name" required maxlength="20"></label><button class="primary">Find profile</button></form>
+  </section>`;
+  const form = $('#people-filters');
+  function updateResults() {
+    const { screenName, age, sex, location, interest } = form.elements;
+    const [min, max] = age.value.split('-').map(Number);
+    const matches = users.filter(user => {
+      const data = samplePeopleDetails[user.name];
+      return user.name.toLowerCase().includes(screenName.value.trim().toLowerCase())
+        && (!age.value || (data.age >= min && data.age <= max))
+        && (!sex.value || data.sex === sex.value)
+        && (!location.value.trim() || (!sampleBotProfiles[user.name]?.private && data.location.toLowerCase().includes(location.value.trim().toLowerCase())))
+        && (!interest.value || (!sampleBotProfiles[user.name]?.private && data.interests.includes(interest.value)));
+    });
+    $('#people-matches').innerHTML = matches.map(user => {
+      const data = samplePeopleDetails[user.name];
+      return `<div class="suggestion">${profileAvatar(user.name)}<a href="${profilePath(user.name, true)}" data-profile-link="${esc(user.name)}" data-sample-profile="1"><strong>${esc(user.name)}</strong><small>${sampleBotProfiles[user.name]?.private ? 'Private profile' : esc(data.location)}</small></a></div>`;
+    }).join('') || '<p>No sample profiles match these filters.</p>';
+  }
+  form.addEventListener('submit', event => event.preventDefault());
+  form.addEventListener('input', updateResults);
+  updateResults();
   $('#public-profile-search').onsubmit = event => {
     event.preventDefault();
     const name = event.currentTarget.elements.name.value.trim().replace(/^@/, '');
@@ -75,8 +104,8 @@ const sampleBotProfiles = {
 
 const chatCharacterProfiles = new Map([["sk8rboi_1987",{"name":"sk8rboi_1987","room":"Late Night"}],["xxmoonchildxx",{"name":"xXmoonchildXx","room":"Late Night"}],["dreamgurl_04",{"name":"dreamgurl_04","room":"Lobby"}],["surferdude_99",{"name":"surferdude_99","room":"Chit Chat"}],["kewl_kat2001",{"name":"kewl_kat2001","room":"Chit Chat"}],["punkrawk_kid",{"name":"punkrawk_kid","room":"Music Lobby"}],["glitterbabe_03",{"name":"glitterbabe_03","room":"Friends"}],["mixtape_mike",{"name":"mixtape_mike","room":"Friends"}],["angelface_x0",{"name":"angelface_x0","room":"Lobby"}],["dj_spinz2k",{"name":"dj_spinz2k","room":"Lobby"}],["nightowl_jen",{"name":"nightowl_jen","room":"Late Night"}],["emo_kid_4ever",{"name":"emo_kid_4ever","room":"Music Lobby"}],["butterfly_kisses88",{"name":"butterfly_kisses88","room":"Chit Chat"}],["xiaolong_88",{"name":"xiaolong_88","room":"中文 Chinese (Mandarin)"}],["meimei1999",{"name":"meimei1999","room":"中文 Chinese (Mandarin)"}],["tianshi_2002",{"name":"tianshi_2002","room":"中文 Chinese (Mandarin)"}],["beijing_boy01",{"name":"beijing_boy01","room":"China"}],["panda_qq",{"name":"panda_qq","room":"China"}],["hk_kitty97",{"name":"hk_kitty97","room":"粵語 Cantonese"}],["mongkok_ah_ming",{"name":"mongkok_ah_ming","room":"China"}],["sakura_chan_98",{"name":"sakura_chan_98","room":"日本語 Japanese"}],["tokyo_ninja01",{"name":"tokyo_ninja01","room":"日本語 Japanese"}],["kawaii_yumi",{"name":"kawaii_yumi","room":"日本語 Japanese"}],["ramen_otaku",{"name":"ramen_otaku","room":"Japan"}],["seoul_star_99",{"name":"seoul_star_99","room":"한국어 Korean"}],["kimchi_love01",{"name":"kimchi_love01","room":"한국어 Korean"}],["minji_2002",{"name":"minji_2002","room":"한국어 Korean"}],["busan_boy88",{"name":"busan_boy88","room":"Korea"}],["pinay_angel_02",{"name":"pinay_angel_02","room":"Tagalog"}],["batang_manila",{"name":"batang_manila","room":"Tagalog"}],["jolibee_lover",{"name":"jolibee_lover","room":"Tagalog"}],["kuya_jun98",{"name":"kuya_jun98","room":"Philippines"}],["cebuana_cutie",{"name":"cebuana_cutie","room":"Philippines"}],["saigon_girl99",{"name":"saigon_girl99","room":"Tiếng Việt (Vietnamese)"}],["pho_king01",{"name":"pho_king01","room":"Tiếng Việt (Vietnamese)"}],["hanoi_boy2000",{"name":"hanoi_boy2000","room":"Vietnam"}],["bangkok_bee",{"name":"bangkok_bee","room":"ภาษาไทย (Thai)"}],["nong_mai99",{"name":"nong_mai99","room":"ภาษาไทย (Thai)"}],["anak_jakarta",{"name":"anak_jakarta","room":"Bahasa Indonesia"}],["cewek_bandung01",{"name":"cewek_bandung01","room":"Bahasa Indonesia"}],["bali_surfer88",{"name":"bali_surfer88","room":"Bahasa Indonesia"}],["desi_munda_99",{"name":"desi_munda_99","room":"हिन्दी Hindi"}],["priya_cutie01",{"name":"priya_cutie01","room":"हिन्दी Hindi"}],["bollywood_fan88",{"name":"bollywood_fan88","room":"हिन्दी Hindi"}],["mumbai_masti",{"name":"mumbai_masti","room":"India"}],["delhi_boy2001",{"name":"delhi_boy2001","room":"India"}],["bandra_babe",{"name":"bandra_babe","room":"India"}],["chennai_kanna",{"name":"chennai_kanna","room":"தமிழ் Tamil"}],["tamil_ponnu99",{"name":"tamil_ponnu99","room":"தமிழ் Tamil"}],["hyd_raja01",{"name":"hyd_raja01","room":"తెలుగు Telugu"}],["telugu_ammayi",{"name":"telugu_ammayi","room":"తెలుగు Telugu"}],["jatt_boy_007",{"name":"jatt_boy_007","room":"ਪੰਜਾਬੀ Punjabi"}],["punjabi_kudi99",{"name":"punjabi_kudi99","room":"ਪੰਜਾਬੀ Punjabi"}],["kolkata_dada",{"name":"kolkata_dada","room":"বাংলা Bengali"}],["rosogolla_girl",{"name":"rosogolla_girl","room":"বাংলা Bengali"}],["chica_loca_01",{"name":"chica_loca_01","room":"En Español"}],["masha_99",{"name":"masha_99","room":"Русский (Russian)"}]]);
 
-function profilePath(name) {
-  return socialBase + '?profile=' + encodeURIComponent(name.toLowerCase());
+function profilePath(name, sample = false) {
+  return socialBase + '?profile=' + encodeURIComponent(name.toLowerCase()) + (sample ? '&sample=1' : '');
 }
 
 function profileRouteName() {
@@ -309,13 +338,28 @@ function renderSignedOutHome() {
     </div>
     <aside class="welcome-side">
       <section class="welcome-account" aria-labelledby="welcome-signin">
-        <h2 id="welcome-signin" class="welcome-panel-title">Your Razzle account</h2>
-        <p>Use the same screen name for Razzle Social, Chat, and Messenger.</p>
-        <div class="welcome-account-actions">
-          <a class="primary home-cta" href="${signInSocialUrl}">Sign in</a>
-          <a class="text-action" href="${joinSocialUrl}">New here? Create an account</a>
+        <h2 id="welcome-signin" class="welcome-panel-title">Sign in</h2>
+        <div class="welcome-panel-body">
+          <form class="welcome-preview-form" method="post" action="${liveMessenger}social-sign-in">
+            <label for="welcome-screen-name">Screen name</label>
+            <input id="welcome-screen-name" name="name" autocomplete="username" required maxlength="20">
+            <label for="welcome-password">Password</label>
+            <input id="welcome-password" name="password" type="password" autocomplete="current-password" required maxlength="100">
+            ${new URLSearchParams(location.search).has('signin') ? '<p class="welcome-form-error" role="alert">Could not sign in. Check your screen name and password or try again later.</p>' : ''}
+            <button class="secondary home-cta welcome-signin" type="submit">Sign in</button>
+          </form>
+          <div class="welcome-account-actions"><a class="text-action" href="${joinSocialUrl}">New here? Create an account</a></div>
+          <a class="welcome-reset" href="${liveMessenger}reset.html">Forgot your password?</a>
         </div>
-        <a class="welcome-reset" href="${liveMessenger}reset.html">Forgot your password?</a>
+      </section>
+      <section class="welcome-people" aria-labelledby="welcome-people-title">
+        <h2 id="welcome-people-title" class="welcome-panel-title">Meet the Community</h2>
+        <div class="welcome-panel-body">
+          <div class="welcome-people-grid">
+            ${users.map(user => `<a href="${profilePath(user.name, true)}" data-profile-link="${esc(user.name)}" data-sample-profile="1">${profileAvatar(user.name)}<strong>${esc(user.name)}</strong></a>`).join('')}
+          </div>
+          <p class="welcome-people-note">Sample profiles</p><button type="button" class="text-action" onclick="show('people')">See more people →</button>
+        </div>
       </section>
     </aside>
   </div>`;
@@ -600,6 +644,9 @@ searchPeople = function () {
   if (liveView) { liveView.refreshRooms(); return; }
   renderPeopleDirectory();
   $('#public-profile-search').elements.name.value = $('#search').value.replace(/^@/, '');
+  const filter = $('#people-filters').elements.screenName;
+  filter.value = $('#public-profile-search').elements.name.value;
+  filter.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
 function editRoomTopics(id) {
@@ -652,12 +699,14 @@ show = function (view) {
   if (view === 'people') renderPeopleDirectory();
   markLiveRoom();
 };
-profile = function (name) {
+profile = function (name, sample = false) {
   if (!/^[a-z][a-z0-9_.-]{2,19}$/i.test(name)) return;
-  const path = profilePath(name);
+  const path = profilePath(name, sample);
   if (location.pathname + location.search !== path) history.pushState(null, '', path);
   document.body.classList.remove('guest-home');
-  renderChatIdentity(name);
+  const example = sample && users.find(user => user.name.toLowerCase() === name.toLowerCase());
+  if (example) renderPublicPerson(example.name);
+  else renderChatIdentity(name);
 };
 compose = function () {
   if (!previewSignedIn) { showSocialHome(); return; }
@@ -861,7 +910,7 @@ loadLiveFeaturedRooms();
 renderAccountMenu();
 function showCurrentRoute() {
   const name = profileRouteName();
-  if (name) { profile(name); return; }
+  if (name) { profile(name, new URLSearchParams(location.search).get('sample') === '1'); return; }
   if (name === '') {
     renderExistingView('people');
     $('#heading').textContent = 'Profile unavailable';
@@ -888,7 +937,7 @@ document.addEventListener('click', event => {
     show('rooms');
     return;
   }
-  if (link.dataset.profileLink) { event.preventDefault(); if ($('#dialog').open) $('#dialog').close(); profile(link.dataset.profileLink); return; }
+  if (link.dataset.profileLink) { event.preventDefault(); if ($('#dialog').open) $('#dialog').close(); profile(link.dataset.profileLink, link.dataset.sampleProfile === '1'); return; }
   if (!link.matches('.menu a[href="rooms.html"], .welcome-guest, [data-live-room]')) return;
   event.preventDefault();
   const view = $('#live-chat-view');

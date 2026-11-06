@@ -355,3 +355,8 @@ main:has(.owner-profile-view) > .intro { display: none; }
 .owner-details dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
 #quick-post input { flex: 1; min-width: 0; padding: 7px 8px; border: 1px solid #c7d9e9; border-radius: 5px; }
 #quick-post .quick-submit { padding: 7px 12px; }
+
+body.signed-out { min-height: 100dvh; display: flex; flex-direction: column; }
+body.signed-out > .app { flex: 1; min-height: 0; }
+.social-footer { margin-top: auto; background: transparent; border: 0; padding-block: 8px; }
+@media (min-width: 800px) { .social-footer { margin-left: 240px; padding-inline: 20px; } }

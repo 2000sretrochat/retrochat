@@ -70,19 +70,30 @@ function http(app, express, hooks = {}) { H = hooks;
       res.json({ ok: true, name });
     } catch (e) { if (e.code === '23505') return res.status(409).json({ error: 'That screen name is already taken.' }); console.error(e); res.status(500).json({ error: 'Sign up failed.' }); }
   });
-  app.post('/api/login', async (req, res) => {
-    if (!db.status().ready) return maint(res);
-    if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return res.status(403).json({ error: 'Sign-ins from your network are not allowed.' });
+  async function signIn(req, res, fromSocial = false) {
+    const reply = (code, payload) => {
+      if (!fromSocial) return res.status(code).json(payload);
+      return res.redirect(303, code === 200 ? '/razzle-account.html' : 'https://2000sretrochat.github.io/retrochat/?signin=failed');
+    };
+    if (!db.status().ready) return reply(503, { error: 'Accounts are temporarily unavailable.' });
+    if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return reply(403, { error: 'Sign-ins from your network are not allowed.' });
     const { name, password, remember } = req.body || {};
     const lc = String(name || '').toLowerCase().slice(0, 40);
-    if (limited('li:' + geo.clientIp(req.headers, req.socket.remoteAddress), 20, 900e3) || limited('ln:' + lc, 8, 900e3)) return res.status(429).json({ error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
+    if (limited('li:' + geo.clientIp(req.headers, req.socket.remoteAddress), 20, 900e3) || limited('ln:' + lc, 8, 900e3)) return reply(429, { error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
     const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw,banned from users where name_lc=$1', [lc]) : [];
     const ok = await bcrypt.compare(String(password || ''), r[0] ? r[0].pw : DUMMY); // constant work either way
-    if (!r[0] || !ok) return res.status(401).json({ error: 'Invalid screen name or password.' });
-    if (r[0].banned) return res.status(403).json({ error: 'This screen name has been banned.' });
+    if (!r[0] || !ok) return reply(401, { error: 'Invalid screen name or password.' });
+    if (r[0].banned) return reply(403, { error: 'This screen name has been banned.' });
     const typed = String(name).trim(), disp = typed.toLowerCase() === r[0].name.toLowerCase() ? typed : r[0].name; // session display = capitalization typed at sign-in
-    await newSession(req, res, r[0].id, !!remember, disp); H.seedMaster && await H.seedMaster(r[0].id, r[0].name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'login'); res.json({ ok: true, name: disp });
-  });
+    await newSession(req, res, r[0].id, !!remember, disp); H.seedMaster && await H.seedMaster(r[0].id, r[0].name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'login'); return reply(200, { ok: true, name: disp });
+  }
+  app.post('/api/login', (req, res) => signIn(req, res));
+  app.post('/social-sign-in', (req, res, next) => {
+    if (req.get('Origin') !== 'https://2000sretrochat.github.io') return res.sendStatus(403);
+    if (!req.is('application/x-www-form-urlencoded')) return res.sendStatus(415);
+    res.set('Cache-Control', 'no-store');
+    next();
+  }, express.urlencoded({ extended: false, limit: '2kb', parameterLimit: 3 }), (req, res) => signIn(req, res, true));
   app.post('/api/logout', async (req, res) => {
     const t = parseCookies(req.headers.cookie)[COOKIE]; if (t && db.status().ready) await db.q('delete from sessions where token=$1', [sha(t)]).catch(() => {});
     res.clearCookie(COOKIE, { path: '/' }); res.json({ ok: true });
