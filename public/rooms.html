@@ -158,7 +158,10 @@ html,body{min-width:728px}
 .invp{width:400px;max-width:94vw}.invp .pb{box-sizing:border-box}.invp .pb input#ivq{width:100%;box-sizing:border-box}.invp .pbtn{flex-wrap:wrap}#vrow>label,#micn{white-space:nowrap}.ivl{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:8px 0}.ivr{display:flex!important;align-items:center;gap:8px;padding:6px 10px;font-weight:400!important;cursor:pointer;border-bottom:1px solid var(--line)}.ivr input{width:auto!important;display:inline!important;margin:0}.ivr.off{opacity:.5;cursor:default}.ivr .yav,.ivr .av{width:26px;height:26px;border-radius:50%;overflow:hidden}.ivn{flex:1}.ivs{font-size:11px;color:var(--muted)}.ivs.available{color:#1a9a3a}.ivs.in{color:#0033A0}.ivm{padding:16px;text-align:center;color:var(--muted)}
 /* responsive full-height room window */
 #chat{display:none;flex-direction:column}
-html.yd #chat{display:flex}
+html.yd #chat{display:flex;flex-direction:column}
+html.yd #chat>.tbar{display:none!important} /* desktop: native OS title only; no duplicate blue strip */
+html.yd #social-chat-header,html.yd #social-chat-layout .site-sidebar,html.yd #brand{display:none!important}
+html.yd #social-chat-layout{display:block!important;padding:0!important;margin:0!important;min-height:0!important;background:transparent!important}
 html.yd #chat #main{flex:1;min-height:0}html.yd #chat #lpane{min-height:0}html.yd #chat #log{flex:1;height:auto!important;min-height:80px}
 html.yd #chat #mpane{min-height:0;overflow:auto}
 #rhead{flex-wrap:nowrap;min-width:0}#rhead>div{min-width:0}#rhead .rn,#rhead .rt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

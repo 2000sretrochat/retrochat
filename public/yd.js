@@ -5,15 +5,33 @@
  const markBody=()=>{if(document.body)document.body.classList.add('desktop-app');};
  document.body?markBody():document.addEventListener('DOMContentLoaded',markBody);
  const css=`html.yd,html.yd body{margin:0!important;padding:0!important;height:100%;overflow:hidden;background:var(--card,#fff)!important;font-family:Tahoma,Verdana,Arial,sans-serif}
-html.yd #yfoot,html.yd #ad-slot{display:none!important}
-html.yd body>.win:not(.im):not(#brw),html.yd body>#mwin{position:fixed!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important}
-html.yd body>.win>.tbar,html.yd body>#mwin>.tbar{display:none!important}
-/* In-app window X: neutral controls in desktop; keep Windows' red hover convention */
+html.yd #yfoot,html.yd #ad-slot,html.yd #pwaInstall{display:none!important}
+/* Hide Social website chrome — desktop is one native app window, not a page-in-a-page */
+html.yd .auth-site-header,html.yd .auth-site-sidebar,html.yd .auth-chat-art,
+html.yd #social-chat-header,html.yd .social-chat-header,html.yd .site-sidebar,
+html.yd #brand,html.yd #room-popout-status{display:none!important}
+html.yd .social-chat-layout,html.yd .auth-site-layout{display:block!important;padding:0!important;margin:0!important;min-height:0!important;gap:0!important;background:transparent!important;grid-template-columns:none!important}
+html.yd .social-chat-main,html.yd .auth-site-main{padding:0!important;margin:0!important;min-width:0!important;min-height:0!important}
+/* Main surfaces fill the native Electron frame (#mwin is nested under <main>, so no body> child combinator) */
+html.yd #mwin,html.yd #chat{position:fixed!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important;inset:0!important;z-index:5}
+/* Strip fake inner title bars / min-max-x — OS title + #menu only */
+/* Messenger only: hide fake window chrome (min/max/×). */
+html.yd #mwin>.tbar{display:none!important}
+/* Desktop room: hide blue #chat>.tbar (duplicates native OS title). Menus + full rich rhead/chat stay. Leave via Room menu. */
+html.yd #chat{display:flex!important;flex-direction:column!important}
+html.yd #chat>.tbar{display:none!important}
+html.yd #chat #main{flex:1 1 auto!important;min-height:0!important}
+html.yd #chat #lpane{min-height:0!important;display:flex!important;flex-direction:column!important}
+html.yd #chat #log{flex:1 1 auto!important;height:auto!important;min-height:80px!important}
+html.yd #chat #mpane{min-height:0!important;overflow:auto!important}
+html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,html.yd #chat #rhead{flex:none!important}
+html.yd #pwaInstall,html.yd .pwa-install{display:none!important}
+/* In real popups (IM/Browse/dialogs) keep one native OS title; hide duplicate web tbar; neutral X */
 html.yd .wb.x,html.yd .tbar .wb.x,html.yd .tbar .x,html.yd .wctl.x,html.yd.ydpop .wb.x,html.yd.ydpop .tbar .x{background:var(--card,#fff)!important;border-color:#aab4c2!important;color:#424950!important}
 html.yd .tbar .wb.x:hover,html.yd .tbar .x:hover,html.yd .wctl.x:hover,html.yd.ydpop .tbar .wb.x:hover,html.yd.ydpop .tbar .x:hover{background:var(--bg,#eef5fc)!important;color:#424950!important}
-html.yd.ydpop .im,html.yd.ydpop #brw{position:fixed!important;display:flex!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
-html.yd.ydpop .im>.tbar,html.yd.ydpop #brw>.tbar{display:none!important}html.yd.ydpop .im .log{flex:1;height:auto!important}
-.ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 12px Tahoma,Verdana,Arial;color:#00205B;padding:0 10px 0 6px;align-self:center;white-space:nowrap}html.yd #menu{display:flex;align-items:center;justify-content:flex-start;padding-left:4px!important;min-height:28px}
+html.yd.ydpop .im,html.yd.ydpop #brw,html.yd.ydpop .yae,html.yd.ydpop .yprof,html.yd.ydpop .yset{position:fixed!important;display:flex!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+html.yd.ydpop .im>.tbar,html.yd.ydpop #brw>.tbar,html.yd.ydpop .yae>.tbar,html.yd.ydpop .yprof>.tbar,html.yd.ydpop .yset>.tbar,html.yd.ydpop .yae>.hd,html.yd.ydpop .yprof>.hd{display:none!important}html.yd.ydpop .im .log{flex:1;height:auto!important}
+.ydlogo{display:none!important}html.yd #menu{display:flex;align-items:center;justify-content:flex-start;padding-left:4px!important;min-height:28px}
 
 /* ===== Signed-out: compact centered classic Messenger form (no buddy chrome) ===== */
 html.yd:not(.yd-in) #main,
