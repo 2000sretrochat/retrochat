@@ -832,7 +832,15 @@ follow = function (name) {
   if (current === 'profile') profile(name);
   toast('Friend request saved in this preview.');
 };
-request = function (name) { if (previewFriends.has(name)) privateChat(name); else follow(name); };
+request = function (name) {
+  // Real Messenger contact request: redirect to live app (Pages cannot set Render cookies).
+  // Appearance unchanged — only the Add/Messenger action leaves the demo localStorage path.
+  if (previewFriends.has(name)) { privateChat(name); return; }
+  const url = new URL(liveMessenger);
+  url.searchParams.set('add', name);
+  toast('Opening Messenger to send a contact request to ' + name + '…');
+  location.assign(url.href);
+};
 const blockPreviewFriend = blockAlias;
 blockAlias = function (name) {
   previewFriends.delete(name);
@@ -857,7 +865,7 @@ relationshipPanel = function () {
     '<h2>Incoming requests</h2>' + rows(followers.filter(name => !following.includes(name)), 'Accept') +
     '<h2>Sent requests</h2>' + rows(requests.filter(name => !following.includes(name))) +
     '<h2>Blocked chatters</h2>' + rows(blocked, 'Unblock') +
-    '<p class="preview-limit">Friends and requests are saved in this browser for the preview.</p></section>';
+    '<p class="preview-limit">Social follows stay in this browser preview. Messenger contact requests open the live Razzle Messenger inbox (saved on your account).</p></section>';
 };
 
 $('#quick-post').addEventListener('submit', event => {

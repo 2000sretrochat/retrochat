@@ -35,6 +35,7 @@ const BOTS = [
   ...B('En Español', 'es', ['chica_loca_01']), ...B('Русский (Russian)', 'ru', ['masha_99']),
 ];
 for (const b of BOTS) b.av = '';
+
 const COLS = ['#000080', '#8b0000', '#006400', '#4b0082', '#b8860b', '#008080', '#c71585'], FNTS = ['Arial', 'Verdana', 'Comic Sans MS', 'Tahoma'];
 BOTS.forEach((b, i) => { b.color = COLS[i % COLS.length]; b.font = FNTS[(i * 3) % FNTS.length]; });
 // extra English variety: templates with fill-ins so lines don't repeat as often
@@ -46,4 +47,7 @@ const RE = { en: ['lol {n}', 'haha true', 'omg same {n}', 'no way!', 'for real?'
 function reply(b, n) { const L = RE[b.lang]; return L ? pick(L).replace('{n}', n) : line(b); }
 function greet(b, n) { const G = { en: ['hey {n}!', 'hi {n} :)', 'welcome {n}', 'sup {n}', 'heyyy {n} whats up'], es: ['¡Hola {n}!'], ru: ['Привет, {n}!'], ja: ['{n}さん、こんにちは！'], ko: ['{n}님 안녕하세요!'], zh: ['{n} 你好！'] }; return pick(G[b.lang] || ['hi {n} :)']).replace('{n}', n); }
 const byRoom = {}; for (const b of BOTS) (byRoom[b.room] = byRoom[b.room] || []).push(b);
+const EXTRA_BOTS = B('Lobby', 'en', ['RazzleGuide [bot]', 'TriviaTime [bot]', 'GameNight [bot]']).concat(B('Music Lobby', 'en', ['MixtapeBot [bot]']));
+for (const b of EXTRA_BOTS) { b.interactive = true; b.av = ''; BOTS.push(b); (byRoom[b.room] = byRoom[b.room] || []).push(b); }
+for (const b of BOTS) if (b.interactive) { b.greet = 'Hi! Mention me and say help to see what I can do.'; }
 module.exports = { BOTS, byRoom, P, line, reply, greet };

@@ -51,8 +51,8 @@ function create() {
   const s = ST.messenger || {};
   win = new BrowserWindow({
     x: s.x, y: s.y,
-    width: s.width || 320, height: s.height || 640,
-    minWidth: 280, minHeight: 420,
+    width: s.width || 500, height: s.height || 760,
+    minWidth: 380, minHeight: 640,
     title: 'Razzle Messenger',
     icon,
     frame: true,

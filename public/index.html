@@ -168,7 +168,25 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 .room-signin #signin :is(input, button, a):focus-visible { outline: 2px solid #397cba; outline-offset: 2px; }
 .room-signin #chat-signin-intro { display: block; color: var(--muted); text-align: center; margin: 0 0 8px; }
 .room-signin #chat-signin-footer { display: flex; gap: 14px; margin-top: 6px; }
-</style><link rel="stylesheet" href="/chat-account.css"></head><body>
+</style>
+<style id="fr-inbox-css">
+#frMenu{position:relative;padding:3px 8px;cursor:default;font-weight:650;color:#003876}
+#frMenu:hover,#frMenu.open{background:#e8f2ff;border-radius:8px}
+#frMenu .fr-label{font-size:12.5px}
+#frBadge.fr-badge{display:inline-block;min-width:16px;padding:0 5px;margin-left:4px;border-radius:999px;background:#e0245e;color:#fff;font:700 11px system-ui;line-height:16px;text-align:center;vertical-align:middle}
+#frBadge[hidden]{display:none!important}
+#frDrop{display:none;position:absolute;left:0;top:100%;min-width:260px;max-width:320px;background:#fff;border:1px solid #c9daf0;border-radius:12px;box-shadow:0 8px 24px #00387622;padding:8px;z-index:80}
+#frMenu.open #frDrop{display:block}
+#frDrop .fr-row{padding:8px;border-radius:8px;border:1px solid #f3d7a5;background:#fff8ec;margin-bottom:6px;font-size:12px;color:#003876}
+#frDrop .fr-row b{color:#004990}
+#frDrop .fr-acts{display:flex;gap:6px;margin-top:6px}
+#frDrop .fr-acts button{flex:1;min-height:28px;border-radius:8px;font:650 12px system-ui;cursor:pointer}
+#frDrop .fr-acts .pri{background:#004990;border:1px solid #004990;color:#fff}
+#frDrop .fr-acts .sec{background:#fff;border:1px solid #c9daf0;color:#003876}
+#frDrop .fr-empty{padding:10px;color:#7f94ac;font-size:12px}
+html.yd #frMenu{padding:4px 8px}
+</style>
+<link rel="stylesheet" href="/chat-account.css"></head><body>
 <div class="auth-site-header" hidden><header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
@@ -188,6 +206,8 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 <div id="mwin" class="win">
  <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
  <div id="menu">
+  <div id="frMenu" class="fr-menu" title="Contact requests" hidden><span class="fr-label">Requests</span><span id="frBadge" class="fr-badge" hidden>0</span>
+   <div class="dd" id="frDrop"><div class="fr-empty">No pending requests</div></div></div>
   <div>Messenger<div class="dd"><div id="mStatus">Change My Status...</div><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom" title="Let friends see which chat room you are in">&#10003; Show the room I'm in</div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
   <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mProf">View Profile of Selected</div><div id="mMyProf">Edit My Profile...</div><div id="mGroup" style="display:none"></div><div id="mMove" style="display:none"></div><hr><div id="mRem">Remove Selected Contact</div><div id="mBlock">Block Selected Contact</div><div id="mBlocked">Blocked List...</div></div></div>
   <div>Actions<div class="dd"><div id="mIm">Send a PM to Selected</div><div id="mBuzz">Buzz Selected</div><div id="mInv">Invite to Room</div><hr><div id="mRooms">Browse Chat Rooms...</div></div></div>
@@ -303,6 +323,11 @@ let avT;$('uName').addEventListener('input',()=>{clearTimeout(avT);const n=$('uN
 async function doUp(){$('eUp').textContent='';if(!$('uEm').checkValidity()){$('uEm').reportValidity();return;}if($('uPw').value!==$('uPw2').value)return $('eUp').textContent='Passwords do not match.';
  if(!$('uAgree').checked)return $('eUp').textContent='Please agree to the Terms and Rules (18 or older) to sign up.';const r=await api('/api/signup',{agree:true,name:$('uName').value.trim(),password:$('uPw').value,email:$('uEm').value.trim(),remember:$('uRem').checked});if(r.error)return $('eUp').textContent=r.error;$('uPw').value=$('uPw2').value='';if (window.YVerify) await YVerify.send(); start()}
 $('bUp').onclick=doUp;$('fUp').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doUp()}});
+
+async function consumeAddParam(){try{const add=new URLSearchParams(location.search).get('add'); if(!add)return; const n=add.trim(); if(!n)return;
+  history.replaceState(null,'',location.pathname+(location.hash||''));
+  const r=await emit('m:add',{name:n,msg:''}); if(r&&r.error)toast(escT(r.error)); else toast(r&&r.text?r.text:('Contact request sent to '+escT(n)));
+}catch(e){}}
 async function signOut(){if(!confirm('Sign out of '+APP_NAME.join('')+' Messenger?'))return;await api('/api/logout');S&&S.disconnect();location.reload()}
 $('mOut').onclick=$('wx').onclick=signOut;
 // ---------- connect ----------
@@ -318,7 +343,7 @@ function start(){
  $('signin').style.display='none';$('main').style.display='flex';S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
  S.on('connect',async()=>{const r=await emit('m:init');if(r.error)return alert(r.error);ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
   $('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
-  $('reqs').innerHTML='';r.requests.forEach(showReq);render();
+  $('reqs').innerHTML='';r.requests.forEach(showReq);syncFrInbox();render();consumeAddParam();
   if(r.offline.length){const by={};r.offline.forEach(m=>(by[m.from]=by[m.from]||[]).push(m));for(const f in by){const w=openIm(f);sys(w,'Messages sent while you were offline:');by[f].forEach(m=>line(w,f,m,true))}SND.im();toast('You have <b>'+r.offline.length+'</b> offline message(s).')}});
  YAv.listen(S,(n,av)=>{const k=n.toLowerCase();if(contacts[k]){contacts[k].avatar=av;render();ims[k]&&peerInfo(ims[k],n)}if(ME&&k==ME.name.toLowerCase()){ME.avatar=av;setMyAv()}});
  {const d=document.createElement('div');d.id='cdot';d.textContent='Reconnecting…';d.style.cssText='display:none;position:fixed;bottom:8px;left:8px;z-index:999;background:rgba(0,0,0,.55);color:#fff;padding:2px 9px;border-radius:10px;font:500 11px system-ui;pointer-events:none';document.body.appendChild(d);let t=0;S.on('disconnect',()=>{clearTimeout(t);t=setTimeout(()=>{if(!S.connected)d.style.display=''},3000)});S.on('connect',()=>{clearTimeout(t);d.style.display='none'})}
@@ -364,8 +389,28 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=Object.values(con
  document.querySelectorAll('.ct:not(.wct)').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>openIm(e.dataset.n).querySelector('textarea').focus();
   e.querySelectorAll('[data-jr]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();window.open('/rooms.html?room='+encodeURIComponent(a.dataset.jr),'yapprooms')});
   e.oncontextmenu=ev=>{ev.preventDefault();sel=e.dataset.n;render();$('mInv').style.opacity=invOk(sel)?'':'.45';$('mInv').title=invOk(sel)?'':sel+" isn't available for invites";document.querySelectorAll('#menu>div')[1].classList.add('open')}})}
+
+function syncFrInbox(){
+  const menu=$('frMenu'), badge=$('frBadge'), drop=$('frDrop'); if(!menu||!drop)return;
+  const rows=[...document.querySelectorAll('#reqs .rq')];
+  menu.hidden=false;
+  if(!rows.length){badge.hidden=true;drop.innerHTML='<div class="fr-empty">No pending requests</div>';return}
+  badge.hidden=false;badge.textContent=String(rows.length);
+  drop.innerHTML=rows.map(r=>{
+    const n=r.dataset.n; const label=r.querySelector('b')?.textContent||n;
+    return `<div class="fr-row" data-n="${escT(n)}"><b>${escT(label)}</b> wants to add you<div class="fr-acts"><button class="pri" data-y=1>Accept</button><button class="sec" data-y=0>Decline</button></div></div>`;
+  }).join('');
+  drop.querySelectorAll('button').forEach(b=>b.onclick=async()=>{
+    const row=b.closest('.fr-row'); const name=row?.dataset.n; if(!name)return;
+    const x=await emit('m:respond',{name,accept:b.dataset.y=='1'});
+    if(x&&x.error)alert(x.error);
+    document.querySelector(`#reqs .rq[data-n="${CSS.escape(name)}"]`)?.remove();
+    row.remove(); syncFrInbox();
+  });
+}
+(function(){const m=$('frMenu'); if(!m)return; m.onclick=e=>{if(e.target.closest('.fr-acts'))return; m.classList.toggle('open')}; document.addEventListener('click',e=>{if(!e.target.closest('#frMenu'))m.classList.remove('open')})})();
 function showReq(r){$('reqs').insertAdjacentHTML('beforeend',`<div class=rq data-n="${escT(r.name.toLowerCase())}"><b>${escT(r.name)}</b> wants to add you as a contact.${r.msg?'<br><i>"'+r.msg+'"</i>':''}<div style="margin-top:4px"><button class=pri data-y=1>Accept</button><button data-y=0>Decline</button></div></div>`);
- const d=$('reqs').lastElementChild;d.querySelectorAll('button').forEach(b=>b.onclick=async()=>{const x=await emit('m:respond',{name:r.name,accept:b.dataset.y=='1'});if(x.error)alert(x.error);d.remove()});SND.im();toast('<b>'+escT(r.name)+'</b> sent you a contact request.');reqPop(r)}
+ const d=$('reqs').lastElementChild;d.querySelectorAll('button').forEach(b=>b.onclick=async()=>{const x=await emit('m:respond',{name:r.name,accept:b.dataset.y=='1'});if(x.error)alert(x.error);d.remove();syncFrInbox()});SND.im();toast('<b>'+escT(r.name)+'</b> sent you a contact request.');reqPop(r);syncFrInbox()}
 const reqQ=[];function reqPop(r){reqQ.push(r);if(reqQ.length==1)reqNext()}
 function reqNext(){const r=reqQ[0];if(!r)return;try{window.focus();window.YappDesktop&&YappDesktop.notify('Contact request',r.name+' wants to add you')}catch(e){}
  let o=document.createElement('div');o.id='rqPop';o.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center';

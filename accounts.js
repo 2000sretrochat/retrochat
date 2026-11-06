@@ -177,8 +177,8 @@ function sockets(io, hooks) {
     s.on('m:idle', safe(async on => { if (!ready) return; const st = state.get(uid); if (st.idle === !!on) return; st.idle = !!on; await broadcast(uid, me); }));
     s.on('m:avatar', safe(async a => { if (!ready || !AVATARS.includes(a)) return { error: 'bad avatar' }; state.get(uid).avatar = a; await db.q('update users set avatar=$2 where id=$1', [uid, a]); await broadcast(uid, me); }));
     s.on('m:add', safe(async ({ name, msg }) => {
-      if (!ready || flood()) return { error: 'Slow down a little.' }; const generic = { ok: true, text: 'If ' + esc(String(name).slice(0, 20)) + ' is a YappChat user, they have been sent your request.' };
-      const t = await idOf(name); if (!t || t.id === uid) return t && t.id === uid ? { error: 'You cannot add yourself.' } : generic;
+      if (!ready || flood()) return { error: 'Slow down a little.' }; const generic = { ok: true, text: 'If ' + esc(String(name).slice(0, 20)) + ' is a Razzle user, they have been sent your request.' };
+      const t = await idOf(name); if (!t) return { error: 'No Razzle account found with that screen name. Check the spelling, or ask them to create one and sign in.' }; if (t.id === uid) return { error: 'You cannot add yourself.' };
       if (await mutual(uid, t.id)) return { error: esc(t.name) + ' is already in your contacts.' };
       if (await blocked(t.id, uid)) return generic;
       // sending a request to someone you blocked means you want them back: lift your block so the request can be answered

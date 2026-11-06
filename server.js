@@ -53,6 +53,7 @@ app.disable('x-powered-by');
 const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'";
 app.use((req,res,next)=>{res.set({'Permissions-Policy':'camera=(self), microphone=(self), display-capture=(self)','Content-Security-Policy':CSP,'X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'strict-origin-when-cross-origin','Cross-Origin-Opener-Policy':'same-origin'}); if (req.secure) res.set('Strict-Transport-Security','max-age=15552000'); next()});
 acc.http(app, express, { reservedName: n => MASTER.reserved(n), ipBanned: ip => MASTER.ipBanned(ip), seedMaster: (id, n) => MASTER.seedMaster(id, n), guestInUse: n => users.has(String(n).toLowerCase()) && !!io.sockets.sockets.get(users.get(String(n).toLowerCase()))?.data.guest });
+try { require('./friend-site')(app, express, acc); } catch (e) { console.error('[friend-site]', e.message); }
 app.get('/privacy', (req, res) => res.sendFile(__dirname + '/public/privacy.html'));
 app.get('/terms', (req, res) => res.sendFile(__dirname + '/public/terms.html'));
 app.use(express.static(__dirname + '/public'));
@@ -124,6 +125,31 @@ const getBots = () => ({ on: botsOn, total: BOTS.length, rooms: botRooms().map(r
 (function loadBots(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadBots(n + 1), 2000).unref?.(); Promise.resolve().then(() => db.q("select v from kv where k='bots'")).then(r => { if (r[0]) { const v = r[0].v; if (v === 'on' || v === 'off') botsOn = v !== 'off'; else try { const j = JSON.parse(v); botsOn = j.on !== false; (j.off || []).forEach(x => botOff.add(x)); } catch { } } botRooms().forEach(x => ROOMS[x] && upd(x)); }).catch(() => {}); })(0);
 // each bot room ticks on its own randomized, staggered timer (every ~3-7 min) and only talks while real people are there
 // bots: each room has its own random timer. Faster (40s-2.5min) while people are in the room, slow (4-10 min) while empty so rooms keep recent text.
+const TRIVIA = [
+ { q: 'Which Messenger feature shook your buddy’s window?', a: ['nudge','buzz'] },
+ { q: 'What does PM stand for?', a: ['private message','private msg'] },
+ { q: 'What color is the Razzle Social star?', a: ['orange'] },
+ { q: 'Complete the phrase: You’ve Got ___!', a: ['mail'] },
+ { q: 'What was the classic yellow Messenger status called when you stepped away?', a: ['away'] }
+];
+const GAMES = { roll: () => 'rolled a ' + (1 + Math.floor(Math.random() * 6)) + '.', '8ball': () => 'The Magic 8 Ball says: ' + ['Signs point to yes.', 'Ask again later.', 'Outlook good.', 'Cannot predict now.'][Math.floor(Math.random() * 4)] };
+const triviaRoom = new Map();
+function interactiveBotReply(b, room, who, text, t) {
+ const handle = t.match(/@([a-z]+)/)?.[1];
+ const wanted = ({ razzleguide: 'RazzleGuide', triviatime: 'TriviaTime', trivia: 'TriviaTime', gamenight: 'GameNight', game: 'GameNight', mixtapebot: 'MixtapeBot', music: 'MixtapeBot' })[handle];
+ if (wanted && b.name.split(' ')[0].toLowerCase() !== wanted.toLowerCase()) return null;
+ const clean = t.replace(/^@[a-z]+[,:]?\s*/, '').trim();
+ const cur = triviaRoom.get(room);
+ if (cur && Date.now() < cur.until && cur.a.some(a => clean === a || clean.includes(a))) { triviaRoom.delete(room); return b.name.startsWith('TriviaTime') ? who + ' got it! The answer was ' + cur.q + ' — ' + cur.a[0] + '.' : null; }
+ if (/\bhelp\b/.test(clean)) return b.name.startsWith('RazzleGuide') ? 'Try @RazzleGuide help, @TriviaTime trivia, @GameNight roll or 8ball, or @MixtapeBot recommend. Open Contacts to manage friend requests.' : 'Mention me and say help for my commands.';
+ if (/\b(hi|hello|hey)\b/.test(clean)) return 'Hi ' + who + '! Say @' + b.name.split(' ')[0] + ' help to see my commands.';
+ if (b.name.startsWith('TriviaTime') && /\btrivia\b|\bstart\b/.test(clean)) { const q = TRIVIA[Math.floor(Math.random() * TRIVIA.length)]; triviaRoom.set(room, { ...q, until: Date.now() + 60000 }); return 'Trivia for 60 seconds: ' + q.q; }
+ if (b.name.startsWith('GameNight') && /\b8ball\b/.test(clean)) return who + ' ' + GAMES['8ball']();
+ if (b.name.startsWith('GameNight') && /\broll\b/.test(clean)) return who + ' ' + GAMES.roll();
+ if (b.name.startsWith('MixtapeBot') && /\b(recommend|music|song)\b/.test(clean)) return 'Try a nostalgia playlist: The Killers — Mr. Brightside, Avril Lavigne — Complicated, and Coldplay — Yellow.';
+ if (b.name.startsWith('RazzleGuide')) return 'I can help you find rooms, use Contacts, or try the other bots. Mention me with help!';
+ return null;
+}
 const botSay = (room, b, text) => push(room, { name: b.name, av: b.av || '', role: '', text: esc(text), color: b.color || '#000080', b: false, i: false, u: false, f: b.font || 'Arial', t: Date.now() });
 const lastBot = {};
 function botTick(room) { const busy = socks(room).length > 0; setTimeout(() => botTick(room), (busy ? 40 + Math.random() * 110 : 240 + Math.random() * 360) * 1000).unref?.();
@@ -133,6 +159,10 @@ function botTick(room) { const busy = socks(room).length > 0; setTimeout(() => b
   if (bs.length > 1 && Math.random() < 0.35) { const o = bs.filter(x => x !== b)[Math.floor(Math.random() * (bs.length - 1))]; setTimeout(() => botsIn(room).includes(o) && botSay(room, o, BOTMOD.reply(o, b.name)), 6000 + Math.random() * 14000).unref?.(); } }
 // a bot may greet a person who says hi or mentions it
 function botHear(room, who, text) { const bs = botsIn(room); if (!bs.length) return; const t = String(text).toLowerCase();
+  if (/^@/.test(t) || triviaRoom.has(room)) {
+    const inter = bs.filter(b => b.interactive);
+    for (const b of inter) { const r = interactiveBotReply(b, room, who, text, t); if (r) { botSay(room, b, r); return; } }
+  }
   const named = bs.find(b => t.includes(b.name.toLowerCase())); const hi = /\b(hi|hey|hello|hola|sup|yo|wassup|anyone)\b/.test(t);
   if (!named && !(hi && Math.random() < 0.6)) return; const b = named || bs[Math.floor(Math.random() * bs.length)];
   setTimeout(() => botsIn(room).includes(b) && botSay(room, b, BOTMOD.greet(b, who)), 3000 + Math.random() * 6000).unref?.(); }
