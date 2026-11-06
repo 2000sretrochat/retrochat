@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><title>YappChat Messenger</title>
+<!doctype html><html><head><meta charset="utf-8"><title>Razzle Messenger</title>
 <script>
 const roomSignInParams = new URLSearchParams(location.search);
 const roomSignInName = roomSignInParams.get('chatRoom');
@@ -120,7 +120,7 @@ html.dark #menu .dd div:hover{color:#fff!important}html.dark .ct.off .n{color:#7
 .ct .n{font-size:14px}.ct .sm{font-size:12px!important}
 #bottom{flex-wrap:nowrap!important;padding:12px 16px!important}#bottom .btn{flex:1;padding:0 8px}
 #foot{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0 10px!important;font-size:12px!important;border-top:1px solid var(--line)}
-#foot .brandname{font-size:14px}
+#foot .brandname{font-size:14px}.tbar .razzle-mark,#foot .razzle-mark{flex:none}.auth-heading .razzle-mark{margin:0 auto 4px}
 #signin .logo{font-size:44px!important}
 /* IM */
 .im{width:520px!important;border-radius:10px!important}
@@ -247,9 +247,10 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 <script src="/device.js"></script><script src="/yd.js"></script><script src="/browse.js"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script>
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
-const APP_NAME=isRoomSignIn?['Razzle',' Chat']:['Yapp','Chat'];
+const APP_NAME=isRoomSignIn?['Razzle',' Chat']:['Razzle',''];
+const razzleMark=(w)=>`<img class="razzle-mark" src="/razzle-social.svg" width="${w}" height="${w}" alt="" style="display:block">`;
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
-document.querySelectorAll('.lgs').forEach(e=>e.innerHTML=YI.logo(26));document.querySelectorAll('.lgs2').forEach(e=>e.innerHTML=YI.logo(22));document.querySelectorAll('.lgbig').forEach(e=>e.innerHTML=isRoomSignIn?'<img src="/razzle-chat.svg" width="56" height="56" alt="">':YI.logo(70));
+document.querySelectorAll('.lgs').forEach(e=>e.innerHTML=razzleMark(26));document.querySelectorAll('.lgs2').forEach(e=>e.innerHTML=razzleMark(22));document.querySelectorAll('.lgbig').forEach(e=>e.innerHTML=isRoomSignIn?'<img src="/razzle-chat.svg" width="56" height="56" alt="">':razzleMark(72));
 if (isRoomSignIn) {
  document.querySelector('.auth-site-header').hidden = false;
  document.querySelector('.auth-site-sidebar').hidden = false;
@@ -424,7 +425,7 @@ async function reportUser(who){const why=prompt('Report '+who+' to the site mode
 function openIm(n){const w0=openIm0(n),k=n.toLowerCase();if(window.pmHeld&&pmHeld[k]){const h=pmHeld[k];delete pmHeld[k];delete pmUnread[k];h.forEach(m=>line(w0,m.from,m));pmBadge()}return w0}
 function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTop;if(ims[k]._pw)try{ims[k]._pw.focus()}catch(e){}return ims[k]}const name=(contacts[k]||{}).name||n;
  const w=document.createElement('div');w.className='im win';const i=Object.keys(ims).length;w.style.left=(330+i*28)+'px';w.style.top=(30+i*28)+'px';w.style.zIndex=++zTop;w.dataset.n=name;
- w.innerHTML=`<div class=tbar><span class=lgs>${YI.logo(24)}</span>${escT(name)} &ndash; Private Message<span class=sp></span><span class="wb x"><i data-i=close data-s=16></i></span></div>
+ w.innerHTML=`<div class=tbar><span class=lgs>${razzleMark(24)}</span>${escT(name)} &ndash; Private Message<span class=sp></span><span class="wb x"><i data-i=close data-s=16></i></span></div>
  <div class=mbar><div>Conversation<div class=dd><div data-m=invite>Invite to Room</div><hr><div data-m=close>Close</div></div></div><div>Edit<div class=dd><div data-m=clearin>Clear Message Box</div></div></div><div>View<div class=dd><div data-m=fmt>Text Style Bar</div></div></div><div>Actions<div class=dd><div data-m=buzz>Send BUZZ!</div><div data-m=voice>Voice Call</div><div data-m=video>Webcam Call</div></div></div><div>Help<div class=dd><div data-m=help>Keyboard Tips</div></div></div></div>
  <div class=ihead><span class=pav></span><div><div class=nm style=cursor:pointer title='View profile' data-m=prof>${escT(name)}</div><div class=st></div></div><span class=sp></span>
  <button class=ib data-a=video title="Webcam call">${YI.svg('video',22)}</button><button class=ib data-a=voice title="Voice call">${YI.svg('phone',22)}</button><button class=ib data-a=buzz title="BUZZ! (Ctrl+G)">${YI.svg('bell',22)}</button><button class=ib data-a=more title="More">${YI.svg('dots',22)}</button>
