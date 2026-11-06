@@ -1,0 +1,98 @@
+.palette-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 9px clamp(12px, 3vw, 36px);
+  background: #f1f5f8;
+  color: #0f2445;
+  font-weight: 650;
+}
+.palette-preview a { padding: 6px 10px; border: 1px solid #b8c8d8; background: white; }
+.palette-preview a[aria-current] { background: #0f2445; border-color: #0f2445; color: white; }
+[data-palette="ink"] body,
+[data-palette="ink"] header,
+[data-palette="ink"] .brand { color: #0f2445; }
+[data-palette="ink"] .left,
+[data-palette="ink"] .room-invite { background: #0f2445; }
+[data-palette="ink"] .menu .selected,
+[data-palette="ink"] header nav a { background: #205aca; color: white; }
+[data-palette="ink"] .intro .label,
+[data-palette="ink"] .feed-nav .on,
+[data-palette="ink"] .text-action,
+[data-palette="ink"] .familiar .section-title h2 { color: #205aca; }
+[data-palette="ink"] .link-preview { border-left-color: #205aca; }
+[data-palette="ink"] #messenger .messenger-title { background: #e8efff; }
+[data-palette="ink"] #messenger .messenger-title strong { color: #0f2445; }
+[data-palette="ink"] #messenger .add-contact { background: #205aca; }
+
+[data-palette="soda"] {
+  --play-ink: #182e74;
+  --play-blue: #274dc4;
+  --play-accent: #ffad47;
+  --play-accent-text: #282249;
+  --play-sidebar: linear-gradient(155deg, #234ccb, #203485 75%);
+  --play-page: #fffaf2;
+  --play-hero: linear-gradient(110deg, #fff0d8, #e7eeff 82%);
+  --play-card: #f0f4ff;
+}
+[data-palette="arcade"] {
+  --play-ink: #34204e;
+  --play-blue: #6433a2;
+  --play-accent: #ffa982;
+  --play-accent-text: #38213f;
+  --play-sidebar: linear-gradient(155deg, #6335a1, #322252 75%);
+  --play-page: #fffbfe;
+  --play-hero: linear-gradient(110deg, #f3e6ff, #ffebdf 90%);
+  --play-card: #f5eefb;
+}
+:is([data-palette="soda"], [data-palette="arcade"]) body { background: var(--play-page); color: var(--play-ink); }
+:is([data-palette="soda"], [data-palette="arcade"]) .brand { color: var(--play-ink); }
+:is([data-palette="soda"], [data-palette="arcade"]) :is(.left, .room-invite) { background: var(--play-sidebar); }
+:is([data-palette="soda"], [data-palette="arcade"]) .menu .selected { background: #ffffff26; color: #fff; box-shadow: inset 3px 0 var(--play-accent); }
+:is([data-palette="soda"], [data-palette="arcade"]) .menu :is(button, a) { color: #fff; }
+:is([data-palette="soda"], [data-palette="arcade"]) .home-intro { background: var(--play-hero); border-left: 4px solid var(--play-accent); }
+:is([data-palette="soda"], [data-palette="arcade"]) :is(.home-actions section, .post, .write, .playlist-dock) { background: var(--play-card); }
+:is([data-palette="soda"], [data-palette="arcade"]) :is(.primary, .room-invite a) { background: var(--play-accent); color: var(--play-accent-text); }
+:is([data-palette="soda"], [data-palette="arcade"]) :is(.secondary, .intro .label, .text-action, .playlist-dock, .familiar .section-title h2) { color: var(--play-blue); }
+:is([data-palette="soda"], [data-palette="arcade"]) .secondary { background: white; border: 1px solid var(--play-blue); }
+:is([data-palette="soda"], [data-palette="arcade"]) #messenger .messenger-title { background: var(--play-card); }
+:is([data-palette="soda"], [data-palette="arcade"]) #messenger .messenger-title strong { color: var(--play-ink); }
+:is([data-palette="soda"], [data-palette="arcade"]) :is(#messenger .add-contact, .app > .sidebar-toggle, .palette-preview a[aria-current]) { background: var(--play-blue); color: #fff; }
+
+/* These experiments apply only when selected from Compare colors. */
+[data-palette="poolside"] {
+  --fresh-ink: #17433f;
+  --fresh-link: #14665f;
+  --fresh-page: #f8f7ed;
+  --fresh-rail: #dbf3eb;
+  --fresh-card: #eff8f2;
+  --fresh-hero: linear-gradient(115deg, #daf5ed, #fff0ca);
+  --fresh-accent: #ffc576;
+}
+[data-palette="berry"] {
+  --fresh-ink: #45233e;
+  --fresh-link: #7a2b61;
+  --fresh-page: #fffbf7;
+  --fresh-rail: #572246;
+  --fresh-card: #f8eef5;
+  --fresh-hero: linear-gradient(115deg, #f8e1ee, #ffe9d8);
+  --fresh-accent: #ffad8e;
+}
+:is([data-palette="poolside"], [data-palette="berry"]) body { background: var(--fresh-page); color: var(--fresh-ink); }
+:is([data-palette="poolside"], [data-palette="berry"]) .brand { color: var(--fresh-ink); }
+:is([data-palette="poolside"], [data-palette="berry"]) :is(.left, .room-invite) { background: var(--fresh-rail); }
+:is([data-palette="poolside"], [data-palette="berry"]) :is(.home-actions section, .post, .write, .playlist-dock) { background: var(--fresh-card); }
+:is([data-palette="poolside"], [data-palette="berry"]) .home-intro { background: var(--fresh-hero); }
+:is([data-palette="poolside"], [data-palette="berry"]) :is(.primary, .room-invite a) { background: var(--fresh-accent); color: var(--fresh-ink); }
+:is([data-palette="poolside"], [data-palette="berry"]) :is(.secondary, .intro .label, .text-action, .playlist-dock, .familiar .section-title h2) { color: var(--fresh-link); }
+:is([data-palette="poolside"], [data-palette="berry"]) .secondary { background: #fff; border: 1px solid var(--fresh-link); }
+:is([data-palette="poolside"], [data-palette="berry"]) #messenger .messenger-title { background: var(--fresh-card); }
+:is([data-palette="poolside"], [data-palette="berry"]) #messenger .messenger-title strong { color: var(--fresh-ink); }
+:is([data-palette="poolside"], [data-palette="berry"]) :is(#messenger .add-contact, .app > .sidebar-toggle, .palette-preview a[aria-current]) { background: var(--fresh-link); color: #fff; }
+[data-palette="poolside"] :is(.left, .left button, .left a, .left small, .left .label, .left em, .left p, .left footer, .room-invite, .room-invite p, .room-invite .label) { color: var(--fresh-ink); }
+[data-palette="poolside"] .menu .selected { background: #b6e7dc; color: #123c38; box-shadow: inset 3px 0 #14665f; }
+[data-palette="poolside"] .home-intro { padding: 26px; border-radius: 12px; }
+[data-palette="poolside"] .home-actions section { border: 1px solid #cde8dc; border-radius: 10px; }
+[data-palette="berry"] .menu .selected { background: #76335e; color: #fff; box-shadow: inset 3px 0 var(--fresh-accent); }
+[data-palette="berry"] .brand-dot { color: #ef7354; }
