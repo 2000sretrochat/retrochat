@@ -4,7 +4,7 @@ const roomSignInParams = new URLSearchParams(location.search);
 const roomSignInName = roomSignInParams.get('chatRoom');
 const isRoomSignIn = Boolean(roomSignInName) || roomSignInParams.get('chat') === '1';
 const socialDestination = { '1': 'https://social-chat-preview-jn.fair-mink-5216.chatgpt.site/?view=welcome',
- pages: 'https://2000sretrochat.github.io/retrochat/?view=welcome' };
+ pages: '/razzle-account.html' };
 const socialTarget = roomSignInParams.get('social');
 const returnToSocial = isRoomSignIn && Object.hasOwn(socialDestination, socialTarget);
 const roomSignInDestination = new URL('/rooms.html', location.origin);

@@ -4,36 +4,17 @@ const socialBase = new URL('./', document.baseURI).pathname;
 // Set to a public HTTPS installer URL when the release is ready.
 const messengerInstallerUrl = '';
 const joinSocialUrl = liveMessenger + '?chat=1&signup=1&social=pages';
-const welcomePreview = new URLSearchParams(location.search).get('view') === 'welcome';
-let previewSignedIn = !welcomePreview && read('previewSignedIn', false);
+const signInSocialUrl = liveMessenger + '?chat=1&social=pages';
+const previewSignedIn = false;
 const renderExistingView = show;
 const renderExistingProfile = profile;
 const renderExistingCard = card;
 const composeExistingPost = compose;
 
 function renderAccountMenu() {
-  $('#account-menu').innerHTML = previewSignedIn
-    ? '<button onclick="profile(\'Zainy\')" class="account-name"><span class="avatar z" aria-hidden="true">Z</span><strong>Zainy</strong></button><button class="account-logout" onclick="logoutPreview()">Log out of preview</button>'
-    : `<button type="button" class="text-action" onclick="showSocialHome();document.querySelector('#welcome-screen-name').focus()">Sign in</button>`;
-  document.querySelectorAll('[data-member-only]').forEach(item => { item.hidden = !previewSignedIn; });
-  $('.left .identity').hidden = !previewSignedIn;
-  document.body.classList.toggle('signed-out', !previewSignedIn);
-  $('.left > .primary').hidden = !previewSignedIn;
-  updateProfilePortraits();
-}
-
-function logoutPreview() {
-  previewSignedIn = false;
-  save('previewSignedIn', false);
-  renderAccountMenu();
-  location.assign('./');
-}
-
-function openPreviewAccount() {
-  previewSignedIn = true;
-  save('previewSignedIn', true);
-  renderAccountMenu();
-  show('feed');
+  $('#account-menu').innerHTML = '<a class="text-action" href="' + signInSocialUrl + '">Sign in</a>';
+  document.querySelectorAll('[data-member-only], .left .identity, .left > .primary').forEach(item => { item.hidden = true; });
+  document.body.classList.add('signed-out');
 }
 
 const interestChoices = [
@@ -49,37 +30,14 @@ const samplePeopleDetails = {
 
 function renderPeopleDirectory() {
   $('#heading').textContent = 'Find your people';
-  $('#subheading').textContent = 'Look for a shared interest or discover someone nearby.';
-  $('#content').innerHTML = `<section class="directory"><h2>Profiles</h2>
-    <form class="people-filters" id="people-filters">
-      <label>Screen name<input name="screenName" placeholder="Any screen name"></label>
-      <label>Age<select name="age"><option value="">Any age</option><option value="18-24">18–24</option><option value="25-34">25–34</option><option value="35-44">35–44</option><option value="45-120">45 and up</option></select></label>
-      <label>Sex<select name="sex"><option value="">Any</option><option>Male</option><option>Female</option></select></label>
-      <label>Location<input name="location" placeholder="City, state, or country"></label>
-      <label>Interest<select name="interest"><option value="">Any interest</option>${interestChoices.map(interest => `<option>${esc(interest)}</option>`).join('')}</select></label>
-    </form>
-    <div id="people-matches" aria-live="polite"></div>
-  </section>`;
-  const form = $('#people-filters');
-  function updateResults() {
-    const { screenName, age, sex, location, interest } = form.elements;
-    const [min, max] = age.value.split('-').map(Number);
-    const matches = users.filter(user => {
-      const data = samplePeopleDetails[user.name];
-      return user.name.toLowerCase().includes(screenName.value.trim().toLowerCase())
-        && (!age.value || (data.age >= min && data.age <= max))
-        && (!sex.value || data.sex === sex.value)
-        && (!location.value.trim() || (!sampleBotProfiles[user.name]?.private && data.location.toLowerCase().includes(location.value.trim().toLowerCase())))
-        && (!interest.value || (!sampleBotProfiles[user.name]?.private && data.interests.includes(interest.value)));
-    });
-    $('#people-matches').innerHTML = matches.map(user => {
-      const data = samplePeopleDetails[user.name];
-      return `<div class="suggestion">${profileAvatar(user.name)}<a href="${profilePath(user.name)}" data-profile-link="${esc(user.name)}"><strong>${esc(user.name)}</strong><small>${sampleBotProfiles[user.name]?.private ? 'Private profile' : esc(data.location)}</small></a></div>`;
-    }).join('') || '<p>No sample profiles match these filters.</p>';
-  }
-  form.addEventListener('submit', event => event.preventDefault());
-  form.addEventListener('input', updateResults);
-  updateResults();
+  $('#subheading').textContent = 'Look up a registered chatter by screen name.';
+  $('#content').innerHTML = '<section class="directory"><h2>Profiles</h2><form id="public-profile-search" class="social-editor"><label>Screen name<input name="name" required maxlength="20" autocomplete="off"></label><button class="primary">Find profile</button></form></section>';
+  $('#public-profile-search').onsubmit = event => {
+    event.preventDefault();
+    const name = event.currentTarget.elements.name.value.trim().replace(/^@/, '');
+    if (/^[a-z][a-z0-9_.-]{2,19}$/i.test(name)) profile(name);
+    else toast('Enter a valid Razzle screen name.');
+  };
 }
 
 const editProfileBeforeInterests = editProfile;
@@ -273,12 +231,6 @@ function renderChatIdentity(name) {
   const view = document.createElement('section');
   view.className = 'space-card';
   $('#content').replaceChildren(view);
-  const character = chatCharacterProfiles.get(name.toLowerCase());
-  if (character) {
-    view.innerHTML = '<span class="avatar">' + esc(character.name[0].toUpperCase()) + '</span><h2>About</h2><p>Usually found in ' +
-      botRoomLink(character.room) + '.</p>';
-    return;
-  }
   view.textContent = 'Looking up this screen name…';
   fetch(new URL('api/social-profile/' + encodeURIComponent(name), liveMessenger), { credentials: 'omit' }).then(async response => {
     if (response.status === 404) { view.textContent = 'No registered chat profile was found for this screen name.'; return; }
@@ -340,7 +292,7 @@ function renderSignedOutHome() {
     <section class="welcome-hero">
       <p class="welcome-eyebrow">CHAT ROOMS · SOCIAL PROFILES · MESSENGER</p>
       <h1>Talk live. Be yourself.</h1>
-      <p>Talk with real people in live chat rooms. Stay in touch through profiles, posts, and Messenger.</p>
+      <p>Meet people in live chat rooms and keep in touch through Razzle Messenger.</p>
       <div class="welcome-hero-actions">
         <a class="primary home-cta welcome-join" href="${joinSocialUrl}">Join</a>
         <a class="home-cta welcome-guest" href="rooms.html">Browse chat rooms</a>
@@ -351,55 +303,22 @@ function renderSignedOutHome() {
     </section>
   <div class="welcome-features">
     <section><h2>Talk in real time</h2><p>Pull up a chair in a voice room. Listen first or jump into the conversation.</p></section>
-    <section><h2>Make a space of your own</h2><p>Share photos, links, and thoughts with the people you meet.</p></section>
+    <section><h2>Make a space of your own</h2><p>Create a screen name you can use in Chat and Messenger.</p></section>
     <section><h2>Stay in touch</h2><p>Keep familiar screen names close with Messenger.</p></section>
   </div>
     </div>
     <aside class="welcome-side">
       <section class="welcome-account" aria-labelledby="welcome-signin">
-        <h2 id="welcome-signin" class="welcome-panel-title">Sign in to the preview</h2>
-        <div class="welcome-panel-body">
-          <form id="welcome-preview-form" class="welcome-preview-form" method="post" autocomplete="off">
-            <label for="welcome-screen-name">Screen name</label>
-            <input id="welcome-screen-name" placeholder="Zainy" aria-describedby="welcome-preview-hint" required maxlength="20">
-            <label for="welcome-password">Password</label>
-            <input id="welcome-password" type="password" aria-describedby="welcome-preview-hint" required maxlength="100">
-            <p id="welcome-preview-hint">Demo only. Use <strong>Zainy</strong> and <strong>razzle-demo</strong>.</p>
-            <p class="welcome-form-error" role="status"></p>
-            <button class="secondary home-cta welcome-signin" type="submit">Sign in to preview</button>
-          </form>
-          <div class="welcome-account-actions">
-            <a class="text-action" href="${joinSocialUrl}">New here? Create an account</a>
-          </div>
-          <a class="welcome-reset" href="${liveMessenger}reset.html">Forgot your password?</a>
+        <h2 id="welcome-signin" class="welcome-panel-title">Your Razzle account</h2>
+        <p>Use the same screen name for Razzle Social, Chat, and Messenger.</p>
+        <div class="welcome-account-actions">
+          <a class="primary home-cta" href="${signInSocialUrl}">Sign in</a>
+          <a class="text-action" href="${joinSocialUrl}">New here? Create an account</a>
         </div>
-      </section>
-      <section class="welcome-people" aria-labelledby="welcome-people-title">
-        <h2 id="welcome-people-title" class="welcome-panel-title">Meet the Community</h2>
-        <div class="welcome-panel-body">
-          <div class="welcome-people-grid">
-            ${users.map(user => `<a href="${profilePath(user.name)}" data-profile-link="${esc(user.name)}">${profileAvatar(user.name)}<strong>${esc(user.name)}</strong></a>`).join('')}
-          </div>
-          <p class="welcome-people-note">Fictional profiles and posts for this preview</p><button type="button" class="text-action" onclick="show('people')">See more people →</button>
-        </div>
+        <a class="welcome-reset" href="${liveMessenger}reset.html">Forgot your password?</a>
       </section>
     </aside>
-  </div>
-
-  <p class="home-demo">Profiles and feeds in this preview are saved in this browser.</p>`;
-  $('#welcome-preview-form').addEventListener('submit', event => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const name = form.querySelector('#welcome-screen-name');
-    const password = form.querySelector('#welcome-password');
-    if (name.value.trim().toLowerCase() === 'zainy' && password.value === 'razzle-demo') {
-      openPreviewAccount();
-      return;
-    }
-    form.querySelector('.welcome-form-error').textContent = 'Use the demo screen name and password shown above.';
-    password.value = '';
-    password.focus();
-  });
+  </div>`;
 }
 
 function showSocialHome() {
@@ -679,17 +598,8 @@ function renderRoomDirectory() {
 searchPeople = function () {
   const liveView = $('#live-chat-view');
   if (liveView) { liveView.refreshRooms(); return; }
-  const query = q.trim().toLowerCase();
-  const members = (previewSignedIn ? [{name:'Zainy', interest:interests}, ...users] : users).filter(user => {
-    if (sampleBotProfiles[user.name]?.private) return user.name.toLowerCase().includes(query);
-    const tags = samplePeopleDetails[user.name]?.interests || [];
-    return [user.name, user.interest, ...tags].join(' ').toLowerCase().includes(query);
-  });
-  $('#heading').textContent = 'Search Razzle Social';
-  $('#subheading').textContent = 'Find preview aliases, chatrooms, room topics, and interests.';
-  $('#content').innerHTML = `<section class="directory"><h2>Members</h2>
-    ${members.map(user => `<div class="suggestion">${profileAvatar(user.name)}<a href="${profilePath(user.name)}" data-profile-link="${esc(user.name)}"><strong>${esc(user.name)}</strong><small>@${esc(user.name.toLowerCase())}</small></a></div>`).join('') || '<p>No matching members.</p>'}
-    <h2>Rooms and topics</h2>${roomList(roomResults(query))}</section>`;
+  renderPeopleDirectory();
+  $('#public-profile-search').elements.name.value = $('#search').value.replace(/^@/, '');
 };
 
 function editRoomTopics(id) {
@@ -746,41 +656,8 @@ profile = function (name) {
   if (!/^[a-z][a-z0-9_.-]{2,19}$/i.test(name)) return;
   const path = profilePath(name);
   if (location.pathname + location.search !== path) history.pushState(null, '', path);
-  document.querySelectorAll('[data-live-room]').forEach(link => link.removeAttribute('aria-current'));
-  $('.menu a[href="rooms.html"]').classList.remove('selected');
-  $('.menu a[href="rooms.html"]').removeAttribute('aria-current');
   document.body.classList.remove('guest-home');
-  if (name === 'Zainy' || (previewSignedIn && blocked.includes(name))) {
-    if (!previewSignedIn) publicPreview = true;
-    renderExistingProfile(name);
-    $('#heading').textContent = '@' + name.toLowerCase();
-    if (name === 'Zainy') {
-      updateOwnerProfile();
-      const info = $('.space-about > .space-card');
-      const handle = info?.querySelector('.handle');
-      if (handle) handle.textContent = '@zainy';
-      $('.space-layout')?.classList.add('owner-profile-view');
-      if (info && !publicPreview && previewSignedIn) {
-        const rows = [['Age',details.age],['Sex',details.sex],['Location',details.location || (details.country ? countryName(details.country) : '')],['Status',details.status]];
-        const basics = info.querySelector('.profile-basics');
-        if (basics) basics.innerHTML = '<dl class="owner-details">' + rows.map(([label,value]) =>
-          '<div><dt>' + label + '</dt><dd>' + esc(value || 'Not set') + '</dd></div>').join('') + '</dl>';
-        info.querySelector('.profile-location')?.remove();
-      }
-    }
-    if (name === 'Zainy' && !(publicPreview && visibility === 'private')) {
-      $('.space-about')?.insertAdjacentHTML('beforeend', '<section class="space-card" id="profile-owned-rooms" hidden></section>');
-      showOwnedRooms(name);
-    }
-    if (!previewSignedIn) {
-      $('.profile-toolbar')?.remove();
-      $('.profile-wall form')?.remove();
-    }
-    return;
-  }
-  publicPreview = false;
-  if (Object.hasOwn(sampleBotProfiles, name)) renderPublicPerson(name);
-  else renderChatIdentity(name);
+  renderChatIdentity(name);
 };
 compose = function () {
   if (!previewSignedIn) { showSocialHome(); return; }
