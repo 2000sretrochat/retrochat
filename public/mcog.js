@@ -11,6 +11,7 @@ const fsApply=()=>{const f=L.ycMFs||'m';document.documentElement.classList.remov
 function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
  const b=document.createElement('button');b.id='mcog';b.type='button';b.title='Quick settings';b.setAttribute('aria-label','Quick settings');b.innerHTML=COG;m.appendChild(b);
  const d=document.createElement('div');d.id='mcogdd';document.body.appendChild(d);
+ d.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-a],[data-f]')){e.preventDefault();e.target.click()}};
  const chk=v=>v?'&#10003;':'';
  const draw=()=>{const dark=window.YTheme&&YTheme.get()=='dark',sr=$('mShowRoom'),f=L.ycMFs||'m';
   d.innerHTML=`<div class=it data-a=th>${dark?SUN:MOON}<span>${dark?'Light mode':'Night mode'}</span></div>
@@ -19,7 +20,7 @@ function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.crea
   <div class=it data-a=rb><span>Allow room buzzes</span><span class=r>${chk(L.ycRoomBuzz!='off')}</span></div>
   <div class=h>Font size</div><div class=fs>${[['s','Small'],['m','Medium'],['l','Large']].map(([k,l])=>`<span data-f=${k} class="${k==f?'on':''}">${l}</span>`).join('')}</div>
   ${sr&&sr.style.display!='none'?`<div class=h>Privacy</div><div class=it data-a=sr><span>Show the room I'm in</span><span class=r>${chk(/\u2713/.test(sr.textContent))}</span></div>`:''}
-  <hr><div class=it data-a=av><span>Audio &amp; Video settings&hellip;</span></div><div class=it data-a=all><span>All Settings&hellip;</span></div>`};
+  <hr><div class=it data-a=av><span>Audio &amp; Video settings&hellip;</span></div><div class=it data-a=all><span>All Settings&hellip;</span></div>`;d.querySelectorAll('[data-a],[data-f]').forEach(item=>{item.tabIndex=0;item.setAttribute('role','button')})};
  const place=()=>{const r=b.getBoundingClientRect(),W=document.documentElement.clientWidth,H=innerHeight,w=d.offsetWidth,h=d.offsetHeight;d.style.left=Math.max(4,Math.min(r.right-w,W-w-4))+'px';d.style.top=Math.max(4,Math.min(r.bottom+2,H-h-4))+'px'};
  const show=o=>{d.classList.toggle('open',o);b.classList.toggle('on',o);if(o){draw();place()}};
  b.onclick=e=>{e.stopPropagation();document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));show(!d.classList.contains('open'))};
