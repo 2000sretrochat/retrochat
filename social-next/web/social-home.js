@@ -566,7 +566,7 @@ function showSocialHome() {
       <section><span class="home-card-icon" aria-hidden="true">◈</span><h2>Your space</h2><p>Make your profile yours and share something with your circle.</p><button class="text-action" onclick="profile('Zainy')">Open your space →</button></section>
       <section><span class="home-card-icon" aria-hidden="true"><img src="bubbles.svg" alt=""></span><h2>Messenger</h2><p>Keep the conversation going with familiar screen names.</p><a class="text-action" href="${liveMessenger}">Open Browser Messenger →</a><button type="button" class="messenger-download" onclick="showMessengerDownload()">Download Messenger</button></section>
     </div>
-    <p class="home-demo">You’re exploring the Social preview. <a href="?view=welcome">View the welcome page →</a></p>
+    
   </div>`;
 }
 
@@ -1305,7 +1305,7 @@ suggestions = function () {
     !previewFriends.has(name) && !requests.includes(name) && !followers.includes(name) && !blocked.includes(name));
   $('#suggestions').innerHTML = candidates.slice(0, 3).map(({name}) =>
     '<div class="suggestion">' + profileAvatar(name) + profileUserLink(name) +
-    '<button type="button" class="follow" data-suggest-friend="' + esc(name) + '">Add friend</button></div>'
+    '<span class="bot-badge">Bot</span></div>'
   ).join('') || '<p>No new suggestions right now.</p>';
   updateNotificationBadge();
 };

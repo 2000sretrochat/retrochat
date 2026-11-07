@@ -1,6 +1,10 @@
 (() => {
   const frame = document.querySelector('#live-social-messenger');
   const send = (action, name) => {
+    if (name && Object.hasOwn(sampleBotProfiles, name) && !previewFriends.has(name)) {
+      toast('This is a sample profile. Add real contacts from Messenger.');
+      return;
+    }
     frame.scrollIntoView({block: 'nearest'});
     frame.contentWindow.postMessage({source: 'chatbabble-social', action, name}, location.origin);
   };

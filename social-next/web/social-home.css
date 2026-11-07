@@ -544,5 +544,5 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
 .article-media img { display: block; max-width: 100%; width: min(100%, 560px); height: auto; border: 1px solid #000; }
 
 .live-social-messenger { display: block; width: 100%; height: 660px; border: 0; background: #f1f5f8; }
-#messenger[hidden], #reopen[hidden] { display: none !important; }
+#messenger, #reopen { display: none !important; }
 .live-social-messenger.expanded { position: fixed; z-index: 40; top: 70px; right: 12px; width: min(820px, calc(100vw - 24px)); height: calc(100dvh - 82px); }
