@@ -8,3 +8,16 @@
 .profile-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
 .profile-facts dd { margin: 0; overflow-wrap: anywhere; }
 .profile-room-groups ul { padding-inline-start: 20px; }
+
+/* Razzle Social sidebar and profile styling. */
+.app > .site-sidebar { align-self: stretch; background: #003b7c; border-radius: 0; }
+.site-sidebar .menu > :is(button, a) { padding: 13px 12px; border-radius: 1px; }
+.site-sidebar .menu > .selected { background: #4d90cd; color: #082b50; box-shadow: inset 3px 0 #d7ebfc; }
+.site-sidebar .identity { padding: 10px 8px; }
+.site-sidebar .identity strong { font-size: 16px; overflow-wrap: anywhere; }
+.site-sidebar .identity small { font-size: 12px; margin-top: 3px; }
+.profile .handle { display: block; font-size: 13px; font-weight: 400; }
+.profile .profile-portrait { width: 220px; height: auto; max-width: 100%; aspect-ratio: 1; }
+.avatar > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.avatar:has(> img) { overflow: hidden; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+.write .avatar { width: 36px; height: 36px; flex: 0 0 36px; }

@@ -248,8 +248,17 @@ app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.
 app.post('/api/profile', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in to edit your profile.' });
   const b = req.body || {}; let age = b.age === '' || b.age == null ? null : parseInt(b.age, 10);
   if (age !== null && !(age >= 18 && age <= 120)) return res.status(400).json({ error: 'Age must be between 18 and 120 (or left blank). YappChat is for adults 18+.' });
-  await db.q('update users set display_name=$2, age=$3, location=$4, bio=$5, interests=$6, sex=coalesce($7,sex), profile_status=coalesce($8,profile_status) where id=$1', [u.id, PCLEAN(b.displayName, 30), age, PCLEAN(b.location, 50), PCLEAN(b.bio, 300), PCLEAN(b.interests, 150), b.sex == null ? null : PCLEAN(b.sex, 40), b.profileStatus == null ? null : PCLEAN(b.profileStatus, 70)]);
-  res.json({ ok: true }); });
+  const displayName = b.displayName == null ? null : PCLEAN(b.displayName, 30);
+  const [updated] = await db.q(`update users set
+    display_name_changed_at = case when $2::text is not null and display_name is distinct from $2
+      then now() else display_name_changed_at end,
+    display_name = coalesce($2, display_name), age=$3, location=$4, bio=$5, interests=$6,
+    sex=coalesce($7,sex), profile_status=coalesce($8,profile_status)
+    where id=$1 and ($2::text is null or display_name is not distinct from $2
+      or display_name_changed_at is null or display_name_changed_at <= now() - interval '7 days')
+    returning display_name`, [u.id, displayName, age, PCLEAN(b.location, 50), PCLEAN(b.bio, 300), PCLEAN(b.interests, 150), b.sex == null ? null : PCLEAN(b.sex, 40), b.profileStatus == null ? null : PCLEAN(b.profileStatus, 70)]);
+  if (!updated) return res.status(409).json({ error: 'You can change your display name once every 7 days.' });
+  res.json({ ok: true, displayName: updated.display_name }); });
 // ---- site admin: room ratings / closing (ADMIN_KEY) ----
 app.get('/api/admin/rooms', (req, res) => { if (!keyOk(req.get('x-admin-key'))) return res.status(401).json({ error: 'Unauthorized' }); res.json(roomList(true).map(r => ({ ...r, official: OFFICIAL.has(r.name) }))); });
 function closeRoom(room) { if (!ROOMS[room]) return 'No such room.'; if (OFFICIAL.has(room)) return 'Official rooms cannot be closed.';

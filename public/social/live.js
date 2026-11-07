@@ -21,6 +21,13 @@
       return response.json();
     });
 
+  const displayNames = new Map();
+  window.socialDisplayName = name => displayNames.get(name.toLowerCase()) || name;
+  function rememberProfile(record) {
+    displayNames.set(record.name.toLowerCase(), record.displayName || record.name);
+    rememberAvatar(record);
+  }
+
   function rememberAvatar(record) {
     const alias = record.name.toLowerCase();
     if (!Object.hasOwn(YAv.cache, alias)) YAv.update(record.name, record.avatar);
@@ -60,8 +67,10 @@
 
     profileData(name).then(record => {
       if (record.bot || record.guest) return;
-      rememberAvatar(record);
+      rememberProfile(record);
       if (!body.isConnected) return;
+      body.querySelector('h2').textContent = socialDisplayName(record.name);
+      body.querySelector('.handle').textContent = '@' + record.name.toLowerCase();
       if (!owner) thumbnail.outerHTML = socialAvatar(record.name);
       body.querySelector('.profile-facts')?.remove();
       const facts = [['Age', record.age], ['Location', record.location], ['Sex', record.sex], ['Status', record.profileStatus]];
@@ -97,6 +106,7 @@
     if (current !== 'profile' || window.profileName !== currentAlias || $('#dialog').open) return;
     modal(`<h2>Customize your space</h2>
       <form id="edit-form">
+        <label>Display name<input name="displayName" maxlength="30" value="${esc(record.displayName || '')}"></label>
         <label>About your chat identity<textarea name="bio" maxlength="300">${esc(record.bio || '')}</textarea></label>
         <label>Age<input name="age" type="number" min="18" max="120" value="${esc(record.age ?? '')}"></label>
         <label>Location<input name="location" maxlength="50" value="${esc(record.location || '')}"></label>
@@ -118,13 +128,15 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            displayName: record.displayName, interests: record.interests,
+            displayName: data.get('displayName'), interests: record.interests,
             bio: data.get('bio'), age: data.get('age'), location: data.get('location'),
             sex: data.get('sex'), profileStatus: data.get('profileStatus')
           })
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Profile could not be saved.');
+        rememberProfile({ ...record, displayName: result.displayName });
+        updateIdentity();
         bio = data.get('bio');
         cover = data.get('cover');
         try { save('bio', bio); save('cover', cover); } catch { toast('Profile saved. Browser storage could not save your cover color.'); }
@@ -141,8 +153,8 @@
   };
 
   const updateIdentity = () => {
-    document.querySelectorAll('.identity strong').forEach(e => e.textContent = currentAlias);
-    document.querySelectorAll('.identity small').forEach(e => e.textContent = '@' + currentAlias.toLowerCase() + ' · Your chat identity');
+    document.querySelectorAll('.identity strong').forEach(e => e.textContent = socialDisplayName(currentAlias));
+    document.querySelectorAll('.identity small').forEach(e => e.textContent = '@' + currentAlias.toLowerCase());
     document.querySelectorAll('.avatar.z').forEach(element => { element.outerHTML = socialAvatar(currentAlias); });
     const title = document.querySelector('.banner-copy strong'); if (title) title.textContent = 'This is your space, ' + currentAlias + '.';
     const side = document.querySelector('.identity'); if (side) side.onclick = () => profile(currentAlias);
@@ -151,7 +163,11 @@
     const banBtn = document.querySelector('.banner-copy button'); if (banBtn) banBtn.onclick = side.onclick;
   };
   updateIdentity();
-  profileData(currentAlias).then(rememberAvatar).catch(() => {});
+  profileData(currentAlias).then(record => {
+    rememberProfile(record);
+    updateIdentity();
+    if (current === 'feed') render();
+  }).catch(() => {});
 
   const label = document.querySelector('.demo');
   if (label) { label.textContent = 'SIGNED IN'; label.classList.add('live-auth'); }

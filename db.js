@@ -24,6 +24,7 @@ create table if not exists login_history(id serial primary key, user_id int not 
 create index if not exists login_history_u on login_history(user_id, id);
 alter table users add column if not exists adult boolean not null default false;
 alter table users add column if not exists display_name text not null default '';
+alter table users add column if not exists display_name_changed_at timestamptz;
 alter table users add column if not exists age int;
 alter table users add column if not exists location text not null default '';
 alter table users add column if not exists bio text not null default '';
