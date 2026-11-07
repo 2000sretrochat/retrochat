@@ -1,6 +1,7 @@
 (() => {
   const session=window.socialSession, me=session.alias, myId=session.id;
   const frame=$('#live-social-messenger'), peopleByName=new Map(), postsById=new Map();
+  const socialFooter=document.querySelector('body > .social-footer');if(socialFooter)document.querySelector('body > .app').appendChild(socialFooter);
   let feed=[], friends=[], people=[], inbox={notifications:[],requests:[]}, loading=false, profileGeneration=0;
   let settingsQueue=Promise.resolve();
 
@@ -201,10 +202,31 @@
   }
   follow=name=>friendAction(name,'request').then(()=>toast('Friend request sent.')).catch(error=>toast(error.message));
   request=name=>friends.some(person=>person.name===name)?privateChat(name):follow(name);
-  privateChat=name=>{frame.scrollIntoView({block:'nearest'});frame.contentWindow.postMessage({source:'chatbabble-social',action:'open-chat',name},location.origin);};
+  const reopenDock=document.createElement('button');
+  reopenDock.type='button';reopenDock.className='messenger-reopen';reopenDock.textContent='Open Messenger';reopenDock.hidden=true;frame.before(reopenDock);
+  const dockUrl=frame.getAttribute('src');let messengerPopup=null;
+  const restoreDock=()=>{
+    if(messengerPopup&&!messengerPopup.closed)messengerPopup.close();messengerPopup=null;
+    if(frame.getAttribute('src')==='about:blank')frame.src=dockUrl;
+    frame.hidden=false;frame.classList.remove('collapsed','expanded');reopenDock.hidden=true;reopenDock.textContent='Open Messenger';
+    frame.contentWindow.postMessage({source:'chatbabble-social',action:'expand'},location.origin);
+  };
+  reopenDock.onclick=restoreDock;
+  setInterval(()=>{if(messengerPopup?.closed)restoreDock();},1000);
+  privateChat=name=>{
+    if(messengerPopup&&!messengerPopup.closed){messengerPopup.focus();messengerPopup.postMessage({source:'chatbabble-social',action:'open-chat',name},location.origin);return;}
+    restoreDock();frame.scrollIntoView({block:'nearest'});frame.contentWindow.postMessage({source:'chatbabble-social',action:'open-chat',name},location.origin);
+  };
   window.addEventListener('message',event=>{
     if(event.origin!==location.origin || event.source!==frame.contentWindow || event.data?.source!=='chatbabble-messenger')return;
-    frame.classList.toggle('expanded',Boolean(event.data.overlay));
+    if(event.data.type==='close'){frame.hidden=true;frame.classList.remove('expanded');reopenDock.hidden=false;return;}
+    if(event.data.type==='collapse'){frame.classList.toggle('collapsed',Boolean(event.data.collapsed));frame.classList.remove('expanded');return;}
+    if(event.data.type==='popout'){
+      messengerPopup=window.open('/social/messenger.html?popout=1','razzleSocialMessenger','popup=yes,width=1040,height=740,resizable=yes,scrollbars=yes');
+      if(!messengerPopup){toast('Allow pop-ups for this site to open Messenger in its own window.');return;}
+      frame.src='about:blank';frame.hidden=true;frame.classList.remove('expanded');reopenDock.textContent='Bring Messenger back';reopenDock.hidden=false;return;
+    }
+    frame.classList.toggle('expanded',Boolean(event.data.overlay)&&!frame.classList.contains('collapsed')&&!frame.hidden);
     if(event.data.type==='state')refreshNotifications();
   });
   function openComment(id) {

@@ -10,3 +10,43 @@ html,body{background:transparent!important;overflow:hidden;margin:0;min-height:1
 #signin{background:#f1f5f8;color:#003876;padding:18px 13px;overflow:auto}#signin .lgbig{display:none}#signin .logo{font-size:24px}#signin input{border:1px solid #d1dce6;border-radius:0}#signin button.pri,button.pri{background:linear-gradient(#ffa600,#ff9100);border:0;color:#003876}#signin a{color:#004990}
 .win{border:0;border-radius:2px;box-shadow:0 3px 12px #00387630;background:#f1f5f8;color:#153653}.tbar{background:linear-gradient(#005b9e,#003b79);text-shadow:none}.im{left:0!important;top:0!important;right:320px!important;width:calc(100vw - 320px)!important;height:100vh!important;max-height:none;transform:none!important;z-index:50!important}.im .log{flex:1;height:auto;min-height:70px;border-color:#dbe5ee}.im .inbox{min-height:65px}.im .call{max-height:190px}.im .ihead{background:#e5eef7}.im .inbox textarea{border:0}#brw{left:0!important;top:0!important;width:calc(100vw - 320px)!important;height:100vh!important}#modal{z-index:5000}#modal>.win{max-width:min(430px,95vw)}#toasts{right:10px!important;bottom:12px!important;max-width:280px}#reqs .rq button{color:#003876}
 @media(max-width:640px){#mwin{width:100%!important}.has-im #mwin{visibility:hidden}.im,#brw{right:0!important;width:100%!important}#menu .dd{min-width:150px}.im .inbox textarea{min-height:50px}}
+
+/* Match the Social dock and keep every control legible. */
+:root{--dock-width:340px}
+#mwin{width:100%!important;background:#003b7c}
+.has-overlay #mwin{width:var(--dock-width)!important}
+#mwin>.tbar{min-height:54px;gap:7px;padding:8px 10px;background:#003876}
+#mwin>.tbar .lgs{display:flex;flex:none}
+.razzle-mark{display:block;width:30px;height:30px;padding:2px;background:#fff;border-radius:7px}
+#mwin>.tbar .appname{color:white!important;font-size:15px!important}
+#mwin>.tbar>.wb:not(.x),#mwin>.tbar>.wb.x{display:grid;place-items:center;flex:none;width:27px;height:28px;padding:4px;background:transparent;border:0;border-radius:5px;color:#fff;cursor:pointer}
+#mwin>.tbar>.wb:hover{background:#ffffff26}
+#mwin>.tbar>.wb svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#mwin>.tbar>.wb[hidden]{display:none!important}
+#menu{color:#153653!important;background:#edf4fb!important;font-size:12px!important;justify-content:space-between}
+#menu>div{color:#153653!important;padding:7px 8px!important}
+#menu>div:hover,#menu>div.open{background:#004990!important;color:#fff!important}
+#menu .dd{color:#153653!important;background:#fff!important}
+#menu .dd div{color:#153653!important}
+#menu .dd div:hover{color:#fff!important;background:#004990!important}
+#me{padding:14px 12px!important;gap:12px!important;background:transparent!important;align-items:flex-start!important}
+#me .nm{color:#fff!important;font-size:17px!important}
+#myav{width:56px!important;height:56px!important;border:1px solid #000!important;border-radius:9px!important}
+#me .stw{margin:6px 0 9px}
+#stsel{color:#e7f2ff!important;font-size:12px!important}
+#stsel option{color:#153653;background:#fff}
+#me .mind{background:#ffffff12!important;border:0!important;border-radius:6px!important;padding:0!important;color:#cce1f4!important}
+#me .mind input#smsg{display:block;box-sizing:border-box;width:100%;min-width:0;margin:0!important;padding:8px 9px!important;background:transparent!important;border:0!important;box-shadow:none!important;color:white!important;font-size:12px!important;border-radius:6px!important}
+#me .mind:focus-within{outline:2px solid #82b8e8;outline-offset:1px}
+#me .mind input#smsg::placeholder{color:#ccdeef!important}
+#list .grp{color:#b6d5ef!important;font-size:12px!important}
+#list .ct .n{color:#fff!important}#list .ct.off .n{color:#c1d5e8!important}
+#list .av{border:1px solid #000!important;border-radius:8px!important;overflow:hidden}
+#list .av img{border-radius:7px}
+.im,#brw{right:var(--dock-width)!important;width:calc(100vw - var(--dock-width) - 16px)!important}
+.dock-collapsed #mwin>:not(.tbar){display:none!important}
+.dock-collapsed #mwin{height:54px!important}
+.messenger-popout #mwin{width:340px!important}
+.messenger-popout #brw{left:0!important;right:356px!important;width:calc(100vw - 356px)!important;max-width:none;height:100vh!important}
+.messenger-popout #brl{max-height:none;flex:1;min-height:0}
+@media(max-width:640px){:root{--dock-width:100vw}.messenger-popout #mwin{width:100%!important}.messenger-popout #brw{width:100%!important;right:0!important;z-index:20}.im{width:100%!important;right:0!important}}
