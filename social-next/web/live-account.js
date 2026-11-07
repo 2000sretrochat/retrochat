@@ -203,11 +203,13 @@
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.querySelector('#notification-dropdown')?.remove();$('#notification-bell').setAttribute('aria-expanded','false');}});
   updateNotificationBadge=()=>{};
   async function friendAction(name,action) {
-    await api('/friends/'+encodeURIComponent(name),'POST',{action});
+    const result=await api('/friends/'+encodeURIComponent(name),'POST',{action});
     await Promise.all([refreshView(),refreshNotifications()]);
     if(current==='following')relationshipPanel();suggestions();
+    if(current==='profile'&&window.profileName.toLowerCase()!==me.toLowerCase())profile(window.profileName);
+    return result;
   }
-  follow=name=>friendAction(name,'request').then(()=>toast('Friend request sent.')).catch(error=>toast(error.message));
+  follow=name=>friendAction(name,'request').then(result=>toast(result.accepted?'Added to your friends.':'Friend request sent.')).catch(error=>toast(error.message));
   request=name=>friends.some(person=>person.name===name)?privateChat(name):follow(name);
   const reopenDock=document.createElement('button');
   reopenDock.type='button';reopenDock.className='messenger-reopen';reopenDock.textContent='Open Messenger';reopenDock.hidden=true;frame.before(reopenDock);
@@ -288,7 +290,7 @@
         mountPostDetails($('#shared-edit-form'),post);return;
       } else if(d.sharedPhoto){const post=postsById.get(d.sharedPhoto);if(post?.image)modal('<h2>Photo</h2><img class="profile-photo-detail" src="'+esc(post.image)+'" alt="Shared photo">');return;}
       else if(d.liveMessage){privateChat(d.liveMessage);return;}
-      else if(d.liveRequest){await friendAction(d.liveRequest,'request');toast('Request sent.');return;}
+      else if(d.liveRequest){const result=await friendAction(d.liveRequest,'request');toast(result.accepted?'Added to your friends.':'Request sent.');return;}
       else if(d.liveRemove){if(confirm('Remove this friend?'))await friendAction(d.liveRemove,'remove');return;}
       else if(d.sharedAccept){await friendAction(d.sharedAccept,'accept');openNotifications();return;}
       else if(d.sharedDecline){await friendAction(d.sharedDecline,'decline');openNotifications();return;}

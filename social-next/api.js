@@ -259,7 +259,7 @@ function registerApi(router, express, db, accounts, io) {
         accounts.toUser?.(actor,'m:contact',{name:target.name,group:'Friends',online:false,status:'offline',avatar:target.avatar});
       }else await db.q('insert into requests(from_id,to_id) values($1,$2) on conflict do nothing',[actor,target.id]);
     } else fail('Unknown friend action.');
-    res.json({ok:true});
+    res.json({ok:true,accepted:action==='request'&&!!target.bot});
   }));
   router.get('/api/friends',run(async(req,res) => {
     const rows=await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
