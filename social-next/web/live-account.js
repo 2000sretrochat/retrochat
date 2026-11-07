@@ -126,6 +126,7 @@
       friends=contacts;contacts.forEach(remember);previewFriends.clear();contacts.forEach(person=>previewFriends.add(person.name));
       syncPreviewFriends();
       if(current==='feed')render();
+      else if(current==='following')relationshipPanel();
       else if(current==='profile' && window.profileName?.toLowerCase()===me.toLowerCase() && !$('#dialog').open)renderOwner();
       loadArticlePreviews();
     } catch(error){toast(error.message);}
@@ -183,6 +184,7 @@
       const bell=$('#notification-bell'),badge=$('#notification-count');
       bell.classList.toggle('has-unread',count>0);badge.hidden=!count;badge.textContent=count?String(count):'';
       bell.setAttribute('aria-label',count?'Notifications, '+count+' new':'Notifications');
+      if(current==='following')relationshipPanel();
     } catch {console.warn('Notification refresh unavailable');}
   }
   openNotifications=function() {
