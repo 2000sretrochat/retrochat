@@ -9,7 +9,7 @@ function setup() {
   } };
   const mod = { exports: {} }, sandbox = { module: mod, exports: mod.exports, console, setInterval: () => ({ unref() {} }), require(name) {
     if (name === './db') return database;
-    if (name === './emails' || name === './geo') return {};
+    if (name === './emails' || name === './geo' || name === './mail') return {};
     if (name === 'bcryptjs') return { hashSync: () => 'dummy' };
     if (name === './flood') return { check: () => null };
     if (name === './messenger-sessions') return require('../messenger-sessions');
