@@ -147,7 +147,7 @@ function sockets(io, hooks) {
   io.on('connection', async s => {
     const acct = s.data.acct; if (!acct) return;
     const uid = acct.id, me = acct.name; let ready = false;
-    const safe = fn => async (...a) => { const cb = typeof a[a.length - 1] === 'function' ? a.pop() : null; try { const restricted = await db.q('select 1 from social_restrictions where user_id= and service=', [uid, 'messenger']); if (restricted.length) { cb && cb({ error: 'Messenger access is restricted. Your Social account remains available.' }); return; } const r = await fn(...a); cb && cb(r || { ok: true }); } catch (e) { if (!e.maint) console.error('[m]', e.message); cb && cb({ error: e.maint ? 'Service under maintenance' : 'Something went wrong' }); } };
+    const safe = fn => async (...a) => { const cb = typeof a[a.length - 1] === 'function' ? a.pop() : null; try { const restricted = await db.q('select 1 from social_restrictions where user_id=$1 and service=$2', [uid, 'messenger']); if (restricted.length) { cb && cb({ error: 'Messenger access is restricted. Your Social account remains available.' }); return; } const r = await fn(...a); cb && cb(r || { ok: true }); } catch (e) { if (!e.maint) console.error('[m]', e.message); cb && cb({ error: e.maint ? 'Service under maintenance' : 'Something went wrong' }); } };
     let stamps = [];
     const flood = () => { const now = Date.now(); stamps = stamps.filter(t => now - t < 10000); if (stamps.length >= 8) return true; stamps.push(now); return false; };
     s.on('m:init', safe(async () => {

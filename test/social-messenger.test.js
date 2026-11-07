@@ -2,6 +2,11 @@ const test = require('node:test'), assert = require('node:assert/strict'), vm = 
 const users = [{ id: 1, name: 'Alice', status: 'available', status_msg: '', avatar: 'a1', show_room: true }, { id: 2, name: 'Bob', status: 'available', status_msg: '', avatar: 'a2', show_room: true }];
 function setup() {
   const database = { status: () => ({ ready: true }), async q(sql, args = []) {
+    if (sql.includes('from social_restrictions')) {
+      assert.equal(sql, 'select 1 from social_restrictions where user_id=$1 and service=$2');
+      assert.equal(args[1], 'messenger');
+      return [];
+    }
     if (sql.startsWith('select name,status')) return users.filter(u => u.id === args[0]);
     if (sql.startsWith('select id,name from users')) return users.filter(u => u.name.toLowerCase() === args[0]);
     if (sql.startsWith('select 1 from contacts')) return [{ exists: 1 }];
