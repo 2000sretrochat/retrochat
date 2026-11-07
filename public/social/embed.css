@@ -20,6 +20,9 @@ html,body{background:transparent!important;overflow:hidden;margin:0;min-height:1
 .razzle-mark{display:block;width:30px;height:30px;padding:2px;background:#fff;border-radius:7px}
 #mwin>.tbar .appname{color:white!important;font-size:15px!important}
 #mwin>.tbar .appname :is(.a,.b){color:inherit!important}
+#mwin>.tbar>span:not(.wb){color:#fff!important}
+#mwin>.tbar>span:nth-child(2){white-space:nowrap;font-size:13px!important}
+#mwin>.tbar>.wb:not(.x),#mwin>.tbar>.wb.x{width:27px!important;min-width:27px!important;height:28px!important;padding:4px!important;background:transparent!important;border:0!important;border-radius:5px!important;box-shadow:none!important;color:white!important}
 #mwin>.tbar>.wb:not(.x),#mwin>.tbar>.wb.x{display:grid;place-items:center;flex:none;width:27px;height:28px;padding:4px;background:transparent;border:0;border-radius:5px;color:#fff;cursor:pointer}
 #mwin>.tbar>.wb:hover{background:#ffffff26}
 #mwin>.tbar>.wb svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -36,10 +39,13 @@ html,body{background:transparent!important;overflow:hidden;margin:0;min-height:1
 #me .stw{margin:6px 0 9px}
 #stsel{color:#e7f2ff!important;font-size:12px!important}
 #stsel option{color:#153653;background:#fff}
+#mwin #stsel{background:transparent!important;color:#e7f2ff!important;border:0!important;box-shadow:none!important;border-radius:4px!important;padding:4px!important;width:auto!important}
 #me .mind{background:#ffffff12!important;border:0!important;border-radius:6px!important;padding:0!important;color:#cce1f4!important}
 #me .mind input#smsg{display:block;box-sizing:border-box;width:100%;min-width:0;margin:0!important;padding:8px 9px!important;background:transparent!important;border:0!important;box-shadow:none!important;color:white!important;font-size:12px!important;border-radius:6px!important}
 #me .mind:focus-within{outline:2px solid #82b8e8;outline-offset:1px}
 #me .mind input#smsg::placeholder{color:#ccdeef!important}
+#search .srch{background:#edf4fb!important;border:0!important;border-radius:7px!important;padding:0 9px!important;color:#526b82!important}
+#search .srch #q{background:transparent!important;border:0!important;box-shadow:none!important;min-width:0;padding:9px 7px!important;color:#153653!important}
 #list .grp{color:#b6d5ef!important;font-size:12px!important}
 #list .ct .n{color:#fff!important}#list .ct.off .n{color:#c1d5e8!important}
 #list .av{border:1px solid #000!important;border-radius:8px!important;overflow:hidden}
