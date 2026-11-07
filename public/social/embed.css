@@ -13,12 +13,13 @@ html,body{background:transparent!important;overflow:hidden;margin:0;min-height:1
 
 /* Match the Social dock and keep every control legible. */
 :root{--dock-width:340px}
-#mwin{width:100%!important;background:#003b7c}
+#mwin{width:100%!important;background:#003b7c!important}
 .has-overlay #mwin{width:var(--dock-width)!important}
-#mwin>.tbar{min-height:54px;gap:7px;padding:8px 10px;background:#003876}
+#mwin>.tbar{min-height:54px;gap:7px;padding:8px 10px;background:#003876!important}
 #mwin>.tbar .lgs{display:flex;flex:none}
 .razzle-mark{display:block;width:30px;height:30px;padding:2px;background:#fff;border-radius:7px}
 #mwin>.tbar .appname{color:white!important;font-size:15px!important}
+#mwin>.tbar .appname :is(.a,.b){color:inherit!important}
 #mwin>.tbar>.wb:not(.x),#mwin>.tbar>.wb.x{display:grid;place-items:center;flex:none;width:27px;height:28px;padding:4px;background:transparent;border:0;border-radius:5px;color:#fff;cursor:pointer}
 #mwin>.tbar>.wb:hover{background:#ffffff26}
 #mwin>.tbar>.wb svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}

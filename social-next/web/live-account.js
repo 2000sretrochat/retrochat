@@ -1,7 +1,8 @@
 (() => {
   const session=window.socialSession, me=session.alias, myId=session.id;
   const frame=$('#live-social-messenger'), peopleByName=new Map(), postsById=new Map();
-  const socialFooter=document.querySelector('body > .social-footer');if(socialFooter)document.querySelector('body > .app').appendChild(socialFooter);
+  const alignFooter=()=>{const footer=document.querySelector('body > .social-footer');if(footer)document.querySelector('body > .app').appendChild(footer);};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',alignFooter,{once:true});else alignFooter();
   let feed=[], friends=[], people=[], inbox={notifications:[],requests:[]}, loading=false, profileGeneration=0;
   let settingsQueue=Promise.resolve();
 
