@@ -1,7 +1,7 @@
 const liveMessenger = 'https://retrochat-izzg.onrender.com/';
 const liveRooms = liveMessenger + 'rooms.html';
 // Set to a public HTTPS installer URL when the release is ready.
-const messengerInstallerUrl = 'https://github.com/2000sretrochat/retrochat/releases/latest/download/YappChat-Setup.exe';
+const messengerInstallerUrl = 'https://github.com/2000sretrochat/retrochat/releases/latest/download/RazzleMessenger-Setup.exe';
 const joinSocialUrl = liveMessenger + '?chat=1&signup=1&social=1';
 const welcomePreview = new URLSearchParams(location.search).get('view') === 'welcome';
 let previewSignedIn = !welcomePreview && read('previewSignedIn', true);

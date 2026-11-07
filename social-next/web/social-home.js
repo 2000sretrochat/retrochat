@@ -2,7 +2,7 @@ const liveMessenger = location.origin + '/';
 seeds.splice(0, seeds.length);
 const liveRooms = liveMessenger + 'rooms.html';
 // Set to a public HTTPS installer URL when the release is ready.
-const messengerInstallerUrl = '';
+const messengerInstallerUrl = 'https://github.com/2000sretrochat/retrochat/releases/latest/download/RazzleMessenger-Setup.exe';
 const joinSocialUrl = liveMessenger + '?chat=1&signup=1&social=1';
 const welcomePreview = false;
 const liveEntry = false;
