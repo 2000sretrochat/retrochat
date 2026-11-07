@@ -100,6 +100,15 @@ function registerApi(router, express, db, accounts, io) {
     const [row] = await db.q('select value from social_settings where user_id=$1',[req.socialAccount.id]);
     res.json(row?.value || {});
   }));
+  router.get('/api/navigation',run(async(req,res)=>{
+    const [row]=await db.q(`select u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,coalesce(s.value->>'portrait','') as portrait,
+      (select count(*)::int from contacts where owner=u.id) as friends from users u left join social_settings s on s.user_id=u.id where u.id=$1`,[req.socialAccount.id]);
+    res.json({...row,master:req.socialAccount.master});
+  }));
+  router.get('/api/portraits',run(async(req,res)=>{
+    const names=String(req.query.names||'').split(',').map(x=>x.toLowerCase()).filter(x=>/^[a-z][a-z0-9_.-]{2,19}$/.test(x)).slice(0,100);
+    const rows=await db.q(`select u.name,coalesce(nullif(s.value->>'portrait',''),'/av/'||u.name) as portrait from users u left join social_settings s on s.user_id=u.id where u.name_lc=any($1::text[])`,[names]);res.json(rows);
+  }));
   router.patch('/api/settings',run(async(req,res) => {
     const value = settingsPatch(req.body);
     const [row] = await db.q(`insert into social_settings(user_id,value) values($1,$2)
@@ -112,16 +121,16 @@ function registerApi(router, express, db, accounts, io) {
   router.get('/api/people',run(async(req,res) => {
     const search = text(req.query.q,80);
     const rows = await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
-      coalesce(s.value->>'portrait','') as portrait,u.age,u.sex,
-      case when coalesce(s.value->>'visibility','public')='private' and u.id<>$1 then '' else u.location end as location
+      coalesce(s.value->>'portrait','') as portrait,u.age,u.sex,exists(select 1 from social_bot_members where user_id=u.id) as bot,
+      case when coalesce(s.value->>'visibility','public')='private' and u.id<>$1 and ${req.socialAccount.master?'false':'true'} then '' else u.location end as location
       from users u left join social_settings s on s.user_id=u.id where not u.banned and not coalesce(u.deactivated,false)
       and not exists(select 1 from social_restrictions where user_id=u.id and service='social')
       and ($2='' or u.name ilike '%'||$2||'%' or u.display_name ilike '%'||$2||'%')
-      order by u.created desc limit 100`,[req.socialAccount.id,search]);
+      order by u.created desc limit 300`,[req.socialAccount.id,search]);
     res.json(rows);
   }));
   router.get('/api/profile/:name',run(async(req,res) => {
-    const [row] = await db.q(`select u.id,u.name,u.display_name,u.age,u.sex,u.location,u.bio,u.interests,u.profile_status,u.created,
+    const [row] = await db.q(`select u.id,u.name,u.display_name,u.age,u.sex,u.location,u.bio,u.interests,u.profile_status,u.created,exists(select 1 from social_bot_members where user_id=u.id) as bot,
       coalesce(s.value,'{}') as settings,exists(select 1 from contacts where owner=u.id and contact=$1) as friend
       from users u left join social_settings s on s.user_id=u.id where u.name_lc=$2
       and not u.banned and not coalesce(u.deactivated,false)`,[req.socialAccount.id,String(req.params.name).toLowerCase()]);
@@ -129,7 +138,7 @@ function registerApi(router, express, db, accounts, io) {
     const owner = row.id === req.socialAccount.id;
     const restricted = row.settings.visibility === 'private' && !owner && !row.friend && !req.socialAccount.master;
     const result = {id:row.id,name:row.name,displayName:row.display_name || row.name,age:row.age,sex:row.sex,
-      status:row.profile_status,memberSince:row.created,private:restricted,owner,friend:row.friend,
+      status:row.profile_status,memberSince:row.created,private:restricted,owner,friend:row.friend,bot:row.bot,
       settings:restricted ? {portrait:row.settings.portrait || '',visibility:'private'} : publicSettings(row.settings)};
     if (!restricted) Object.assign(result,{location:row.location,bio:row.bio,interests:row.interests});
     res.json(result);
@@ -232,7 +241,7 @@ function registerApi(router, express, db, accounts, io) {
   }));
   router.post('/api/friends/:name',run(async(req,res) => {
     const actor=req.socialAccount.id, action=req.body?.action;
-    const [target]=await db.q('select id,name,avatar,status,status_msg from users where name_lc=$1 and not banned and not coalesce(deactivated,false)',[req.params.name.toLowerCase()]);
+    const [target]=await db.q('select id,name,avatar,status,status_msg,exists(select 1 from social_bot_members where user_id=users.id) as bot from users where name_lc=$1 and not banned and not coalesce(deactivated,false)',[req.params.name.toLowerCase()]);
     if (!target || target.id===actor) fail('Account unavailable.',404);
     if (action==='accept') {
       const added=await db.q(`with pending as (delete from requests where from_id=$1 and to_id=$2 returning from_id,to_id)
@@ -244,7 +253,11 @@ function registerApi(router, express, db, accounts, io) {
     else if (action==='request') {
       const [blocked]=await db.q('select 1 from blocks where (owner=$1 and blocked=$2) or (owner=$2 and blocked=$1)',[actor,target.id]);
       if (blocked) fail('This request cannot be sent.',403);
-      await db.q('insert into requests(from_id,to_id) values($1,$2) on conflict do nothing',[actor,target.id]);
+      if(target.bot){
+        await db.q('insert into contacts(owner,contact) values($1,$2),($2,$1) on conflict do nothing',[actor,target.id]);
+        await db.q('delete from requests where (from_id=$1 and to_id=$2) or (from_id=$2 and to_id=$1)',[actor,target.id]);
+        accounts.toUser?.(actor,'m:contact',{name:target.name,group:'Friends',online:false,status:'offline',avatar:target.avatar});
+      }else await db.q('insert into requests(from_id,to_id) values($1,$2) on conflict do nothing',[actor,target.id]);
     } else fail('Unknown friend action.');
     res.json({ok:true});
   }));

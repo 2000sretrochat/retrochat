@@ -35,6 +35,12 @@ function attachSocialNext(app, express, accounts, db, io) {
     next();
   });
   registerApi(router, express, db, accounts, io);
+  router.get('/bot-portrait/:index.svg',async(req,res)=>{
+    const index=Number(req.params.index);if(!Number.isInteger(index)||index<0||index>=61)return res.sendStatus(404);
+    const image=await fs.promises.readFile(path.join(assets,'directory-bot-photos.jpg'));
+    res.type('image/svg+xml').set('Cache-Control','private,max-age=86400').send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${index%8*160} ${Math.floor(index/8)*160} 160 160"><image width="1280" height="1280" href="data:image/jpeg;base64,${image.toString('base64')}"/></svg>`);
+  });
+  router.get('/rooms.html',(_req,res)=>res.redirect(302,'/rooms.html'));
   router.get('/country', (_req, res) => res.json({country: null}));
   router.get('/article-preview', async (req, res) => {
     const response = await articlePreview(typeof req.query.url === 'string' ? req.query.url : '');

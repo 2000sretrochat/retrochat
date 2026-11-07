@@ -755,4 +755,4 @@ document.querySelectorAll('#hdr').forEach(()=>{});
  else{const lab=document.createElement('span');lab.textContent='Boost';lab.className='mlb';lab.style.cssText='font:600 10px var(--sys);color:var(--muted,#567);margin-right:2px';wrap.prepend(lab);show(YAV.setBoost(YAV.cfg().boost));up.onclick=()=>show(YAV.setBoost(YAV.cfg().boost+10));dn.onclick=()=>show(YAV.setBoost(YAV.cfg().boost-10))}})();
 
 (()=>{const e=document.getElementById('mMute');if(!e)return;const u=()=>e.classList.toggle('chk',localStorage.ycSound==='off');u();e.onclick=()=>{localStorage.ycSound=localStorage.ycSound==='off'?'on':'off';u()};addEventListener('storage',u);addEventListener('ycsound',u)})();
-</script><script src="/room137.js"></script></body></html>
+</script><script src="/room137.js"></script><script src="/social/navigation.js"></script></body></html>

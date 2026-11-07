@@ -1,6 +1,40 @@
 // Only this dedicated copy of Messenger speaks to the same-origin Social page.
 (() => {
   const docked = parent !== window;
+  const select=document.getElementById('stsel'),statusInput=document.getElementById('smsg');
+  select.querySelector('option[value="showroom"]').textContent="Show Room I'm In";
+  const custom=document.createElement('option');custom.value='custom';custom.textContent='Custom…';select.appendChild(custom);statusInput.maxLength=60;
+  const oldStatus=select.onchange;
+  select.onchange=async()=>{
+    if(select.value==='custom'){
+      const result=await emit('m:status',{msg:''});if(result.error){select.value=ME.status;return;}
+      ME.msg='';roomMode(false);statusInput.focus();return;
+    }
+    return oldStatus();
+  };
+  roomMode=on=>{
+    statusInput.readOnly=!!on;statusInput.value=on?'Not in a room':dec(ME?.msg||'');
+    statusInput.placeholder=on?"Room you're in":'Custom status (up to 60 characters)';select.value=ME?.status||'available';
+    if(on&&S?.connected)emit('m:room-label').then(result=>{if(ME?.msg==='[room]')statusInput.value=result.room?'In: '+result.room:'Not in a room';});
+  };
+  const portraits=new Map();
+  const paintPortraits=()=>{
+    for(const row of document.querySelectorAll('#tree .ct[data-n]')){
+      const source=portraits.get(row.dataset.n.toLowerCase()),av=row.querySelector('.av');if(!source||!av||av.dataset.socialPortrait===source)continue;
+      if(av.tagName==='IMG')av.src=source;else {const image=new Image();image.src=source;image.alt=row.dataset.n+' profile photo';image.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit';av.replaceChildren(image);}
+      av.dataset.socialPortrait=source;
+    }
+    const own=portraits.get(ME?.name?.toLowerCase()),av=document.getElementById('myav');if(own&&av?.tagName==='IMG')av.src=own;
+  };
+  const baseRender=render;render=()=>{baseRender();paintPortraits();};
+  const syncProfiles=async()=>{
+    if(!ME)return;
+    if(ME.msg==='[room]')roomMode(true);
+    try{const names=[ME.name,...Object.values(contacts).map(person=>person.name)];const response=await fetch('/social-next/api/portraits?names='+encodeURIComponent(names.join(',')));if(!response.ok)return;
+      for(const person of await response.json())if(person.portrait)portraits.set(person.name.toLowerCase(),person.portrait);paintPortraits();
+    }catch{}
+  };
+  setInterval(syncProfiles,10000);setTimeout(syncProfiles,800);
   document.documentElement.classList.toggle('messenger-popout', !docked);
   const bar = document.querySelector('#mwin > .tbar');
   bar.querySelector('.lgs').innerHTML = '<img class="razzle-mark" src="/social-next/conversation-circle.svg" alt="">';

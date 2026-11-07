@@ -10,7 +10,7 @@ module.exports = function (C) {
   // Seedable names: only the default master. Env MASTER_NAMES=yappchat alone is NOT seedable (collision guard); DB is_master remains authoritative.
   const NAMES = [DEFAULT_MASTER]; // env MASTER_NAMES legacy values are ignored for seeding
   // Exact authorized masters (t228u/t229u). DB is_master only for these; no broad env auto-promote.
-  const AUTHORIZED_MASTERS = ['zainy', 'tony', 'razzle', 'zainyochka'];
+  const AUTHORIZED_MASTERS = ['zainy', 'tony', 'bigtony', 'razzle', 'zainyochka'];
   // Demo/example names used in marketing screenshots — blocked for signup and guest, never seeded as masters.
   const EXAMPLE_BLOCKED = ['lumakite', 'pixelorchard', 'mosscomet'];
   const reserved = n => { const lc = String(n || '').trim().toLowerCase(); return RESV.includes(lc) || EXAMPLE_BLOCKED.includes(lc) || lc === 'razzle' || lc === 'yappchat'; };
@@ -72,6 +72,7 @@ module.exports = function (C) {
       }
     } catch (e) { console.error('[shared-email]', e.message); }
     try { await seedBotProfiles(); } catch (e) { console.error('[bot-profiles]', e.message); }
+    try { await require('./social-next/bots').seedSocialBots(db); console.log('[social-bots] synchronized'); } catch(e) { console.error('[social-bots]',e.message); }
   }
   // Seeds a profile for EVERY bot. Never overwrites master edits: inserts use ON CONFLICT and only fill a missing bot_id.
   // Legacy "[bot]" rows (TriviaTime/GameNight/...) are renamed in place so their edits/avatars survive; only untouched legacy defaults are refreshed.

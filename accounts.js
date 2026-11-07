@@ -81,7 +81,7 @@ function http(app, express, hooks = {}) { H = hooks;
     const lc = String(name || '').toLowerCase().slice(0, 40);
     if (limited('li:' + geo.clientIp(req.headers, req.socket.remoteAddress), 20, 900e3) || limited('ln:' + lc, 8, 900e3)) return reply(429, { error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
     const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw,banned,deactivated from users where name_lc=$1', [lc]) : [];
-    const ok = await bcrypt.compare(String(password || ''), r[0] ? r[0].pw : DUMMY); // constant work either way
+    const ok = await bcrypt.compare(String(password || ''), r[0] && !r[0].pw.startsWith('!social-bot:') ? r[0].pw : DUMMY) && !r[0]?.pw.startsWith('!social-bot:'); // Bots have no usable sign-in password.
     if (!r[0] || !ok) return reply(401, { error: 'Invalid screen name or password.' });
     if (r[0].banned) return reply(403, { error: 'This screen name has been banned.' });
     if (r[0].deactivated) return reply(403, { error: 'This screen name has been deactivated.' });
@@ -174,6 +174,7 @@ function sockets(io, hooks) {
       await db.q('update users set status=$2,status_msg=$3 where id=$1', [uid, st.status, st.msg]); for (const x of online.get(uid)) if (x !== s) x.emit('m:self', { status: st.status, msg: st.msg });
       await broadcast(uid, me); return { ok: true, status: st.status, msg: st.msg };
     }));
+    s.on('m:room-label',safe(async()=>({room:hooks.rawRoomOf?hooks.rawRoomOf(me):null})));
     s.on('m:showroom', safe(async on => { if (!ready) return; const st = state.get(uid); st.showRoom = !!on; await db.q('update users set show_room=$2 where id=$1', [uid, !!on]); await broadcast(uid, me); return { ok: true, showRoom: st.showRoom }; }));
     s.on('m:idle', safe(async on => { if (!ready) return; const st = state.get(uid); if (st.idle === !!on) return; st.idle = !!on; await broadcast(uid, me); }));
     s.on('m:avatar', safe(async a => { if (!ready || !AVATARS.includes(a)) return { error: 'bad avatar' }; state.get(uid).avatar = a; await db.q('update users set avatar=$2 where id=$1', [uid, a]); await broadcast(uid, me); }));
@@ -184,6 +185,7 @@ function sockets(io, hooks) {
       if (await blocked(t.id, uid)) return generic;
       // sending a request to someone you blocked means you want them back: lift your block so the request can be answered
       if (await blocked(uid, t.id)) { await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]); for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === uid) x.data.blk?.delete(t.id); }
+      if((await db.q('select 1 from social_bot_members where user_id=$1',[t.id])).length)return await accept(t);
       // if they already asked me, accept straight away
       if ((await db.q('select 1 from requests where from_id=$1 and to_id=$2', [t.id, uid])).length) return await accept(t);
       await db.q('insert into requests(from_id,to_id,msg) values($1,$2,$3) on conflict (from_id,to_id) do update set msg=excluded.msg, created=now()', [uid, t.id, String(msg || '').slice(0, 120)]);

@@ -16,6 +16,7 @@ test('Social API enforces content ownership, admin permissions, and same-origin 
   const app=express(),router=express.Router(),queries=[];
   const db={q:async(sql,args)=>{
     queries.push({sql,args});
+    if(sql.startsWith('select id,name,avatar,status,status_msg'))return [{id:22,name:'BotPal',avatar:'a1',bot:true}];
     if(sql.startsWith('select p.*'))return [{id:postId,author_id:8,wall_id:9,image:'',body:'Original'}];
     if(sql.startsWith('select c.*,p.wall_id'))return [{id:postId,author_id:8,wall_id:9}];
     if(sql.startsWith('select id,name,is_master'))return [{id:8,name:'Other',is_master:false}];
@@ -41,4 +42,21 @@ test('Social API enforces content ownership, admin permissions, and same-origin 
   assert.ok(queries.some(({sql,args})=>sql.startsWith('insert into social_restrictions') && args[1]==='social' && args[3]===4));
   const post=await request('/posts','POST',{body:'Link',link:'javascript:alert(1)'});
   assert.equal(post.status,400);
+  assert.equal((await request('/friends/BotPal','POST',{action:'request'})).status,200);
+  assert.ok(queries.some(({sql,args})=>sql.startsWith('insert into contacts(owner,contact) values($1,$2),($2,$1)') && args[0]===4 && args[1]===22));
+});
+
+test('Social bot introductions use stable IDs and never overwrite member aliases',async()=>{
+  const {seedSocialBots}=require('../social-next/bots'),queries=[];
+  const database={q:async(sql,args=[])=>{
+    queries.push({sql,args});
+    if(sql.startsWith('select user_id from social_bot_members') && args[0]==='sk8rboi_1987')return [{user_id:22}];
+    return [];
+  }};
+  await seedSocialBots(database);await seedSocialBots(database);
+  const posts=queries.filter(q=>q.sql.includes('insert into social_posts'));
+  assert.equal(posts.length,2);assert.equal(posts[0].args[0],posts[1].args[0]);
+  assert.match(posts[0].args[0],/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.ok(!queries.some(q=>q.sql.includes('update users')));
+  assert.ok(queries.filter(q=>q.sql.includes('insert into users')).every(q=>q.sql.includes('on conflict(name_lc) do nothing')));
 });

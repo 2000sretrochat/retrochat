@@ -574,3 +574,8 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
 .avatar,.avatar img,.member-thumbnail,.member-thumbnail img{border-radius:8px!important;overflow:hidden}
 .profile-portrait,.editable-profile-portrait,.profile-photo-open img,.photo-grid img,.post-image{border-radius:10px!important}
 .avatar img,.member-thumbnail img,.profile-portrait{border:1px solid #000;box-sizing:border-box}
+.site-sidebar :is(.menu .selected,.menu [aria-current="page"],.featured-room[aria-current="page"]){box-shadow:none!important;border-left:0!important}
+button.primary,a.primary,.home-hero button,.welcome-hero .welcome-join,.room-invite a{background:#004990!important;color:#fff!important;border-color:#004990!important}
+.site-sidebar>button.primary{background:#4d90cd!important;color:#fff!important}
+#notification-dropdown{position:absolute;right:18px;top:calc(100% + 6px);width:min(380px,calc(100vw - 24px));max-height:min(70dvh,550px);overflow:auto;padding:18px;background:#fff;border:1px solid #c7d8e8;border-radius:10px;box-shadow:0 14px 40px #173b6026;color:#173b60;z-index:100;text-align:left;white-space:normal;font:14px 'Segoe UI',sans-serif}
+#notification-dropdown h2{font-size:18px;margin:0 0 14px}#notification-dropdown h3{font-size:14px;margin:14px 0 8px}#notification-dropdown p{font-size:13px;line-height:1.5}#notification-dropdown .notification-post{display:block;width:100%;padding:10px 0;text-align:left;border-bottom:1px solid #e3edf5}

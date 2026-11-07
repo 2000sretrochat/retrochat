@@ -57,3 +57,23 @@ html,body{background:transparent!important;overflow:hidden;margin:0;min-height:1
 .messenger-popout #brw{left:0!important;right:356px!important;width:calc(100vw - 356px)!important;max-width:none;height:100vh!important}
 .messenger-popout #brl{max-height:none;flex:1;min-height:0}
 @media(max-width:640px){:root{--dock-width:100vw}.messenger-popout #mwin{width:100%!important}.messenger-popout #brw{width:100%!important;right:0!important;z-index:20}.im{width:100%!important;right:0!important}}
+
+/* A real light theme and font sizes that affect the contact list. */
+html{--contact-font:13px;--status-font:12px}
+html.mfs-s{--contact-font:12px;--status-font:11px}
+html.mfs-l{--contact-font:16px;--status-font:14px}
+#mwin #list .ct .n{font-size:var(--contact-font)!important}
+#mwin #list .ct .sm,#mwin #list .grp{font-size:var(--status-font)!important}
+#search{margin:5px 12px!important;padding:0!important}
+#search .srch{min-height:32px!important;height:32px!important}
+#search .srch #q{height:30px!important;min-height:0!important;margin:0!important;padding:5px 7px!important;font-size:13px!important;line-height:20px!important}
+html:not(.dark) #mwin{background:#f2f7fc!important;color:#153653!important}
+html:not(.dark) #me .nm,html:not(.dark) #mwin #list .ct .n,html:not(.dark) #mwin #stsel{color:#153653!important}
+html:not(.dark) #mwin #list .ct.off .n,html:not(.dark) #mwin #list .ct .sm,html:not(.dark) #mwin #list .grp{color:#526b82!important}
+html:not(.dark) #me .mind{background:#e0edf8!important}
+html:not(.dark) #me .mind input#smsg{color:#315675!important}
+html:not(.dark) #me .mind input#smsg::placeholder{color:#526b82!important}
+html:not(.dark) #mwin #list .ct:hover{background:#dfedfa!important}
+html:not(.dark) #bottom{border-top-color:#d2e0ed!important}
+html:not(.dark) #bottom button{background:#004990!important;color:white!important}
+#mwin>.tbar{height:54px!important;min-height:54px!important;padding:8px 10px!important}

@@ -56,3 +56,4 @@ create table if not exists social_notifications (
   unique(recipient_id,actor_id,kind,reference_id)
 );
 create index if not exists social_notifications_inbox on social_notifications(recipient_id, created desc);
+create table if not exists social_bot_members(user_id int primary key references users(id) on delete cascade,bot_id text not null unique,photo_index int not null);

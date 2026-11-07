@@ -109,7 +109,7 @@
       const wall=record.friend?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message"></textarea><button class="primary">Post</button></form></section>':'';
       $('#content').innerHTML='<div class="space-layout"><aside class="space-about"><section class="space-card">'+
         (record.settings.portrait?'<img class="profile-portrait" src="'+esc(record.settings.portrait)+'" alt="Profile photo">':profileAvatar(record.name))+
-        '<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span><p>'+esc(record.bio || '')+
+        '<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span>'+(record.bot?'<p class="bot-profile-badge">Chat bot</p>':'')+'<p>'+esc(record.bio || '')+
         '</p><div class="profile-basics">'+esc([record.age,record.sex,record.location].filter(Boolean).join(' · '))+'</div><div class="space-actions">'+
         '<button class="secondary" data-live-message="'+esc(record.name)+'">Message</button>'+
         (!record.friend?'<button class="secondary" data-live-request="'+esc(record.name)+'">Add friend</button>':'')+'</div></section></aside><section class="space-posts">'+
@@ -131,7 +131,7 @@
     } catch(error){toast(error.message);}
     finally{loading=false;}
   }
-  function personRow(person) {return '<div class="suggestion">'+profileAvatar(person.name)+profileUserLink(person.name)+'</div>';}
+  function personRow(person) {return '<div class="suggestion">'+profileAvatar(person.name)+profileUserLink(person.name)+(person.bot?'<small class="bot-profile-badge">Bot</small>':'')+'</div>';}
   renderPeopleDirectory=()=>{
     current='people';$('.write').hidden=true;$('.feed-nav').hidden=true;
     $('#content').classList.remove('custom-space');$('#content').removeAttribute('style');
@@ -186,15 +186,21 @@
     } catch {console.warn('Notification refresh unavailable');}
   }
   openNotifications=function() {
-    modal('<h2>Notifications</h2><h3>Friend requests</h3>'+(inbox.requests.map(requestMarkup).join('') || '<p>No pending requests.</p>')+
+    let panel=document.querySelector('#notification-dropdown');
+    if(panel){panel.remove();$('#notification-bell').setAttribute('aria-expanded','false');return;}
+    panel=document.createElement('section');panel.id='notification-dropdown';panel.setAttribute('aria-label','Notifications');panel.tabIndex=-1;
+    panel.innerHTML='<h2>Notifications</h2><h3>Friend requests</h3>'+(inbox.requests.map(requestMarkup).join('') || '<p>No pending requests.</p>')+
       '<h3>Post activity</h3>'+(inbox.notifications.map(item=>'<button class="text-action notification-post" data-shared-notification="'+item.post_id+'">'+esc(item.display_name)+' '+
-        ({post:'posted on your wall',comment:'commented on your post',like:'liked your post'}[item.kind] || '')+'</button>').join('') || '<p>No post activity yet.</p>'));
+        ({post:'posted on your wall',comment:'commented on your post',like:'liked your post'}[item.kind] || '')+'</button>').join('') || '<p>No post activity yet.</p>');
+    document.querySelector('body > header').appendChild(panel);$('#notification-bell').setAttribute('aria-expanded','true');panel.focus();
     save('seenSharedRequests',inbox.requests.map(item=>item.name));
     api('/notifications/read','POST',{ids:inbox.notifications.map(item=>item.id)}).then(refreshNotifications).catch(error=>toast(error.message));
   };
   document.addEventListener('click',event=>{
     if(event.target.closest('#notification-bell')){event.preventDefault();event.stopImmediatePropagation();openNotifications();}
+    else if(!event.target.closest('#notification-dropdown')){document.querySelector('#notification-dropdown')?.remove();$('#notification-bell').setAttribute('aria-expanded','false');}
   },true);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.querySelector('#notification-dropdown')?.remove();$('#notification-bell').setAttribute('aria-expanded','false');}});
   updateNotificationBadge=()=>{};
   async function friendAction(name,action) {
     await api('/friends/'+encodeURIComponent(name),'POST',{action});
@@ -262,7 +268,7 @@
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button)return;
     const d=button.dataset;
-    if(!Object.keys(d).some(key=>key.startsWith('shared') || key.startsWith('live')) && !d.editPost && !d.deletePost && !d.removePhoto)return;
+    if(!Object.keys(d).some(key=>['sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','sharedAccept','sharedDecline','sharedNotification','liveMessage','liveRequest','liveRemove'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
     event.preventDefault();event.stopImmediatePropagation();
     try {
       if(d.sharedLike){like(d.sharedLike);return;}
@@ -286,7 +292,7 @@
       else if(d.liveRemove){if(confirm('Remove this friend?'))await friendAction(d.liveRemove,'remove');return;}
       else if(d.sharedAccept){await friendAction(d.sharedAccept,'accept');openNotifications();return;}
       else if(d.sharedDecline){await friendAction(d.sharedDecline,'decline');openNotifications();return;}
-      else if(d.sharedNotification){$('#dialog').close();show('feed');await refreshView();document.querySelector('[data-post-id="'+CSS.escape(d.sharedNotification)+'"]')?.scrollIntoView({block:'center'});return;}
+      else if(d.sharedNotification){document.querySelector('#notification-dropdown')?.remove();$('#dialog').close();show('feed');await refreshView();document.querySelector('[data-post-id="'+CSS.escape(d.sharedNotification)+'"]')?.scrollIntoView({block:'center'});return;}
       await refreshView();if(current==='profile' && window.profileName.toLowerCase()!==me.toLowerCase())profile(window.profileName);
     } catch(error){toast(error.message);}
   },true);
@@ -316,4 +322,8 @@
   setInterval(()=>{if(document.visibilityState==='visible'){refreshNotifications();if(!$('#dialog').open && current==='feed')refreshView();}},20000);
   window.addEventListener('focus',()=>{refreshNotifications();if(!$('#dialog').open)refreshView();});
   window.socialApi=api;window.socialRefresh=refreshView;
+  const destination=new URLSearchParams(location.search).get('view');
+  if(['feed','people','following'].includes(destination))show(destination);
+  else if(destination==='profile')profile(me);
+  if(new URLSearchParams(location.search).get('admin')==='1')document.addEventListener('DOMContentLoaded',()=>window.openSocialAdmin?.(),{once:true});
 })();
