@@ -93,7 +93,7 @@ async function init() {
   const local = /localhost|127\.0\.0\.1|\/tmp/.test(process.env.DATABASE_URL);
   pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: local || /sslmode=disable/.test(process.env.DATABASE_URL) ? false : { rejectUnauthorized: false }, max: 5 });
   pool.on('error', e => console.error('[db] pool error', e.message));
-  for (let i = 0; i < 5; i++) { try { await pool.query(SQL); ready = true; error = null; console.log('[db] ready'); return; } catch (e) { error = e.message; console.error('[db] init failed:', e.message); await new Promise(r => setTimeout(r, 3000)); } }
+  for (let i = 0; i < 5; i++) { try { await pool.query(SQL); await pool.query(require('node:fs').readFileSync(require('node:path').join(__dirname,'social-next/schema.sql'),'utf8')); ready = true; error = null; console.log('[db] ready'); return; } catch (e) { error = e.message; console.error('[db] init failed:', e.message); await new Promise(r => setTimeout(r, 3000)); } }
 }
 const q = (t, p) => { if (!ready) throw Object.assign(new Error('maintenance'), { maint: true }); return pool.query(t, p).then(r => r.rows); };
 module.exports = { init, q, status: () => ({ ready, error: ready ? null : (process.env.DATABASE_URL ? 'Database unavailable' : 'Database not configured') }) };

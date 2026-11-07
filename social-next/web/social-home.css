@@ -546,3 +546,8 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
 .live-social-messenger { display: block; width: 100%; height: 660px; border: 0; background: #f1f5f8; }
 #messenger, #reopen { display: none !important; }
 .live-social-messenger.expanded { position: fixed; z-index: 40; top: 70px; right: 12px; width: min(820px, calc(100vw - 24px)); height: calc(100dvh - 82px); }
+.shared-comment { margin: 10px 0; padding: 10px; background: #edf4fa; border-radius: 4px; }
+.shared-comment > small { display: block; margin: 4px 0; color: #315b82; }
+.admin-account, .admin-content { padding: 12px 0; border-bottom: 1px solid #d7e3ef; overflow-wrap: anywhere; }
+.admin-account > div, .admin-content > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.post-top { flex-wrap: wrap; gap: 8px; }

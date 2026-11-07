@@ -56,7 +56,8 @@ acc.http(app, express, { reservedName: n => MASTER.reserved(n), ipBanned: ip => 
 try { require('./friend-site')(app, express, acc); } catch (e) { console.error('[friend-site]', e.message); }
 app.get('/privacy', (req, res) => res.sendFile(__dirname + '/public/privacy.html'));
 app.get('/terms', (req, res) => res.sendFile(__dirname + '/public/terms.html'));
-require('./social-next')(app, express, acc, db);
+require('./social-next')(app, express, acc, db, io);
+app.get(['/social', '/social/'], (_req,res) => res.redirect(302, '/social-next/'));
 app.use(express.static(__dirname + '/public'));
 // ---- avatars: custom (uploaded / avatar-maker) images. Accounts -> Postgres `avatars`; guests -> memory for the session ----
 const AVMEM = new Map(), PRESETS = ['a1','a2','a3','a4','a5','a6','a7','a8'], AVMAX = 32 * 1024;

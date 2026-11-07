@@ -1,7 +1,7 @@
 // Browser-local profile customization. No real names are required.
 const profileNameState = read('profileNameState', { name: read('displayAlias', 'Zainy'), changedAt: 0 });
 const profileNameWait = 7 * 24 * 60 * 60 * 1000;
-let displayAlias=window.socialSession.profile.display_name || window.socialSession.alias,portrait=read('portrait',''),details={...read('details',{}),age:window.socialSession.profile.age ?? '',location:window.socialSession.profile.location || '',sex:window.socialSession.profile.sex || '',status:window.socialSession.profile.profile_status || ''},playlist=read('playlist',[]),walls=read('walls',{});
+let displayAlias=window.socialSession.profile.display_name || window.socialSession.alias,portrait=read('portrait',''),details={orientation:'',zodiac:'',enabled:false,...read('details',{}),age:window.socialSession.profile.age ?? '',location:window.socialSession.profile.location || '',sex:window.socialSession.profile.sex || '',status:window.socialSession.profile.profile_status || ''},playlist=read('playlist',[]),walls=read('walls',{});
 const baseProfile=profile,baseEdit=editProfile;
 function persistProfile(k,v){try{save(k,v);return true}catch{toast('Browser storage is full. Try a smaller image.');return false}}
 function youtubeId(url){try{const u=new URL(url);let id;if(u.hostname==='youtu.be')id=u.pathname.slice(1);else if(['youtube.com','www.youtube.com','m.youtube.com'].includes(u.hostname))id=u.searchParams.get('v')||u.pathname.split('/').filter(Boolean)[1];return /^[\w-]{11}$/.test(id||'')?id:null}catch{return null}}

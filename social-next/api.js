@@ -1,0 +1,312 @@
+const crypto = require('node:crypto');
+const geo = require('../geo');
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const feelings = new Set(['','Happy','Excited','Grateful','Relaxed','Hopeful','Loved','Proud','Curious','Tired','Bored','Sad','Worried','Frustrated','Lonely']);
+const text = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
+function photo(value, maximum = 700000) {
+  if (!value) return '';
+  if (typeof value !== 'string' || value.length > maximum || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value)) throw Object.assign(Error('Choose a smaller JPG, PNG, or WebP.'), {status:400});
+  return value;
+}
+function link(value) {
+  if (!value) return '';
+  let url;
+  try { url = new URL(value); } catch { throw Object.assign(Error('Use an http or https link.'),{status:400}); }
+  if (!['http:','https:'].includes(url.protocol) || url.username || url.password || url.href.length > 2000) throw Object.assign(Error('Use an http or https link.'), {status:400});
+  return url.href;
+}
+function publicSettings(value = {}) {
+  return {portrait:value.portrait || '', headline:value.headline || '', appearance:value.appearance || null,
+    visibility:value.visibility === 'private' ? 'private' : 'public', favoriteRooms:value.favoriteRooms || [],
+    musicService:value.musicService || null,details:value.details?.enabled ? value.details : null,cover:value.cover || '#d9e9fa'};
+}
+function settingsPatch(value) {
+  const allowed = new Set(['portrait','headline','cover','appearance','visibility','favoriteRooms','musicService','details','defaultPresence']);
+  if (!value || Array.isArray(value) || typeof value !== 'object') throw Object.assign(Error('Invalid settings.'), {status:400});
+  const result = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (!allowed.has(key)) continue;
+    if (key === 'portrait') result[key] = photo(item);
+    else if (key === 'headline') result[key] = text(item,100);
+    else if (key === 'cover') result[key] = /^#[0-9a-f]{6}$/i.test(item) ? item : '#d9e9fa';
+    else if (key === 'visibility') result[key] = item === 'private' ? 'private' : 'public';
+    else if (key === 'defaultPresence') {
+      if (['available','away','dnd','invisible'].includes(item)) result[key] = item;
+    } else if (key === 'favoriteRooms') result[key] = Array.isArray(item) ? item.slice(0,30).map(x => text(x,100)).filter(Boolean) : [];
+    else if (key === 'appearance' && item && typeof item === 'object') {
+      result[key] = {palette:text(item.palette,20),background:/^#[0-9a-f]{6}$/i.test(item.background) ? item.background : '#ffffff',
+        texture:['plain','dots','lines'].includes(item.texture) ? item.texture : 'plain', image:photo(item.image,1250000),
+        custom:Array.isArray(item.custom) ? item.custom.slice(0,3).map(c => /^#[0-9a-f]{6}$/i.test(c) ? c : '#004990') : []};
+    } else if (key === 'musicService' && item && typeof item === 'object') result[key] = {brand:text(item.brand,20),url:link(item.url)};
+    else if (key === 'details' && item && typeof item === 'object') result[key] = {orientation:text(item.orientation,70),zodiac:text(item.zodiac,30),enabled:!!item.enabled};
+  }
+  return result;
+}
+function registerApi(router, express, db, accounts, io) {
+  const writes=new Map();
+  const run = handler => async (req,res) => {
+    try { await handler(req,res); }
+    catch(error) {
+      if (!error.status) console.error('[social]', error.message);
+      res.status(error.status || 500).json({error:error.status ? error.message : 'Social could not complete that request. Please retry.'});
+    }
+  };
+  const fail = (message,status=400) => { throw Object.assign(Error(message),{status}); };
+  const admin = req => { if (!req.socialAccount.master) fail('Administrator access required.',403); };
+  const audit = (req,action,target,detail='') => db.q(
+    'insert into master_audit(by_name,action,target,detail) values($1,$2,$3,$4)',
+    [req.socialAccount.alias,action,String(target),text(detail,500)]);
+  const access = (post, viewer, master = false) => `(
+    ${master ? 'true' : 'false'} or ${post}.wall_id=${viewer} or ${post}.author_id=${viewer} or
+    (coalesce((select value->>'visibility' from social_settings where user_id=${post}.wall_id),'public') <> 'private')
+    or exists(select 1 from contacts where owner=${post}.wall_id and contact=${viewer})
+  )`;
+  async function visiblePost(req, id) {
+    if (!uuid.test(id)) fail('Invalid post.');
+    const [post] = await db.q(`select p.* from social_posts p join users u on u.id=p.author_id
+      join users w on w.id=p.wall_id where p.id=$1 and not p.removed and not u.banned
+      and not coalesce(u.deactivated,false) and not w.banned and not coalesce(w.deactivated,false)
+      and ${access('p','$2',req.socialAccount.master)}`,[id,req.socialAccount.id]);
+    if (!post) fail('Post unavailable.',404);
+    return post;
+  }
+  async function originInfo(req) {
+    const ip = geo.clientIp(req.headers,req.socket.remoteAddress);
+    return {ip, location:await geo.lookup(ip)};
+  }
+  const postFields = `p.id,p.author_id,p.wall_id,p.body,p.link,p.image,p.feeling,p.place,p.created,p.updated,
+    u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
+    coalesce(s.value->>'portrait','') as portrait,
+    (select count(*)::int from social_likes where post_id=p.id) as likes,
+    exists(select 1 from social_likes where post_id=p.id and user_id=$1) as liked`;
+  router.use('/api', express.json({limit:'3mb'}), (req,res,next) => {
+    if (req.method !== 'GET') {
+      if (!req.is('application/json')) return res.status(415).json({error:'JSON required.'});
+      const origin = req.get('origin');
+      if (origin) {
+        try { if (new URL(origin).host !== req.get('host')) return res.status(403).json({error:'Invalid origin.'}); }
+        catch { return res.sendStatus(403); }
+      }
+      const id=req.socialAccount.id, now=Date.now();
+      if(writes.size>10000)for(const [key,value] of writes)if(now-value.start>600000)writes.delete(key);
+      let bucket=writes.get(id);
+      if(!bucket || now-bucket.start>600000){bucket={start:now,count:0};writes.set(id,bucket);}
+      if(++bucket.count>120)return res.status(429).json({error:'Please wait a little before making more changes.'});
+    }
+    next();
+  });
+  router.get('/api/settings',run(async(req,res) => {
+    const [row] = await db.q('select value from social_settings where user_id=$1',[req.socialAccount.id]);
+    res.json(row?.value || {});
+  }));
+  router.patch('/api/settings',run(async(req,res) => {
+    const value = settingsPatch(req.body);
+    const [row] = await db.q(`insert into social_settings(user_id,value) values($1,$2)
+      on conflict(user_id) do update set value=social_settings.value || excluded.value returning value`,
+      [req.socialAccount.id,JSON.stringify(value)]);
+    if(value.defaultPresence)await db.q('update users set status=$2 where id=$1',
+      [req.socialAccount.id,value.defaultPresence==='dnd'?'busy':value.defaultPresence]);
+    res.json(row.value);
+  }));
+  router.get('/api/people',run(async(req,res) => {
+    const search = text(req.query.q,80);
+    const rows = await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
+      coalesce(s.value->>'portrait','') as portrait,u.age,u.sex,
+      case when coalesce(s.value->>'visibility','public')='private' and u.id<>$1 then '' else u.location end as location
+      from users u left join social_settings s on s.user_id=u.id where not u.banned and not coalesce(u.deactivated,false)
+      and not exists(select 1 from social_restrictions where user_id=u.id and service='social')
+      and ($2='' or u.name ilike '%'||$2||'%' or u.display_name ilike '%'||$2||'%')
+      order by u.created desc limit 100`,[req.socialAccount.id,search]);
+    res.json(rows);
+  }));
+  router.get('/api/profile/:name',run(async(req,res) => {
+    const [row] = await db.q(`select u.id,u.name,u.display_name,u.age,u.sex,u.location,u.bio,u.interests,u.profile_status,u.created,
+      coalesce(s.value,'{}') as settings,exists(select 1 from contacts where owner=u.id and contact=$1) as friend
+      from users u left join social_settings s on s.user_id=u.id where u.name_lc=$2
+      and not u.banned and not coalesce(u.deactivated,false)`,[req.socialAccount.id,String(req.params.name).toLowerCase()]);
+    if (!row) fail('Profile unavailable.',404);
+    const owner = row.id === req.socialAccount.id;
+    const restricted = row.settings.visibility === 'private' && !owner && !row.friend && !req.socialAccount.master;
+    const result = {id:row.id,name:row.name,displayName:row.display_name || row.name,age:row.age,sex:row.sex,
+      status:row.profile_status,memberSince:row.created,private:restricted,owner,friend:row.friend,
+      settings:restricted ? {portrait:row.settings.portrait || '',visibility:'private'} : publicSettings(row.settings)};
+    if (!restricted) Object.assign(result,{location:row.location,bio:row.bio,interests:row.interests});
+    res.json(result);
+  }));
+  router.get('/api/posts',run(async(req,res) => {
+    const wall = text(req.query.wall,20).toLowerCase();
+    const rows = await db.q(`select ${postFields} from social_posts p join users u on u.id=p.author_id
+      join users w on w.id=p.wall_id left join social_settings s on s.user_id=u.id
+      where not p.removed and not u.banned and not coalesce(u.deactivated,false)
+      and not w.banned and not coalesce(w.deactivated,false)
+      and ($2='' or w.name_lc=$2)
+      and ($2<>'' or p.author_id=$1 or p.wall_id=$1 or exists(select 1 from contacts where owner=$1 and contact=p.author_id))
+      and ${access('p','$1',req.socialAccount.master)}
+      order by p.created desc limit 40`,[req.socialAccount.id,wall]);
+    const comments = rows.length ? await db.q(`select c.id,c.post_id,c.author_id,c.body,c.created,u.name,
+      coalesce(nullif(u.display_name,''),u.name) as display_name,coalesce(s.value->>'portrait','') as portrait
+      from social_comments c join users u on u.id=c.author_id left join social_settings s on s.user_id=u.id
+      where c.post_id=any($1::uuid[]) and not c.removed and not u.banned and not coalesce(u.deactivated,false)
+      order by c.created limit 600`,[rows.map(p=>p.id)]) : [];
+    res.json(rows.map(row=>({...row,comments:comments.filter(c=>c.post_id===row.id)})));
+  }));
+  router.post('/api/posts',run(async(req,res) => {
+    const b=req.body || {}, id=b.id || crypto.randomUUID();
+    if (!uuid.test(id)) fail('Invalid post.');
+    const body=text(b.body,3000), image=photo(b.image), url=link(b.link);
+    if (!body && !image && !url) fail('Add a thought, photo, or link.');
+    const [wall] = await db.q('select id from users where name_lc=$1 and not banned and not coalesce(deactivated,false)',
+      [String(b.wall || req.socialAccount.alias).toLowerCase()]);
+    if (!wall) fail('Profile unavailable.',404);
+    if (wall.id !== req.socialAccount.id) {
+      const [friend] = await db.q('select 1 from contacts where owner=$1 and contact=$2',[wall.id,req.socialAccount.id]);
+      if (!friend) fail('Only friends can post on this wall.',403);
+    }
+    const info=await originInfo(req);
+    await db.q(`with added as (
+      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location)
+      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict(id) do nothing returning id,wall_id
+    ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
+      select wall_id,$2,'post',id,id::text from added where wall_id<>$2 on conflict do nothing`,
+      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location]);
+    res.status(201).json({id});
+  }));
+  router.patch('/api/posts/:id',run(async(req,res) => {
+    const post=await visiblePost(req,req.params.id);
+    if (post.author_id!==req.socialAccount.id && !req.socialAccount.master) fail('Only the author can edit this post.',403);
+    const b=req.body || {};
+    const body=text(b.body,3000), url=link(b.link), image=b.removeImage ? '' : post.image;
+    if (!body && !url && !image) fail('Keep a thought, link, or photo.');
+    await db.q('update social_posts set body=$2,link=$3,image=$4,feeling=$5,place=$6,updated=now() where id=$1',
+      [post.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120)]);
+    res.json({ok:true});
+  }));
+  router.delete('/api/posts/:id',run(async(req,res) => {
+    const post=await visiblePost(req,req.params.id);
+    if (![post.author_id,post.wall_id].includes(req.socialAccount.id) && !req.socialAccount.master) fail('You cannot remove this post.',403);
+    await db.q('update social_posts set removed=true,updated=now() where id=$1',[post.id]);
+    res.json({ok:true});
+  }));
+  router.post('/api/posts/:id/comments',run(async(req,res) => {
+    const post=await visiblePost(req,req.params.id), body=text(req.body?.body,1500), id=req.body?.id || crypto.randomUUID();
+    if (!body || !uuid.test(id)) fail('Enter a comment.');
+    const info=await originInfo(req);
+    await db.q(`with added as (
+      insert into social_comments(id,post_id,author_id,body,ip,approximate_location) values($1,$2,$3,$4,$5,$6)
+      on conflict(id) do nothing returning id
+    ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
+      select $7,$3,'comment',$2,id::text from added where $7<>$3 on conflict do nothing`,
+      [id,post.id,req.socialAccount.id,body,info.ip,info.location,post.author_id]);
+    res.status(201).json({id});
+  }));
+  router.delete('/api/comments/:id',run(async(req,res) => {
+    if (!uuid.test(req.params.id)) fail('Invalid comment.');
+    const [comment]=await db.q('select c.*,p.wall_id from social_comments c join social_posts p on p.id=c.post_id where c.id=$1',[req.params.id]);
+    if (!comment) fail('Comment unavailable.',404);
+    if (![comment.author_id,comment.wall_id].includes(req.socialAccount.id) && !req.socialAccount.master) fail('You cannot remove this comment.',403);
+    await db.q('update social_comments set removed=true where id=$1',[comment.id]);
+    res.json({ok:true});
+  }));
+  router.put('/api/posts/:id/like',run(async(req,res) => {
+    const post=await visiblePost(req,req.params.id);
+    if (req.body?.liked === true) await db.q(`with added as (
+      insert into social_likes(post_id,user_id) values($1,$2) on conflict do nothing returning post_id
+    ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
+      select $3,$2,'like',post_id,post_id::text from added where $3<>$2 on conflict do nothing`,[post.id,req.socialAccount.id,post.author_id]);
+    else await db.q(`with gone as (delete from social_likes where post_id=$1 and user_id=$2 returning post_id)
+      delete from social_notifications where post_id=$1 and actor_id=$2 and kind='like'`,[post.id,req.socialAccount.id]);
+    res.json({ok:true});
+  }));
+  router.get('/api/notifications',run(async(req,res) => {
+    const notifications=await db.q(`select n.id,n.kind,n.post_id,n.created,n.seen,u.name,
+      coalesce(nullif(u.display_name,''),u.name) as display_name
+      from social_notifications n join users u on u.id=n.actor_id join social_posts p on p.id=n.post_id
+      where n.recipient_id=$1 and not p.removed
+      and (n.kind<>'comment' or exists(select 1 from social_comments where id::text=n.reference_id and not removed))
+      order by n.created desc limit 100`,[req.socialAccount.id]);
+    const requests=await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
+      coalesce(s.value->>'portrait','') as portrait from requests r join users u on u.id=r.from_id
+      left join social_settings s on s.user_id=u.id where r.to_id=$1 order by r.created desc`,[req.socialAccount.id]);
+    res.json({notifications,requests});
+  }));
+  router.post('/api/friends/:name',run(async(req,res) => {
+    const actor=req.socialAccount.id, action=req.body?.action;
+    const [target]=await db.q('select id,name,avatar,status,status_msg from users where name_lc=$1 and not banned and not coalesce(deactivated,false)',[req.params.name.toLowerCase()]);
+    if (!target || target.id===actor) fail('Account unavailable.',404);
+    if (action==='accept') {
+      const added=await db.q(`with pending as (delete from requests where from_id=$1 and to_id=$2 returning from_id,to_id)
+        insert into contacts(owner,contact) select to_id,from_id from pending union select from_id,to_id from pending
+        on conflict do nothing returning owner`,[target.id,actor]);
+      if (!added.length) fail('Request is no longer pending.',409);
+    } else if (action==='decline') await db.q('delete from requests where from_id=$1 and to_id=$2',[target.id,actor]);
+    else if (action==='remove') await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)',[actor,target.id]);
+    else if (action==='request') {
+      const [blocked]=await db.q('select 1 from blocks where (owner=$1 and blocked=$2) or (owner=$2 and blocked=$1)',[actor,target.id]);
+      if (blocked) fail('This request cannot be sent.',403);
+      await db.q('insert into requests(from_id,to_id) values($1,$2) on conflict do nothing',[actor,target.id]);
+    } else fail('Unknown friend action.');
+    res.json({ok:true});
+  }));
+  router.get('/api/friends',run(async(req,res) => {
+    const rows=await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
+      coalesce(s.value->>'portrait','') as portrait from contacts c join users u on u.id=c.contact
+      left join social_settings s on s.user_id=u.id where c.owner=$1 and not u.banned and not coalesce(u.deactivated,false)`,[req.socialAccount.id]);
+    res.json(rows);
+  }));
+  router.post('/api/notifications/read',run(async(req,res) => {
+    const ids=Array.isArray(req.body?.ids)?req.body.ids.filter(id=>/^\d+$/.test(String(id))).slice(0,100):[];
+    await db.q('update social_notifications set seen=true where recipient_id=$1 and id=any($2::bigint[])',[req.socialAccount.id,ids]);
+    res.json({ok:true});
+  }));
+  router.get('/api/admin',run(async(req,res) => {
+    admin(req);
+    const users=await db.q(`select u.id,u.name,u.display_name,u.is_master,u.deactivated,u.banned,u.last_ip,u.last_loc,
+      coalesce((select json_agg(json_build_object('service',r.service,'reason',r.reason)) from social_restrictions r where r.user_id=u.id),'[]') as restrictions
+      from users u order by u.created desc limit 200`);
+    const posts=await db.q(`select p.id,p.body,p.image<>' ' and p.image<>'' as has_image,p.author_id,p.created,p.removed,
+      p.ip,p.approximate_location,u.name from social_posts p join users u on u.id=p.author_id order by p.created desc limit 100`);
+    const comments=await db.q(`select c.id,c.post_id,c.body,c.created,c.removed,c.ip,c.approximate_location,u.name
+      from social_comments c join users u on u.id=c.author_id order by c.created desc limit 100`);
+    res.json({users,posts,comments});
+  }));
+  router.post('/api/admin',run(async(req,res) => {
+    admin(req);
+    const b=req.body || {}, action=String(b.action);
+    if (['restrict','unrestrict','deactivate','reactivate'].includes(action)) {
+      const [target]=await db.q('select id,name,is_master from users where id=$1',[Number(b.userId)]);
+      if (!target) fail('Account unavailable.',404);
+      if (target.id===req.socialAccount.id || target.is_master) fail('Master accounts must be managed through the master console.',403);
+      if (action==='restrict' || action==='unrestrict') {
+        if (!['social','messenger'].includes(b.service)) fail('Choose Social or Messenger.');
+        if (action==='restrict') await db.q(`insert into social_restrictions(user_id,service,reason,by_user) values($1,$2,$3,$4)
+          on conflict(user_id,service) do update set reason=excluded.reason,by_user=excluded.by_user,created=now()`,
+          [target.id,b.service,text(b.reason,300),req.socialAccount.id]);
+        else await db.q('delete from social_restrictions where user_id=$1 and service=$2',[target.id,b.service]);
+        if (action==='restrict' && b.service==='messenger' && io) for (const socket of io.sockets.sockets.values()) {
+          if (socket.data.acct?.id===target.id && socket.data.mess) socket.disconnect(true);
+        }
+      } else {
+        await db.q('update users set deactivated=$2 where id=$1',[target.id,action==='deactivate']);
+        if (action==='deactivate') {
+          await db.q('delete from sessions where user_id=$1',[target.id]);
+          if (io) for(const socket of io.sockets.sockets.values()) if(socket.data.acct?.id===target.id) socket.disconnect(true);
+        }
+      }
+      await audit(req,'social-'+action,target.name,b.service || '');
+    } else if (['remove-post','restore-post','remove-image','remove-comment','restore-comment','clear-portrait'].includes(action)) {
+      if (action==='clear-portrait') {
+        await db.q(`insert into social_settings(user_id,value) values($1,'{"portrait":""}')
+          on conflict(user_id) do update set value=social_settings.value || '{"portrait":""}'::jsonb`,[Number(b.userId)]);
+      } else {
+        if (!uuid.test(b.id || '')) fail('Invalid content.');
+        if (action==='remove-image') await db.q("update social_posts set image='',updated=now() where id=$1",[b.id]);
+        else if (action.endsWith('comment')) await db.q('update social_comments set removed=$2 where id=$1',[b.id,action==='remove-comment']);
+        else await db.q('update social_posts set removed=$2,updated=now() where id=$1',[b.id,action==='remove-post']);
+      }
+      await audit(req,'social-'+action,b.id || b.userId);
+    } else fail('Unknown action.');
+    res.json({ok:true});
+  }));
+}
+module.exports = {registerApi, settingsPatch, publicSettings};
