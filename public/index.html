@@ -252,7 +252,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><div class="adph adph-b">Advertisement - Google Ads</div></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/device.js"></script><script src="/yd.js"></script><script src="/browse.js"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=2"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script>
+<script src="/desktop-signin.js"></script><script src="/desktop-updates.js"></script><script src="/device.js"></script><script src="/yd.js"></script><script src="/browse.js"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=2"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script>
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=isRoomSignIn?['Razzle',' Chat']:['Razzle',''];
@@ -302,12 +302,12 @@ function masterInit(){MW=1;const dd=document.querySelector('#menu>div .dd');if(d
 fetch('/api/me').then(r=>r.json()).then(m=>{if(m.name){start();if(m.m)masterInit()}});
 $('toUp').onclick=()=>{$('fIn').style.display='none';$('fUp').style.display='flex';$('uName').focus();if(isRoomSignIn)$('chat-signin-intro').textContent='Create your account to join the conversation.'};$('toIn').onclick=()=>{$('fUp').style.display='none';$('fIn').style.display='contents';if(isRoomSignIn)$('chat-signin-intro').textContent='Sign in to join the conversation.'};
 if (isRoomSignIn && roomSignInParams.get('signup') === '1') $('toUp').click();
-async function doIn(){$('eIn').textContent='';const r=await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;$('iPw').value='';start()}
+async function doIn(){$('eIn').textContent='';const r=window.RazzleSignin&&RazzleSignin.active?await RazzleSignin.signIn():await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;$('iPw').value='';start()}
 $('bIn').onclick=doIn;['iName','iPw'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doIn()}}));
 let avT;$('uName').addEventListener('input',()=>{clearTimeout(avT);const n=$('uName').value.trim();if(!n)return $('uAv').textContent='';avT=setTimeout(async()=>{const r=await fetch('/api/available?name='+encodeURIComponent(n)).then(r=>r.json()).catch(()=>({}));
  $('uAv').innerHTML=r.valid===false?'<span class=err>3-20 characters, start with a letter; letters, numbers, _ or .</span>':r.available?'<span class=ok>&#10004; '+escT(n)+' is available</span>':r.error?'':'<span class=err>&#10008; '+escT(n)+' is taken</span>'},350)});
 async function doUp(){$('eUp').textContent='';if(!$('uEm').checkValidity()){$('uEm').reportValidity();return;}if($('uPw').value!==$('uPw2').value)return $('eUp').textContent='Passwords do not match.';
- if(!$('uAgree').checked)return $('eUp').textContent='Please agree to the Terms and Rules (18 or older) to sign up.';const r=await api('/api/signup',{agree:true,name:$('uName').value.trim(),password:$('uPw').value,email:$('uEm').value.trim(),remember:$('uRem').checked});if(r.error)return $('eUp').textContent=r.error;$('uPw').value=$('uPw2').value='';if (window.YVerify) await YVerify.send(); start()}
+ if(!$('uAgree').checked)return $('eUp').textContent='Please agree to the Terms and Rules (18 or older) to sign up.';const r=await api('/api/signup',{agree:true,name:$('uName').value.trim(),password:$('uPw').value,email:$('uEm').value.trim(),remember:$('uRem').checked});if(r.error)return $('eUp').textContent=r.error;window.RazzleSignin&&RazzleSignin.note($('uName').value.trim());$('uPw').value=$('uPw2').value='';if (window.YVerify) await YVerify.send(); start()}
 $('bUp').onclick=doUp;$('fUp').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doUp()}});
 
 async function consumeAddParam(){try{const add=new URLSearchParams(location.search).get('add'); if(!add)return; const n=add.trim(); if(!n)return;

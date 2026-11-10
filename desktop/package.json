@@ -24,6 +24,7 @@
       "main.js",
       "preload.js",
       "micvol.js",
+      "signin-store.js",
       "build/icon.png",
       "build/icon.ico"
     ],

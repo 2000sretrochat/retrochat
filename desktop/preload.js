@@ -4,6 +4,19 @@ const api = {
   notify: (t, b) => ipcRenderer.send('yc-notify', t, b),
   isDesktop: true,
   inviteWindows: true, // room invites open in their own centered, always-on-top window
+  // Saved screen names on this computer. Passwords stay in the main process (encrypted); the page only sees names.
+  signin: {
+    list: () => ipcRenderer.invoke('yc-signin-list'),
+    signIn: o => ipcRenderer.invoke('yc-signin', { name: String(o?.name || ''), password: o?.password == null ? null : String(o.password), save: !!o?.save }),
+    note: n => ipcRenderer.invoke('yc-signin-note', String(n || '')),
+    remove: n => ipcRenderer.invoke('yc-signin-remove', String(n || ''))
+  },
+  // Help > Check for Updates; state = { status: idle|checking|downloading|downloaded|none|error|dev, version, percent, current }
+  updates: {
+    state: () => ipcRenderer.invoke('yc-upd-state'),
+    check: () => ipcRenderer.invoke('yc-upd-check'),
+    onState: cb => { if (typeof cb === 'function') ipcRenderer.on('yc-upd', (_, st) => cb(st)); }
+  },
   micVol: process.platform === 'win32'
     ? { get: () => ipcRenderer.invoke('yc-micvol', 0), step: d => ipcRenderer.invoke('yc-micvol', d) }
     : undefined
