@@ -108,7 +108,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
   }));
   router.get('/api/navigation',run(async(req,res)=>{
     const [row]=await db.q(`select u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,coalesce(s.value->>'portrait','') as portrait,
-      (select count(*)::int from contacts where owner=u.id) as friends from users u left join social_settings s on s.user_id=u.id where u.id=$1`,[req.socialAccount.id]);
+      (select count(*)::int from contacts where owner=u.id and contact<>owner) as friends from users u left join social_settings s on s.user_id=u.id where u.id=$1`,[req.socialAccount.id]);
     res.json({...row,master:req.socialAccount.master});
   }));
   router.get('/api/portraits',run(async(req,res)=>{
@@ -314,7 +314,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
   router.get('/api/friends',run(async(req,res) => {
     const rows=await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
       coalesce(s.value->>'portrait','') as portrait from contacts c join users u on u.id=c.contact
-      left join social_settings s on s.user_id=u.id where c.owner=$1 and not u.banned and not coalesce(u.deactivated,false)`,[req.socialAccount.id]);
+      left join social_settings s on s.user_id=u.id where c.owner=$1 and c.contact<>c.owner and not u.banned and not coalesce(u.deactivated,false)`,[req.socialAccount.id]);
     res.json(rows);
   }));
   router.post('/api/notifications/read',run(async(req,res) => {

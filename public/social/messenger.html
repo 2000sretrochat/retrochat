@@ -259,7 +259,7 @@ function start(){$('signin').style.display='none';$('main').style.display='flex'
  YAv.listen(S,(n,av)=>{const k=n.toLowerCase();if(contacts[k]){contacts[k].avatar=av;render();ims[k]&&peerInfo(ims[k],n)}if(ME&&k==ME.name.toLowerCase()){ME.avatar=av;setMyAv()}});
  {const d=document.createElement('div');d.id='cdot';d.textContent='Reconnecting…';d.style.cssText='display:none;position:fixed;bottom:8px;left:8px;z-index:999;background:rgba(0,0,0,.55);color:#fff;padding:2px 9px;border-radius:10px;font:500 11px system-ui;pointer-events:none';document.body.appendChild(d);let t=0;S.on('disconnect',()=>{clearTimeout(t);t=setTimeout(()=>{if(!S.connected)d.style.display=''},3000)});S.on('connect',()=>{clearTimeout(t);d.style.display='none'})}
  S.on('m:presence',p=>{const k=p.name.toLowerCase(),c=contacts[k];if(!c)return;const was=c.online;Object.assign(c,p);render();
-  if(!was&&p.online){localStorage.ycDoor!='off'&&SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar,p.name)}else if(was&&!p.online){localStorage.ycDoor!='off'&&SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar,p.name)}
+  if(ME&&k==ME.name.toLowerCase()){/* my own entry: same view my contacts get, but no door sound/toast for myself */}else if(!was&&p.online){localStorage.ycDoor!='off'&&SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar,p.name)}else if(was&&!p.online){localStorage.ycDoor!='off'&&SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar,p.name)}
   const w=ims[k];w&&peerInfo(w,p.name)});
  S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();$('stsel').value=x.status;$('smsg').value=dec(x.msg);roomMode(x.msg=='[room]')});
  S.on('m:contacts-changed',refreshContacts);
@@ -317,7 +317,7 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=Object.values(con
   +(cs.length||q||MW?'':'<div style="padding:10px;color:var(--muted)">No contacts yet. Click <b>Add a Contact</b> to send a buddy request.</div>');
  document.querySelectorAll('.grp').forEach(e=>e.onclick=()=>{const g=e.dataset.g;closedG.has(g)?closedG.delete(g):closedG.add(g);localStorage.ycClosed=JSON.stringify([...closedG]);render()});
  document.querySelectorAll('.wct').forEach(e=>e.oncontextmenu=async ev=>{ev.preventDefault();if(confirm('Stop watching '+e.dataset.w+'?')){await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:e.dataset.w,remove:true})});loadWatch()}});
- document.querySelectorAll('.ct:not(.wct)').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>openIm(e.dataset.n).querySelector('textarea').focus();
+ document.querySelectorAll('.ct:not(.wct)').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>{if(ME&&e.dataset.n.toLowerCase()==ME.name.toLowerCase())return window.YProf&&YProf.show(e.dataset.n,{me:ME.name});openIm(e.dataset.n).querySelector('textarea').focus()};
   e.querySelectorAll('[data-jr]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();window.open('/rooms.html?room='+encodeURIComponent(a.dataset.jr),'yapprooms')});
   e.oncontextmenu=ev=>{ev.preventDefault();sel=e.dataset.n;render();$('mInv').style.opacity=invOk(sel)?'':'.45';$('mInv').title=invOk(sel)?'':sel+" isn't available for invites";document.querySelectorAll('#menu>div')[1].classList.add('open')}})}
 function showReq(request){messengerInbox.add(request);SND.im();toast(escT(request.name)+' sent you a contact request.');}

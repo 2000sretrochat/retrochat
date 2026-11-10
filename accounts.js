@@ -257,7 +257,7 @@ function sockets(io, hooks) {
     s.on('m:avatar', safe(async a => { if (!ready || !AVATARS.includes(a)) return { error: 'bad avatar' }; state.get(uid).avatar = a; await db.q('update users set avatar=$2 where id=$1', [uid, a]); await broadcast(uid, me); }));
     s.on('m:add', safe(async ({ name, msg }) => {
       if (!ready || flood()) return { error: 'Slow down a little.' }; const generic = { ok: true, text: 'If ' + esc(String(name).slice(0, 20)) + ' is a Razzle user, they have been sent your request.' };
-      const t = await idOf(name); if (!t) return { error: 'No Razzle account found with that screen name. Check the spelling, or ask them to create one and sign in.' }; if (t.id === uid) return { error: 'You cannot add yourself.' };
+      const t = await idOf(name); if (!t) return { error: 'No Razzle account found with that screen name. Check the spelling, or ask them to create one and sign in.' }; if (t.id === uid) { await db.q("insert into contacts(owner,contact,grp) values($1,$1,'Friends') on conflict do nothing", [uid]); contactsChangedFn(uid); return { ok: true, self: true, text: 'Added yourself - your entry shows you exactly the way your contacts see you.' }; } // self-entry: added directly, no request
       if (await mutual(uid, t.id)) return { error: esc(t.name) + ' is already in your contacts.' };
       if (await blocked(t.id, uid)) return generic;
       // sending a request to someone you blocked means you want them back: lift your block so the request can be answered
@@ -291,7 +291,7 @@ function sockets(io, hooks) {
       await db.q('insert into groups(owner,name) values($1,$2) on conflict do nothing', [uid, group]);
       if (name) { const t = await idOf(name); if (t) await db.q('update contacts set grp=$3 where owner=$1 and contact=$2', [uid, t.id, group]); } return { ok: true, group }; }));
     // relay helpers: only between mutual contacts, never to/from blockers
-    async function peer(name) { const t = await idOf(name); if (!t || !(await mutual(uid, t.id)) || (!s.data.master && await blocked(t.id, uid))) return null; return t; }
+    async function peer(name) { const t = await idOf(name); if (!t || t.id === uid || !(await mutual(uid, t.id)) || (!s.data.master && await blocked(t.id, uid))) return null; return t; }
     s.on('m:im', safe(async m => {
       if (!ready || !m) return;
       const id = /^[0-9a-f-]{36}$/i.test(m.clientId || '') ? m.clientId : crypto.randomUUID();
