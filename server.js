@@ -56,7 +56,10 @@ acc.http(app, express, { reservedName: n => MASTER.reserved(n) || isBot(n), ipBa
 try { require('./friend-site')(app, express, acc); } catch (e) { console.error('[friend-site]', e.message); }
 app.get('/privacy', (req, res) => res.sendFile(__dirname + '/public/privacy.html'));
 app.get('/terms', (req, res) => res.sendFile(__dirname + '/public/terms.html'));
-require('./social-next')(app, express, acc, db, io);
+require('./social-next')(app, express, acc, db, io, {
+  rooms: () => [...OFFICIAL],
+  say: (room, bot, message) => botSay(room, bot, message),
+});
 app.get(['/social', '/social/'], (_req,res) => res.redirect(302, '/social-next/'));
 app.use(express.static(__dirname + '/public'));
 // ---- avatars: custom (uploaded / avatar-maker) images. Accounts -> Postgres `avatars`; guests -> memory for the session ----

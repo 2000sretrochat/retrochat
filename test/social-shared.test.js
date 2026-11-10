@@ -79,3 +79,28 @@ test('chat bots and Social profiles share stable aliases, and quiet visitors hav
   assert.deepEqual(row.args.slice(4,7),['','','']);
   assert.ok(!queries.some(q=>q.sql.includes('insert into social_posts') || q.sql.includes('insert into social_settings')));
 });
+
+test('bot chat is master-only and audits the real operator before sending',async t=>{
+  const app=express(),router=express.Router(),audit=[],sent=[];
+  const db={q:async(sql,args=[])=>{
+    if(sql.startsWith('select b.bot_id'))return [{bot_id:'preview-nightowl'}];
+    if(sql.startsWith('select 1 from social_bot_members'))return args[0]==='preview-nightowl'?[{}]:[];
+    if(sql.startsWith('insert into master_audit'))audit.push(args);
+    return [];
+  }};
+  router.use((req,_res,next)=>{req.socialAccount={id:4,alias:'Operator',master:req.headers['x-test-admin']==='yes'};next();});
+  registerApi(router,express,db,{},null,{rooms:()=>['Lobby'],say:(room,bot,message)=>sent.push([room,bot.name,message])});
+  app.use(router);
+  const server=app.listen(0,'127.0.0.1');t.after(()=>server.close());await once(server,'listening');
+  const url='http://127.0.0.1:'+server.address().port+'/api/admin/bot-chat';
+  const request=(body,admin=true)=>fetch(url,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','x-test-admin':admin?'yes':'no'},body:body?JSON.stringify(body):undefined});
+  const message={botId:'preview-nightowl',room:'Lobby',message:'  Hello there  '};
+  assert.equal((await request(null,false)).status,403);
+  assert.equal((await request(message,false)).status,403);
+  assert.deepEqual(await (await request()).json(),{bots:[{id:'preview-nightowl',name:'NightOwl'}],rooms:['Lobby']});
+  assert.equal((await request({...message,room:'Unknown'})).status,400);
+  assert.equal((await request({...message,botId:'preview-retrofan'})).status,404);
+  assert.equal((await request(message)).status,200);
+  assert.deepEqual(audit,[['Operator','bot-chat','NightOwl','Lobby']]);
+  assert.deepEqual(sent,[['Lobby','NightOwl','Hello there']]);
+});

@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const geo = require('../geo');
+const bots = require('../bots');
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const feelings = new Set(['','Happy','Excited','Grateful','Relaxed','Hopeful','Loved','Proud','Curious','Tired','Bored','Sad','Worried','Frustrated','Lonely']);
@@ -43,7 +44,7 @@ function settingsPatch(value) {
   }
   return result;
 }
-function registerApi(router, express, db, accounts, io) {
+function registerApi(router, express, db, accounts, io, botChat) {
   const writes=new Map();
   const run = handler => async (req,res) => {
     try { await handler(req,res); }
@@ -281,6 +282,27 @@ function registerApi(router, express, db, accounts, io) {
     await db.q('update social_notifications set seen=true where recipient_id=$1 and id=any($2::bigint[])',[req.socialAccount.id,ids]);
     res.json({ok:true});
   }));
+  if (botChat) {
+    router.get('/api/admin/bot-chat',run(async(req,res) => {
+      admin(req);
+      const rows=await db.q(`select b.bot_id from social_bot_members b join users u on u.id=b.user_id
+        where not u.banned and not coalesce(u.deactivated,false)`);
+      const allowed=new Set(rows.map(row=>row.bot_id));
+      res.json({bots:bots.BOTS.filter(bot=>allowed.has(bot.id)).map(({id,name})=>({id,name})),rooms:botChat.rooms()});
+    }));
+    router.post('/api/admin/bot-chat',run(async(req,res) => {
+      admin(req);
+      const bot=bots.byId(text(req.body?.botId,40));
+      const room=text(req.body?.room,150), message=text(req.body?.message,300);
+      if(!bot || !botChat.rooms().includes(room) || !message) fail('Choose a bot and a room, and enter a message.');
+      const [active]=await db.q(`select 1 from social_bot_members b join users u on u.id=b.user_id
+        where b.bot_id=$1 and not u.banned and not coalesce(u.deactivated,false)`,[bot.id]);
+      if(!active)fail('That bot is unavailable.',404);
+      await audit(req,'bot-chat',bot.name,room);
+      botChat.say(room,bot,message);
+      res.json({ok:true});
+    }));
+  }
   router.get('/api/admin',run(async(req,res) => {
     admin(req);
     const users=await db.q(`select u.id,u.name,u.display_name,u.is_master,u.deactivated,u.banned,u.last_ip,u.last_loc,

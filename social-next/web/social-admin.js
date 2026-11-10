@@ -11,12 +11,40 @@
     const body=$('#dialog-body');
     body.innerHTML='<h2>Social administration</h2><p>Posting locations are approximate. Actions are recorded in the master audit log.</p>'+
       '<p><a href="/master" target="_blank" rel="noopener">Open master account console</a></p>'+
+      '<details id="admin-bot-chat"><summary>Type as a bot</summary><p>Send a chat-room message using a bot screen name. Your admin account is recorded in the audit log.</p>'+
+      '<form id="admin-bot-chat-form" hidden><label>Bot<select name="botId" required></select></label> '+
+      '<label>Room<select name="room" required></select></label> <label>Message<input name="message" maxlength="300" required></label> '+
+      '<button class="primary">Send to room</button></form><p data-bot-chat-status role="status"></p></details>'+
       '<label>Find an account<input id="social-admin-search" type="search" placeholder="Screen name"></label><div id="social-admin-users"></div>'+
       '<details><summary>Recent posts</summary>'+data.posts.map(post=>'<section class="admin-content"><strong>'+e(post.name)+'</strong><p>'+e(post.body)+'</p><small>'+
         e(post.ip)+' · '+e(post.approximate_location || 'Location unavailable')+'</small><div>'+button(post.removed?'restore-post':'remove-post',post.removed?'Restore post':'Remove post','data-id="'+post.id+'"')+
         (post.has_image?button('remove-image','Remove photo','data-id="'+post.id+'"'):'')+'</div></section>').join('')+'</details>'+
       '<details><summary>Recent comments</summary>'+data.comments.map(comment=>'<section class="admin-content"><strong>'+e(comment.name)+'</strong><p>'+e(comment.body)+'</p><small>'+e(comment.ip)+' · '+
         e(comment.approximate_location || 'Location unavailable')+'</small><div>'+button(comment.removed?'restore-comment':'remove-comment',comment.removed?'Restore comment':'Remove comment','data-id="'+comment.id+'"')+'</div></section>').join('')+'</details>';
+    const botChat=$('#admin-bot-chat'), form=$('#admin-bot-chat-form'), status=botChat.querySelector('[data-bot-chat-status]');
+    botChat.addEventListener('toggle',async()=>{
+      if(!botChat.open || !form.hidden || status.textContent==='Loading bots…')return;
+      status.textContent='Loading bots…';
+      try {
+        const {bots,rooms}=await window.socialApi('/admin/bot-chat');
+        form.elements.botId.replaceChildren(new Option('Choose a bot',''),...bots.map(bot=>new Option(bot.name,bot.id)));
+        form.elements.room.replaceChildren(new Option('Choose a room',''),...rooms.map(room=>new Option(room,room)));
+        form.hidden=false;
+        status.textContent='';
+      } catch(error){status.textContent=error.message;}
+    });
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const {botId,room,message}=form.elements, send=form.querySelector('button');
+      const payload={botId:botId.value,room:room.value,message:message.value}, name=botId.selectedOptions[0].text;
+      send.disabled=true;
+      try {
+        await window.socialApi('/admin/bot-chat','POST',payload);
+        status.textContent='Message sent to '+payload.room+' as '+name+'.';
+        message.value='';message.focus();
+      } catch(error){status.textContent=error.message;}
+      finally{send.disabled=false;}
+    });
     const showUsers=query=>{
       $('#social-admin-users').innerHTML=data.users.filter(user=>(user.name+' '+user.display_name).toLowerCase().includes(query.toLowerCase())).map(user=>{
         const attr='data-user-id="'+user.id+'"';

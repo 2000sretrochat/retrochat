@@ -12,7 +12,7 @@ function withAccountAlias(content, alias) {
   return content.replace(/Zainy|zainy/g, original => original === 'Zainy' ? alias : alias.toLowerCase());
 }
 
-function attachSocialNext(app, express, accounts, db, io) {
+function attachSocialNext(app, express, accounts, db, io, botChat) {
   const router = express.Router();
   router.use(async (req, res, next) => {
     const account = await accounts.userFromCookie(req.headers.cookie).catch(() => null);
@@ -34,7 +34,7 @@ function attachSocialNext(app, express, accounts, db, io) {
     req.socialAccount = { id: account.id, alias, master:!!permission?.is_master };
     next();
   });
-  registerApi(router, express, db, accounts, io);
+  registerApi(router, express, db, accounts, io, botChat);
   router.get('/bot-portrait/:index.svg',async(req,res)=>{
     const index=Number(req.params.index);
     if(!Number.isInteger(index)||index<0||index>=64)return res.sendStatus(404);
