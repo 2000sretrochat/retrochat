@@ -1,7 +1,7 @@
 {
   "name": "razzle-messenger-desktop",
   "productName": "Razzle Messenger",
-  "version": "13.10.6",
+  "version": "13.10.7",
   "description": "Razzle Messenger desktop app (Beta)",
   "author": "Razzle Social",
   "license": "UNLICENSED",
@@ -63,7 +63,14 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
-      "createStartMenuShortcut": true
-    }
+      "createStartMenuShortcut": true,
+      "include": "build/installer.nsh"
+    },
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "razzle-icon-${version}.ico"
+      }
+    ]
   }
 }
