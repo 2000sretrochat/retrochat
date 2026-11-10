@@ -77,7 +77,11 @@ test('repeating the same Messenger send ID delivers one message', async () => {
   const [first,second]=await Promise.all([send(alice,'m:im',message),send(alice,'m:im',message)]);
   assert.equal(first.id,second.id);
   assert.equal(bob.events.filter(event=>event[0]==='m:im').length,1);
-  await send(alice,'m:im',{...message,clientId:'e49d4c07-3a65-4205-a020-2fae045487ab'});
+  alice.disconnect();
+  const reconnected=await socket(1);await send(reconnected,'m:init');
+  assert.equal((await send(reconnected,'m:im',message)).id,first.id);
+  assert.equal(bob.events.filter(event=>event[0]==='m:im').length,1);
+  await send(reconnected,'m:im',{...message,clientId:'e49d4c07-3a65-4205-a020-2fae045487ab'});
   assert.equal(bob.events.filter(event=>event[0]==='m:im').length,2);
 });
 

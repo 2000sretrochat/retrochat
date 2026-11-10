@@ -64,13 +64,21 @@
       createdAt:row.created,time:postTime({createdAt:row.created}),topic:'Your space'};
     postsById.set(post.id,post);return post;
   }
+  function eventCard(post){
+    if(!post.event_at)return '';
+    const start=new Date(post.event_at);
+    return '<div class="space-card"><strong>Room event</strong><p>'+esc(post.event_room)+' · '+esc(start.toLocaleString())+'</p>'+
+      '<a href="/rooms.html?room='+encodeURIComponent(post.event_room)+'">Open room</a> '+
+      (start>Date.now()?'<button type="button" class="secondary" data-event-rsvp="'+post.id+'" aria-pressed="'+post.attending+'">'+(post.attending?'Going · Undo RSVP':'RSVP · Going')+'</button> ':'')+
+      '<span>'+post.attendees+' going</span></div>';
+  }
   function sharedCard(post) {
     const owner=post.author_id===myId, moderator=session.master || owner || post.wall_id===myId;
     const comments=(post.comments || []).map(comment=>'<div class="shared-comment">'+author(comment.name)+
       '<small>'+esc(new Date(comment.created).toLocaleString())+'</small><p>'+esc(comment.body)+'</p>'+
       ((comment.author_id===myId || post.wall_id===myId || session.master)?'<button type="button" class="text-action" data-shared-comment-remove="'+comment.id+'">Delete comment</button>':'')+'</div>').join('');
     return '<article class="post" data-post-id="'+post.id+'"><div class="post-top">'+author(post.name)+
-      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+postDetailsMarkup(post)+'<p>'+esc(post.text)+'</p>'+
+      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+postDetailsMarkup(post)+'<p>'+esc(post.text)+'</p>'+eventCard(post)+
       (post.image?'<button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Shared photo"></button>':'')+
       (post.url?'<div class="link-preview">'+postLinkMedia(post.url)+'<a href="'+esc(post.url)+'" target="_blank" rel="noopener noreferrer">'+esc(new URL(post.url).hostname)+'</a></div>':'')+
       '<div class="post-actions"><button type="button" data-shared-like="'+post.id+'" aria-pressed="'+post.liked+'">'+(post.liked?'♥ Liked':'♡ Like')+' '+post.likes+'</button>'+
@@ -112,7 +120,9 @@
         '<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span>'+(record.bot?'<p class="bot-profile-badge">Chat bot</p>':'')+'<p>'+esc(record.bio || '')+
         '</p><div class="profile-basics">'+esc([record.age,record.sex,record.location].filter(Boolean).join(' · '))+'</div><div class="space-actions">'+
         '<button class="secondary" data-live-message="'+esc(record.name)+'">Message</button>'+
-        (!record.friend?'<button class="secondary" data-live-request="'+esc(record.name)+'">Add friend</button>':'')+'</div></section></aside><section class="space-posts">'+
+        (!record.friend && !record.blocked?'<button class="secondary" data-live-request="'+esc(record.name)+'">Add friend</button>':'')+
+        '<button class="text-action" data-profile-block="'+esc(record.name)+'" data-blocked="'+record.blocked+'">'+(record.blocked?'Unblock':'Block')+'</button>'+
+        '<button class="text-action" data-profile-report="'+esc(record.name)+'">Report</button></div></section></aside><section class="space-posts">'+
         (record.private?'<section class="space-card private-notice"><h3>Private profile</h3><p>This person shares their space with friends.</p></section>':wall+rows.map(normalize).map(sharedCard).join(''))+'</section></div>';
       loadArticlePreviews();
     }).catch(error=>{if(generation===profileGeneration)$('#content').innerHTML='<section class="empty">'+esc(error.message)+'</section>';});
@@ -244,6 +254,46 @@
     modal('<h2>Add a comment</h2><form id="shared-comment-form" data-post="'+id+'"><textarea name="body" maxlength="1500" required aria-label="Comment"></textarea><button class="primary">Post comment</button></form>');
   }
   comment=openComment;addProfileComment=openComment;
+  const eventButton=document.createElement('button');
+  eventButton.id='plan-room-event';eventButton.type='button';eventButton.className='text-action';eventButton.textContent='Plan a room event';
+  $('#quick-post')?.append(eventButton);
+  eventButton.onclick=async()=>{
+    try {
+      const rooms=await api('/events/rooms');
+      modal('<h2>Plan a room event</h2><form id="shared-event-form"><label>Title<input name="title" maxlength="120" required></label>'+
+        '<label>Room<select name="room" required>'+rooms.map(room=>'<option>'+esc(room)+'</option>').join('')+'</select></label>'+
+        '<label>Starts (your local time)<input name="starts" type="datetime-local" required></label><button class="primary">Share event</button></form>');
+      $('#shared-event-form').onsubmit=async event=>{
+        event.preventDefault();
+        const form=event.currentTarget,send=form.querySelector('button');send.disabled=true;
+        try{
+          await api('/posts','POST',{body:form.elements.title.value,event:{room:form.elements.room.value,starts:new Date(form.elements.starts.value).toISOString()}});
+          $('#dialog').close();await refreshView();toast('Room event shared.');
+        }catch(error){toast(error.message);}finally{send.disabled=false;}
+      };
+    }catch(error){toast(error.message);}
+  };
+  document.addEventListener('click',async event=>{
+    const control=event.target.closest('[data-event-rsvp],[data-profile-report],[data-profile-block]');if(!control)return;
+    const {eventRsvp,profileReport,profileBlock,blocked}=control.dataset;
+    try{
+      if(eventRsvp){
+        const going=control.getAttribute('aria-pressed')!=='true';control.disabled=true;
+        const update=await api('/events/'+eventRsvp+'/rsvp','PUT',{going});
+        control.setAttribute('aria-pressed',String(update.attending));
+        control.textContent=update.attending?'Going · Undo RSVP':'RSVP · Going';
+        control.nextElementSibling.textContent=update.attendees+' going';
+        const post=postsById.get(eventRsvp);if(post)Object.assign(post,update);
+      }else if(profileBlock){
+        const on=blocked!=='true';if(on&&!confirm('Block '+profileBlock+' and remove them from your contacts?'))return;
+        await api('/block/'+encodeURIComponent(profileBlock),'PUT',{blocked:on});profile(profileBlock);
+      }else{
+        const why=prompt('Report '+profileReport+' to the site moderators. What happened?','');if(!why?.trim())return;
+        const response=await fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({who:profileReport,why})});
+        if(!response.ok)throw Error('Could not submit the report.');toast('Report sent.');
+      }
+    }catch(error){toast(error.message);}finally{control.disabled=false;}
+  });
   like=id=>{const post=postsById.get(id);if(post)api('/posts/'+id+'/like','PUT',{liked:!post.liked}).then(refreshView).catch(error=>toast(error.message));};
   document.addEventListener('submit',async event=>{
     const form=event.target;

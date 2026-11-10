@@ -76,7 +76,9 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const ip = geo.clientIp(req.headers,req.socket.remoteAddress);
     return {ip, location:await geo.lookup(ip)};
   }
-  const postFields = `p.id,p.author_id,p.wall_id,p.body,p.link,p.image,p.feeling,p.place,p.created,p.updated,
+  const postFields = `p.id,p.author_id,p.wall_id,p.body,p.link,p.image,p.feeling,p.place,p.created,p.updated,p.event_room,p.event_at,
+    (select count(*)::int from social_event_rsvps r where r.post_id=p.id) as attendees,
+    exists(select 1 from social_event_rsvps r where r.post_id=p.id and r.user_id=$1) as attending,
     u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
     coalesce(s.value->>'portrait','') as portrait,
     (select count(*)::int from social_likes where post_id=p.id) as likes,
@@ -132,17 +134,33 @@ function registerApi(router, express, db, accounts, io, botChat) {
   }));
   router.get('/api/profile/:name',run(async(req,res) => {
     const [row] = await db.q(`select u.id,u.name,u.display_name,u.age,u.sex,u.location,u.bio,u.interests,u.profile_status,u.created,exists(select 1 from social_bot_members where user_id=u.id) as bot,
-      coalesce(s.value,'{}') as settings,exists(select 1 from contacts where owner=u.id and contact=$1) as friend
+      coalesce(s.value,'{}') as settings,exists(select 1 from contacts where owner=u.id and contact=$1) as friend,
+      exists(select 1 from blocks where owner=$1 and blocked=u.id) as blocked
       from users u left join social_settings s on s.user_id=u.id where u.name_lc=$2
       and not u.banned and not coalesce(u.deactivated,false)`,[req.socialAccount.id,String(req.params.name).toLowerCase()]);
     if (!row) fail('Profile unavailable.',404);
     const owner = row.id === req.socialAccount.id;
     const restricted = row.settings.visibility === 'private' && !owner && !row.friend && !req.socialAccount.master;
     const result = {id:row.id,name:row.name,displayName:row.display_name || row.name,age:row.age,sex:row.sex,
-      status:row.profile_status,memberSince:row.created,private:restricted,owner,friend:row.friend,bot:!!(req.socialAccount.master&&row.bot),
+      status:row.profile_status,memberSince:row.created,private:restricted,owner,friend:row.friend,blocked:!!row.blocked,bot:!!(req.socialAccount.master&&row.bot),
       settings:restricted ? {portrait:row.settings.portrait || '',visibility:'private'} : publicSettings(row.settings)};
     if (!restricted) Object.assign(result,{location:row.location,bio:row.bio,interests:row.interests});
     res.json(result);
+  }));
+  router.put('/api/block/:name',run(async(req,res) => {
+    const result=await accounts.blockAccount(req.socialAccount.id,req.socialAccount.alias,req.params.name,req.body?.blocked!==false);
+    if(result.error)fail(result.error,404);
+    res.json(result);
+  }));
+  router.get('/api/events/rooms',run(async(_req,res)=>res.json(botChat?.rooms() || [])));
+  router.put('/api/events/:id/rsvp',run(async(req,res) => {
+    const post=await visiblePost(req,req.params.id);
+    if(!post.event_at || new Date(post.event_at)<=new Date())fail('This event is no longer taking RSVPs.');
+    const params=[post.id,req.socialAccount.id];
+    if(req.body?.going===true)await db.q('insert into social_event_rsvps(post_id,user_id) values($1,$2) on conflict do nothing',params);
+    else await db.q('delete from social_event_rsvps where post_id=$1 and user_id=$2',params);
+    const [count]=await db.q('select count(*)::int as attendees from social_event_rsvps where post_id=$1',[post.id]);
+    res.json({attending:req.body?.going===true,attendees:count.attendees});
   }));
   router.get('/api/posts',run(async(req,res) => {
     const wall = text(req.query.wall,20).toLowerCase();
@@ -166,20 +184,28 @@ function registerApi(router, express, db, accounts, io, botChat) {
     if (!uuid.test(id)) fail('Invalid post.');
     const body=text(b.body,3000), image=photo(b.image), url=link(b.link);
     if (!body && !image && !url) fail('Add a thought, photo, or link.');
+    let eventRoom=null,eventAt=null;
+    if(b.event){
+      eventRoom=text(b.event.room,150);
+      eventAt=new Date(b.event.starts);
+      if(!body || !botChat?.rooms().includes(eventRoom) || !Number.isFinite(+eventAt) || +eventAt<=Date.now() || +eventAt>Date.now()+365*86400000)
+        fail('Choose a room and a future start time within one year, and enter an event title.');
+    }
     const [wall] = await db.q('select id from users where name_lc=$1 and not banned and not coalesce(deactivated,false)',
       [String(b.wall || req.socialAccount.alias).toLowerCase()]);
     if (!wall) fail('Profile unavailable.',404);
     if (wall.id !== req.socialAccount.id) {
+      if(eventRoom)fail('Share events from your own feed.',403);
       const [friend] = await db.q('select 1 from contacts where owner=$1 and contact=$2',[wall.id,req.socialAccount.id]);
       if (!friend) fail('Only friends can post on this wall.',403);
     }
     const info=await originInfo(req);
     await db.q(`with added as (
-      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location)
-      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict(id) do nothing returning id,wall_id
+      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at)
+      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(id) do nothing returning id,wall_id
     ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
       select wall_id,$2,'post',id,id::text from added where wall_id<>$2 on conflict do nothing`,
-      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location]);
+      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt]);
     res.status(201).json({id});
   }));
   router.patch('/api/posts/:id',run(async(req,res) => {
@@ -282,6 +308,14 @@ function registerApi(router, express, db, accounts, io, botChat) {
     await db.q('update social_notifications set seen=true where recipient_id=$1 and id=any($2::bigint[])',[req.socialAccount.id,ids]);
     res.json({ok:true});
   }));
+  if(botChat?.musicLobby){
+    router.get('/api/admin/music',run(async(req,res)=>{admin(req);res.json(await botChat.musicLobby.list());}));
+    router.delete('/api/admin/music/:id',run(async(req,res)=>{
+      admin(req);if(!uuid.test(req.params.id))fail('Invalid track.');
+      if(!await botChat.musicLobby.remove(req.params.id))fail('Track unavailable.',404);
+      res.json({ok:true});
+    }));
+  }
   if (botChat) {
     router.get('/api/admin/bot-chat',run(async(req,res) => {
       admin(req);

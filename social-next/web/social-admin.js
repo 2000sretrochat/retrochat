@@ -15,6 +15,11 @@
       '<form id="admin-bot-chat-form" hidden><label>Bot<select name="botId" required></select></label> '+
       '<label>Room<select name="room" required></select></label> <label>Message<input name="message" maxlength="300" required></label> '+
       '<button class="primary">Send to room</button></form><p data-bot-chat-status role="status"></p></details>'+
+      '<details id="admin-music"><summary>Music Lobby library</summary><p>House DJs take turns playing these tracks and pause for anyone using the mic.</p>'+
+      '<form id="admin-music-form"><label>Title<input name="title" maxlength="100" required></label> '+
+      '<label>Artist<input name="artist" maxlength="100"></label> <label>MP3 (up to 8 MB)<input name="track" type="file" accept="audio/mpeg,.mp3" required></label> '+
+      '<label><input name="rights" type="checkbox" required> I have permission to stream this track on Razzle.</label> '+
+      '<button class="primary">Upload track</button></form><p data-music-status role="status"></p><ul data-music-tracks></ul></details>'+
       '<label>Find an account<input id="social-admin-search" type="search" placeholder="Screen name"></label><div id="social-admin-users"></div>'+
       '<details><summary>Recent posts</summary>'+data.posts.map(post=>'<section class="admin-content"><strong>'+e(post.name)+'</strong><p>'+e(post.body)+'</p><small>'+
         e(post.ip)+' · '+e(post.approximate_location || 'Location unavailable')+'</small><div>'+button(post.removed?'restore-post':'remove-post',post.removed?'Restore post':'Remove post','data-id="'+post.id+'"')+
@@ -44,6 +49,44 @@
         message.value='';message.focus();
       } catch(error){status.textContent=error.message;}
       finally{send.disabled=false;}
+    });
+    const music=$('#admin-music'), upload=$('#admin-music-form'), musicStatus=music.querySelector('[data-music-status]');
+    async function loadTracks(){
+      const tracks=await window.socialApi('/admin/music');
+      const list=music.querySelector('[data-music-tracks]');
+      list.innerHTML=tracks.map(track=>'<li>'+e(track.title)+(track.artist?' · '+e(track.artist):'')+
+        ' <button type="button" class="text-action" data-track-remove="'+e(track.id)+'">Remove</button></li>').join('');
+      if(!tracks.length)list.innerHTML='<li>No tracks uploaded.</li>';
+    }
+    music.addEventListener('toggle',()=>{if(music.open)loadTracks().catch(error=>musicStatus.textContent=error.message);});
+    music.addEventListener('click',async event=>{
+      const remove=event.target.closest('[data-track-remove]');if(!remove || !confirm('Remove this track from the Music Lobby?'))return;
+      remove.disabled=true;
+      try{await window.socialApi('/admin/music/'+remove.dataset.trackRemove,'DELETE',{});musicStatus.textContent='Track removed.';await loadTracks();}
+      catch(error){musicStatus.textContent=error.message;}finally{remove.disabled=false;}
+    });
+    upload.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const {title,artist,track,rights}=upload.elements, file=track.files[0], send=upload.querySelector('button');
+      if(!file || file.size>8388608 || !rights.checked){musicStatus.textContent='Choose an MP3 up to 8 MB and confirm permission.';return;}
+      send.disabled=true;musicStatus.textContent='Checking track…';
+      const url=URL.createObjectURL(file), audio=new Audio();
+      try {
+        const duration=await new Promise((resolve,reject)=>{
+          const done=setTimeout(()=>reject(Error('Could not read the track.')),10000);
+          audio.onloadedmetadata=()=>{clearTimeout(done);resolve(audio.duration);};
+          audio.onerror=()=>{clearTimeout(done);reject(Error('Choose a playable MP3.'));};
+          audio.preload='metadata';audio.src=url;
+        });
+        if(!Number.isFinite(duration) || duration<=0 || duration>600)throw Error('Choose a track up to 10 minutes long.');
+        const params=new URLSearchParams({title:title.value,artist:artist.value,duration,rights:'yes'});
+        musicStatus.textContent='Uploading…';
+        const response=await fetch('/social-next/music/upload?'+params,{method:'POST',headers:{'Content-Type':'audio/mpeg'},body:file});
+        const result=await response.json().catch(()=>({}));
+        if(!response.ok)throw Error(result.error || 'Upload failed. Please try again.');
+        upload.reset();musicStatus.textContent='Track added.';await loadTracks();
+      }catch(error){musicStatus.textContent=error.message;}
+      finally{audio.removeAttribute('src');URL.revokeObjectURL(url);send.disabled=false;}
     });
     const showUsers=query=>{
       $('#social-admin-users').innerHTML=data.users.filter(user=>(user.name+' '+user.display_name).toLowerCase().includes(query.toLowerCase())).map(user=>{

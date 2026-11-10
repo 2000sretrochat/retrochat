@@ -57,3 +57,20 @@ create table if not exists social_notifications (
 );
 create index if not exists social_notifications_inbox on social_notifications(recipient_id, created desc);
 create table if not exists social_bot_members(user_id int primary key references users(id) on delete cascade,bot_id text not null unique,photo_index int not null);
+
+alter table social_posts add column if not exists event_room text;
+alter table social_posts add column if not exists event_at timestamptz;
+create table if not exists social_event_rsvps (
+  post_id uuid not null references social_posts(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  primary key (post_id,user_id)
+);
+
+create table if not exists room_music_tracks (
+  id uuid primary key,
+  slot integer not null unique check (slot between 1 and 12),
+  title text not null,
+  artist text not null,
+  duration double precision not null check (duration > 0 and duration <= 600),
+  audio bytea not null check (octet_length(audio) between 4 and 8388608)
+);

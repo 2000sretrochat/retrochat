@@ -1238,6 +1238,7 @@ function mountOwnerWallComposer() {
   const wall = $('#wall-form');
   if (!wall) return;
   const form = $('#quick-post').cloneNode(true);
+  form.querySelector('#plan-room-event')?.remove();
   form.id = 'wall-post-composer';
   form.hidden = false;
   form.querySelector('.post-details')?.remove();

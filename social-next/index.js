@@ -35,6 +35,18 @@ function attachSocialNext(app, express, accounts, db, io, botChat) {
     next();
   });
   registerApi(router, express, db, accounts, io, botChat);
+  if(botChat?.musicLobby){
+    router.post('/music/upload',(req,res,next)=>{
+      if(!req.socialAccount.master)return res.sendStatus(403);
+      if(req.get('origin')!==req.protocol+'://'+req.get('host'))return res.sendStatus(403);
+      if(!req.is('audio/mpeg') || req.query.rights!=='yes')return res.status(400).json({error:'Confirm that you can stream this MP3.'});
+      next();
+    },express.raw({type:'audio/mpeg',limit:'8mb'}),async(req,res)=>{
+      const clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):'';
+      const result=await botChat.musicLobby.add({title:clean(req.query.title,100),artist:clean(req.query.artist,100),duration:Number(req.query.duration),audio:req.body});
+      res.status(result.error?400:201).json(result);
+    });
+  }
   router.get('/bot-portrait/:index.svg',async(req,res)=>{
     const index=Number(req.params.index);
     if(!Number.isInteger(index)||index<0||index>=64)return res.sendStatus(404);

@@ -105,6 +105,7 @@ function http(app, express, hooks = {}) { H = hooks;
 function sockets(io, hooks) {
   const { clientKind, replacedSessions, CallRoutes } = require('./messenger-sessions');
   const callRoutes = new CallRoutes();
+  const sentMessages = new Map(); // Share retries across Messenger reconnections.
   const online = new Map(); // uid -> Set(socket)
   const ROOM_TAG = '[room]', AUDS = ['lol', 'doh', 'woohoo', 'wave', 'kiss', 'drumroll'], IMVS = ['none', 'beach', 'space', 'hearts', 'city', 'retro']; const state = new Map(); // uid -> {status,msg,idle,avatar,name}
   const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = on && (sr || st.showRoom !== false) ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
@@ -112,6 +113,21 @@ function sockets(io, hooks) {
   setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
   const toUser = (uid, ev, data) => { for (const s of online.get(uid) || []) s.emit(ev, data); };
   contactsChangedFn = (...ids) => { for (const id of ids) toUser(id, 'm:contacts-changed'); };
+  blockFn = async (uid, byName, name, on=true) => {
+    const [target]=await db.q('select id,name from users where name_lc=$1',[String(name||'').toLowerCase().slice(0,30)]);
+    if(!target || target.id===uid)return {error:'Account unavailable.'};
+    if(on){
+      await db.q(`with added as (insert into blocks(owner,blocked) values($1,$2) on conflict do nothing),
+        cleared as (delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1))
+        delete from requests where (from_id=$1 and to_id=$2) or (from_id=$2 and to_id=$1)`,[uid,target.id]);
+      toUser(uid,'m:gone',{name:target.name});toUser(target.id,'m:gone',{name:byName});
+    }else await db.q('delete from blocks where owner=$1 and blocked=$2',[uid,target.id]);
+    for(const client of io.sockets.sockets.values())if(client.data.acct?.id===uid && client.data.blk){
+      if(on)client.data.blk.add(target.id);else client.data.blk.delete(target.id);
+    }
+    toUser(uid,'m:block-state',{name:target.name,on});contactsChangedFn(uid);
+    return {ok:true,name:target.name};
+  };
   async function contactList(uid) {
     const rows = await db.q('select u.id,u.name,c.grp from contacts c join users u on u.id=c.contact where c.owner=$1 order by lower(u.name)', [uid]);
     return rows.map(c => ({ name: c.name, group: c.grp, ...pres(c.id) }));
@@ -232,24 +248,23 @@ function sockets(io, hooks) {
     }));
     s.on('m:remove', safe(async ({ name }) => { if (!ready) return; const t = await idOf(name); if (!t) return; await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)', [uid, t.id]);
       toUser(uid, 'm:gone', { name: t.name }); toUser(t.id, 'm:gone', { name: me }); }));
-    s.on('m:block', safe(async ({ name, on }) => { if (!ready) return; const t = await idOf(name); if (!t || t.id === uid) return { error: 'Not found' };
-      if (on === false) { await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]); for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === uid) x.data.blk?.delete(t.id); return { ok: true }; }
-      await db.q('insert into blocks(owner,blocked) values($1,$2) on conflict do nothing', [uid, t.id]);
-      await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)', [uid, t.id]); await db.q('delete from requests where from_id=$1 and to_id=$2', [t.id, uid]);
-      toUser(uid, 'm:gone', { name: t.name }); toUser(t.id, 'm:gone', { name: me }); for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === uid && x.data.blk) x.data.blk.add(t.id); return { ok: true, name: t.name }; }));
+    s.on('m:block',safe(async ({name,on})=>ready?blockFn(uid,me,name,on!==false):{error:'Sign in first.'}));
     s.on('m:group', safe(async ({ name, group }) => { if (!ready) return; group = String(group || '').trim().slice(0, 24); if (!group || /[<>]/.test(group)) return { error: 'Group names are 1-24 characters.' };
       await db.q('insert into groups(owner,name) values($1,$2) on conflict do nothing', [uid, group]);
       if (name) { const t = await idOf(name); if (t) await db.q('update contacts set grp=$3 where owner=$1 and contact=$2', [uid, t.id, group]); } return { ok: true, group }; }));
     // relay helpers: only between mutual contacts, never to/from blockers
     async function peer(name) { const t = await idOf(name); if (!t || !(await mutual(uid, t.id)) || (!s.data.master && await blocked(t.id, uid))) return null; return t; }
-    const sentMessages = new Map();
     s.on('m:im', safe(async m => {
       if (!ready || !m) return;
       const id = /^[0-9a-f-]{36}$/i.test(m.clientId || '') ? m.clientId : crypto.randomUUID();
-      if (sentMessages.has(id)) return sentMessages.get(id);
-      const delivery = sendMessage(m, id);
-      sentMessages.set(id, delivery);
-      if (sentMessages.size > 128) sentMessages.delete(sentMessages.keys().next().value);
+      const key=uid+':'+id, cached=sentMessages.get(key);
+      if(cached && cached.expires>Date.now())return cached.delivery;
+      const delivery=sendMessage(m,id).then(result=>{
+        if(!result?.ok)sentMessages.delete(key);
+        return result;
+      },error=>{sentMessages.delete(key);throw error;});
+      sentMessages.set(key,{delivery,expires:Date.now()+600000});
+      if(sentMessages.size>8192)sentMessages.delete(sentMessages.keys().next().value);
       return delivery;
     }));
     async function sendMessage(m, id) {
@@ -257,9 +272,11 @@ function sockets(io, hooks) {
       const text = String(m.text || '').trim().slice(0, 1000); if (!text) return; { const fl = require('./flood').check(me, text, s.data && s.data.master); if (fl) return { error: fl }; } const t = await peer(m.to); if (!t) return { error: 'You can only message your contacts.' };
       const body = { id, text: esc(text), ...fmt(m), ...(AUDS.includes(m.aud) ? { aud: m.aud } : {}) }, now = Date.now();
       try { const ar = await db.q('select id from users where id = any($1) and archive', [[uid, t.id]]); for (const r of ar) await db.q('insert into im_archive(owner,peer,dir,body) values($1,$2,$3,$4)', [r.id, r.id === uid ? t.name : me, r.id === uid ? 'out' : 'in', body]); } catch { }
-      for (const x of online.get(uid) || []) if (x !== s) x.emit('m:im-echo', { to: t.name, t: now, ...body });
-      if (online.has(t.id)) { toUser(t.id, 'm:im', { from: me, t: now, ...body }); return { ok: true, t: now, ...body }; }
-      await db.q('insert into offline(to_id,from_id,body) values($1,$2,$3)', [t.id, uid, body]); return { ok: true, offline: true, t: now, ...body };
+      const offline=!online.has(t.id);
+      if(offline)await db.q('insert into offline(to_id,from_id,body) values($1,$2,$3)',[t.id,uid,body]);
+      else toUser(t.id,'m:im',{from:me,t:now,...body});
+      for(const x of online.get(uid)||[])if(x!==s)x.emit('m:im-echo',{to:t.name,t:now,...body,offline});
+      return {ok:true,offline,t:now,...body};
     }
     s.on('m:seen', safe(async ({ to }) => { if (!ready) return; const t = await peer(to); if (!t) return;
       const r = await db.q('select count(*)::int n from users where id = any($1) and receipts', [[uid, t.id]]); if (r[0].n === 2) toUser(t.id, 'm:seen', { from: me, t: Date.now() }); }));
@@ -298,6 +315,6 @@ function sockets(io, hooks) {
   });
 }
 let isOnlineFn = () => false, setAvFn = async () => {};
-let presFn = null, toUserFn = () => {}, contactsChangedFn = () => {};
-module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), toUser: (u, e, d) => toUserFn(u, e, d), contactsChanged: (...ids) => contactsChangedFn(...ids), devConflict: null, setAvatar: (uid, av) => setAvFn(uid, av) };
+let blockFn, presFn = null, toUserFn = () => {}, contactsChangedFn = () => {};
+module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), toUser: (u, e, d) => toUserFn(u, e, d), contactsChanged: (...ids) => contactsChangedFn(...ids), blockAccount: (...args) => blockFn(...args), devConflict: null, setAvatar: (uid, av) => setAvFn(uid, av) };
 

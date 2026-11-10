@@ -171,7 +171,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 </style>
 <style id="fr-inbox-css">
 </style>
-<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/messenger-inbox.js"></script><script src="/messenger-calls.js"></script></head><body>
+<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/messenger-inbox.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script></head><body>
 <div class="auth-site-header" hidden><header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
@@ -352,6 +352,7 @@ function start(){
   const w=ims[k];w&&peerInfo(w,p.name)});
  S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();$('stsel').value=x.status;$('smsg').value=dec(x.msg);roomMode(x.msg=='[room]')});
  S.on('m:contacts-changed',refreshContacts);
+ S.on('m:block-state',({name,on})=>{blockedL=blockedL.filter(n=>n.toLowerCase()!==name.toLowerCase());if(on)blockedL.push(name);});
 S.on('m:offline-read',ids=>{
   const read=new Set(ids);
   for(const [name,messages] of Object.entries(window.pmHeld||{})){
@@ -414,7 +415,7 @@ const addC=()=>modal('Add a Contact','Screen name:<input type=text id=an maxleng
 $('bAdd').onclick=$('mAdd').onclick=addC;
 const need=()=>{if(!sel){alert('Select a contact first.');return null}return sel};
 $('mRem').onclick=()=>{const n=need();if(n&&confirm('Remove '+n+' from your contacts?'))emit('m:remove',{name:n})};
-$('mBlock').onclick=()=>{const n=need();if(n&&confirm('Block '+n+'? They will be removed from your contacts and cannot message you.'))emit('m:block',{name:n}).then(r=>{if(r.name)blockedL.push(r.name)})};
+$('mBlock').onclick=()=>{const n=need();if(n&&confirm('Block '+n+'? They will be removed from your contacts and cannot message you.'))emit('m:block',{name:n}).then(r=>{if(r.error)toast(r.error)})};
 $('mBlocked').onclick=()=>modal('Blocked List',blockedL.length?blockedL.map(n=>`<label><input type=checkbox value="${escT(n)}"> ${escT(n)}</label>`).join('')+'<small>Tick names to unblock.</small>':'Nobody is blocked.',async()=>{for(const c of $('mdB').querySelectorAll('input:checked')){await emit('m:block',{name:c.value,on:false});blockedL=blockedL.filter(x=>x!=c.value)}},'Unblock');
 $('mGroup').onclick=()=>modal('Add a Group','Group name:<input type=text id=gn maxlength=24>',async()=>{const r=await emit('m:group',{group:$('gn').value});if(r.group&&!groups.includes(r.group)){groups.push(r.group);render()}return r});
 $('mMove').onclick=()=>{const n=need();if(!n)return;modal('Move '+n,`Move to group:<select id=gm>${groups.map(g=>`<option>${escT(g)}</option>`).join('')}</select>`,async()=>{const r=await emit('m:group',{name:n,group:$('gm').value});if(r.group){contacts[n.toLowerCase()].group=r.group;render()}return r})};
@@ -459,7 +460,7 @@ function line(w,from,m,old){
  const mine=ME&&from.toLowerCase()==ME.name.toLowerCase();const col=mine||!m.color||m.color=='#000000'?'':`color:${m.color};`;
  const sty=`${col}font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;const c=contacts[from.toLowerCase()],av=mine?ME.avatar:(c?c.avatar:'');
  const tm=new Date(m.t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
- w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg${mine?' me':''}" title="${escT(from)}">${avHtml(av,'',from)}<div class=bb><span style="${sty}">${YGif.render(m.text)||RCSmileys.replace(m.text)}</span><div class=tm>${tm}${m.offline?' &middot; delivered when they sign in':''}</div></div><div class=tm2>${tm}${m.offline?' &middot; delivered later':''}</div></div>`);scroll(w)}
+ w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg${mine?' me':''}" title="${escT(from)}">${avHtml(av,'',from)}<div class=bb><span style="${sty}">${YGif.render(m.text)||RCSmileys.replace(m.text)}</span><div class=tm>${tm}${m.deliveryState?' &middot; '+m.deliveryState:(m.offline?' &middot; delivered when they sign in':'')}</div></div><div class=tm2>${tm}${m.deliveryState?' &middot; '+m.deliveryState:(m.offline?' &middot; delivered later':'')}</div></div>`);scroll(w)}
 function peerInfo(w,n){const c=contacts[n.toLowerCase()],st=c?(c.online?(c.idle?'idle':c.status):'offline'):'offline';
  const ih=w.querySelector('.ihead');if(ih){ih.querySelector('.pav').innerHTML=avHtml(c?c.avatar:'','',c?c.name:n);ih.querySelector('.st').innerHTML=`<span class="sdot ${st}"></span>${STL[st]}${c&&c.msg&&!(c.showRoom&&c.room)?' &middot; '+RCSmileys.replace(c.msg):''}${c&&c.online&&c.room?` &middot; <a href="#" class=imjr title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>`:''}`;const j=ih.querySelector('.imjr');if(j)j.onclick=ev=>{ev.preventDefault();window.open('/rooms.html?room='+encodeURIComponent(c.room),'yapprooms')}}
  w.querySelector('.peer').innerHTML=avHtml(c?c.avatar:'','sm ring r-'+st,c?c.name:n)+`<span class="dot d-${st}"></span><b>${escT(c?c.name:n)}</b> &mdash; ${STL[st]}${c&&c.msg?' &middot; '+RCSmileys.replace(c.msg):''}`}
@@ -473,7 +474,7 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  <div class=mbar><div>Conversation<div class=dd><div data-m=invite>Invite to Room</div><hr><div data-m=close>Close</div></div></div><div>Edit<div class=dd><div data-m=clearin>Clear Message Box</div></div></div><div>View<div class=dd><div data-m=fmt>Text Style Bar</div></div></div><div>Actions<div class=dd><div data-m=buzz>Send BUZZ!</div><div data-m=voice>Voice Call</div><div data-m=video>Webcam Call</div></div></div><div>Help<div class=dd><div data-m=help>Keyboard Tips</div></div></div></div>
  <div class=ihead><span class=pav></span><div><div class=nm style=cursor:pointer title='View profile' data-m=prof>${escT(name)}</div><div class=st></div></div><span class=sp></span>
  <button class=ib data-a=video title="Webcam call">${YI.svg('video',22)}</button><button class=ib data-a=voice title="Voice call">${YI.svg('phone',22)}</button><button class=ib data-a=buzz title="BUZZ! (Ctrl+G)">${YI.svg('bell',22)}</button><button class=ib data-a=more title="More">${YI.svg('dots',22)}</button>
- <div class=imenu><div data-m=prof>View Profile</div><div data-m=invite>Invite to Room</div><div data-m=fmt>Text style (bold, color, font)</div><div data-m=close>Close window</div></div></div>
+ <div class=imenu><div data-m=prof>View Profile</div><div data-m=invite>Invite to Room</div><div data-m=fmt>Text style (bold, color, font)</div><div data-a=block>Block</div><div data-a=rep>Report</div><div data-m=close>Close window</div></div></div>
  <div class=tools><button class=tb data-a=voice title="Start a voice call"><span>&#127908;</span>Call</button><button class=tb data-a=video title="Start a webcam call"><span>&#128247;</span>Webcam</button>
  <button class=tb data-a=buzz title="BUZZ! (Ctrl+G)"><span>&#128243;</span>Buzz</button><button class=tb data-a=aud title="Send an Audible"><span>&#128264;</span>Audibles</button><button class=tb data-a=imv title="IMVironment: theme this conversation for both of you"><span>&#127774;</span>IMVironment</button><button class=tb data-a=rep title="Report this user"><span>&#9873;</span>Report</button></div>
  <div class=call><video class=them autoplay playsinline></video><video class=me autoplay playsinline muted></video><div class=cs></div><button class=hang style="background:#d9534f;color:#fff;border-color:#a33">Hang Up</button></div>
@@ -490,13 +491,22 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  w.querySelector('.font').onchange=e=>{st.f=e.target.value;ta.style.fontFamily=st.f};
  const smp=w.querySelector('.smp');smp.innerHTML=RCSmileys.ordered.map(m=>`<span data-k="${m.esc}">${m.html}</span>`).join('');
  w.querySelector('.smb').onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};smp.querySelectorAll('span[data-k]').forEach(e=>e.onclick=()=>{ta.value+=' '+dec(e.dataset.k)+' ';smp.classList.remove('open');ta.focus()});
- const send=async gif=>{const t=(gif||ta.value).trim();if(!t)return;if(!gif)ta.value='';const r=await emit('m:im',{to:name,text:t,clientId:crypto.randomUUID(),...st});if(r.error)return sys(w,r.error);{const e=w.querySelector('.yseen');e&&e.remove()}line(w,ME.name,r)};
+ const send=gif=>{
+  const t=(gif||ta.value).trim();if(!t)return;if(!gif)ta.value='';
+  sendMessengerMessage({socket:()=>S,log:w.querySelector('.log'),text:t,payload:{to:name,text:t,...st},onSent:r=>{
+   w.querySelector('.yseen')?.remove();line(w,ME.name,{...r,deliveryState:r.offline?'Sent · offline':'Sent'});
+  }});
+ };
  w.querySelector('.gifb').onclick=e=>{e.stopPropagation();YGif.picker(e.currentTarget,tok=>send(tok))};
  w.querySelector('form').onsubmit=e=>{e.preventDefault();send()};let lt=0;
  const pop=(btn,items,fn)=>{document.querySelectorAll('.ypop').forEach(x=>x.remove());const p=document.createElement('div');p.className='ypop';p.style.cssText='position:fixed;z-index:9999;background:var(--card,#fff);border:1px solid #7f9db9;box-shadow:2px 2px 6px #0004;padding:2px 0;font:12px Tahoma';const r=btn.getBoundingClientRect();p.style.left=r.left+'px';p.style.top=(r.bottom+2)+'px';
   p.innerHTML=items.map(([k,l])=>`<div data-k="${k}" style="padding:4px 14px;cursor:pointer">${l}</div>`).join('');document.body.appendChild(p);p.querySelectorAll('div').forEach(d=>{d.onmouseenter=()=>d.style.background='#dbe8fb';d.onmouseleave=()=>d.style.background='';d.onclick=()=>{p.remove();fn(d.dataset.k)}});setTimeout(()=>document.addEventListener('click',()=>p.remove(),{once:true}),0)};
  w.querySelectorAll('[data-a=aud]').forEach(b=>b.onclick=()=>pop(b,Object.entries(YAud.A).map(([k,a])=>[k,a.e+' '+a.l]),async k=>{const r=await emit('m:im',{to:name,text:'['+YAud.A[k].l+']',aud:k,...st});if(r.error)return sys(w,r.error);line(w,ME.name,r);YAud.play(k,w)}));
  w.querySelectorAll('[data-a=imv]').forEach(b=>b.onclick=()=>pop(b,Object.entries(YAud.IMVS),async env=>{const r=await emit('m:imv',{to:name,env});if(r.error)sys(w,r.error)}));
+ w.querySelector('[data-a=block]').onclick=async()=>{
+  if(!confirm('Block '+name+' and remove them from your contacts?'))return;
+  const result=await emit('m:block',{name});sys(w,escT(result.error||'Blocked '+name+'.'));
+ };
  w.querySelectorAll('[data-a=rep]').forEach(b=>b.onclick=()=>reportUser(name));
  emit('m:imv-get',{with:name}).then(r=>setImv(w,r.env));
  ta.addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();if(!e.repeat&&!e.isComposing)send()}else if(e.ctrlKey&&e.key.toLowerCase()=='g'){e.preventDefault();buzz(name)}else if(e.key.length==1&&Date.now()-lt>2500){lt=Date.now();S.emit('m:typing',{to:name})}});

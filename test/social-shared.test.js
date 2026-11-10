@@ -104,3 +104,24 @@ test('bot chat is master-only and audits the real operator before sending',async
   assert.deepEqual(audit,[['Operator','bot-chat','NightOwl','Lobby']]);
   assert.deepEqual(sent,[['Lobby','NightOwl','Hello there']]);
 });
+
+test('visible future room events support idempotent RSVP and undo',async t=>{
+  const id='d503a3f4-4b9e-4f31-951e-05881c2a4720', app=express(),router=express.Router(),people=new Set();
+  const db={q:async(sql,args=[])=>{
+    if(sql.startsWith('select p.*'))return [{id, event_at:new Date(Date.now()+3600000)}];
+    if(sql.startsWith('insert into social_event_rsvps'))people.add(args[1]);
+    if(sql.startsWith('delete from social_event_rsvps'))people.delete(args[1]);
+    if(sql.startsWith('select count(*)'))return [{attendees:people.size}];
+    return [];
+  }};
+  router.use((req,_res,next)=>{req.socialAccount={id:4,alias:'Member',master:false};next();});
+  registerApi(router,express,db,{},null,{rooms:()=>['Music Lobby']});
+  app.use(router);
+  const server=app.listen(0,'127.0.0.1');t.after(()=>server.close());await once(server,'listening');
+  const url='http://127.0.0.1:'+server.address().port+'/api/events/';
+  assert.deepEqual(await (await fetch(url+'rooms')).json(),['Music Lobby']);
+  const rsvp=going=>fetch(url+id+'/rsvp',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({going})}).then(r=>r.json());
+  assert.deepEqual(await rsvp(true),{attending:true,attendees:1});
+  assert.deepEqual(await rsvp(true),{attending:true,attendees:1});
+  assert.deepEqual(await rsvp(false),{attending:false,attendees:0});
+});

@@ -3,6 +3,7 @@ const FLOOD = require('./flood');
 const express = require('express'), http = require('http'), { Server } = require('socket.io');
 const acc = require('./accounts'), db = require('./db'), geo = require('./geo');
 const app = express(), server = http.createServer(app);
+const {createMusicLobby,room:musicRoom}=require('./music-lobby');
 app.set('trust proxy', 1);
 const io = new Server(server, { pingInterval: 20000, pingTimeout: 40000, maxHttpBufferSize: 1e5, allowRequest: (req, cb) => { const o = req.headers.origin; try { cb(null, !o || new URL(o).host === req.headers.host); } catch { cb(null, false); } } });
 io.use(async (s, next) => { if (MASTER.ipBanned(geo.clientIp(s.handshake.headers, s.handshake.address))) return next(new Error('banned'));
@@ -56,9 +57,15 @@ acc.http(app, express, { reservedName: n => MASTER.reserved(n) || isBot(n), ipBa
 try { require('./friend-site')(app, express, acc); } catch (e) { console.error('[friend-site]', e.message); }
 app.get('/privacy', (req, res) => res.sendFile(__dirname + '/public/privacy.html'));
 app.get('/terms', (req, res) => res.sendFile(__dirname + '/public/terms.html'));
+const musicLobby=createMusicLobby({db,occupied:()=>botsOn && !botOff.has(musicRoom) && socks(musicRoom).length>0,
+  humanTurn:()=>micsOf(musicRoom)!==1 || micsUsed(musicRoom)>0 || (hqOn(musicRoom) && qOf(musicRoom).length>0),
+  emit:state=>io.to(musicRoom).emit('music:state',state)});
+app.get('/api/room-music/:id',musicLobby.audio);
+setInterval(musicLobby.tick,2000).unref();
 require('./social-next')(app, express, acc, db, io, {
   rooms: () => [...OFFICIAL],
   say: (room, bot, message) => botSay(room, bot, message),
+  musicLobby,
 });
 app.get(['/social', '/social/'], (_req,res) => res.redirect(302, '/social-next/'));
 app.use(express.static(__dirname + '/public'));
@@ -302,7 +309,7 @@ function seen(room, vm) { return socks(room).filter(x => vm || !x.data.inc); }
 function members(room, vm) { return [...seen(room, vm).map(x => x.data.name), ...botsIn(room).map(b => b.name)].sort((a,b)=>a.localeCompare(b)); }
 function roster(room, vm) { return seen(room, vm).map(x => ({ ...(vm && x.data.inc ? { inc: true } : {}), name: x.data.name, av: x.data.av || '', id: x.id, guest: !!x.data.guest, cam: !!x.data.cam, talk: !!x.data.talk, ...(x.data.music ? { music: true } : {}), ...(x.data.idle ? { idle: true } : {}), tl: x.data.talk && x.data.talkUntil ? Math.max(0, Math.ceil((x.data.talkUntil - Date.now()) / 1000)) : 0, role: x.data.master ? '' : roleOf(x, room), dot: dotLeft(room, x.data.name.toLowerCase()) !== null, dl: Math.ceil((dotLeft(room, x.data.name.toLowerCase()) || 0) / 1000), mt: mod(room).mt.has(x.data.name.toLowerCase()), mm: mod(room).mm.has(x.data.name.toLowerCase()), voice: !!x.data.voice, viewers: x.data.cam ? [...(x.data.viewers||[])].map(v => io.sockets.sockets.get(v)?.data.name).filter(Boolean) : [] })).concat(botsIn(room).map(b => ({ name: b.name, av: b.av, id: 'bot-' + b.id, guest: true, bot: true, cam: false, talk: false, tl: 0, role: '', dot: false, dl: 0, mt: false, mm: false, voice: false, viewers: [] }))).sort((a,b)=>a.name.localeCompare(b.name)); }
 const MICS = {}; const MIC_DEFAULT_OFFICIAL = 3;
-const micsOf = r => MICS[r] || (UROOMS.has(r) ? 1 : MIC_DEFAULT_OFFICIAL);
+const micsOf = r => MICS[r] || (UROOMS.has(r) || r===musicRoom ? 1 : MIC_DEFAULT_OFFICIAL);
 const micsUsed = r => socks(r).filter(x => x.data.talk).length;
 function parseSecs(t) { if (t == null || t === '' || t === 'off' || t === 0 || t === '0') return 0; const m = String(t).trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs|seconds?|m|min|mins|minutes?)?$/); if (!m) return null;
   const v = Math.round(parseFloat(m[1]) * (m[2] && m[2][0] === 'm' ? 60 : 1)); return v >= 5 && v <= 300 ? v : null; }
@@ -313,7 +320,7 @@ function setMicOpts(room, { hq, timer, mann } = {}) { if (!ROOMS[room]) return '
   MASTER.saveMeta(room, { hq: !!HQ[room], mtimer: MTIMER[room] || 0, mann: MANN[room] || 0 }); upd(room); return null; }
 function setMics(room, n) { n = +n; if (!ROOMS[room]) return 'No such room.'; if (![1, 2, 3, 4, 5].includes(n)) return 'Mic limit must be 1 to 5.';
   MICS[room] = n; MASTER.saveMics(room, n); io.to(room).emit('mics', { room, max: n }); upd(room); return null; }
-const HQ = {}, MTIMER = {}, QUEUE = {}, MANN = {}; // hands-up on/off, per-turn seconds (0=off), ordered socket ids
+const HQ = {[musicRoom]:true}, MTIMER = {}, QUEUE = {}, MANN = {}; // hands-up on/off, per-turn seconds (0=off), ordered socket ids
 const qOf = r => QUEUE[r] = (QUEUE[r] || []).filter(id => { const x = io.sockets.sockets.get(id); return x && x.data.room === r && x.data.voice && !x.data.talk; });
 const hqOn = r => !!HQ[r] && micsOf(r) === 1;
 function micq(room) { return { room, on: hqOn(room), timer: MTIMER[room] || 0, mann: MANN[room] || 0, max: micsOf(room), q: hqOn(room) ? qOf(room).map(id => io.sockets.sockets.get(id).data.name) : [] }; }
@@ -330,7 +337,7 @@ const AH = { roomExists: r => !!ROOMS[r], roomRating: r => rateOf(r), rawRoomOf:
   bannedFrom: (r, n) => { const e = MOD[r]?.kicked?.get?.(String(n).toLowerCase()); return !!e && e > Date.now(); },
   toRoomUser: (n, ev, d) => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); x && x.emit(ev, d); }, roomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && !x.data.inc && !x.data.master && ROOMS[x.data.room] ? x.data.room : null; } };
 function lists(room) { if (!room) return; setImmediate(() => { for (const x of socks(room)) if (x.data.acct) AH.roomChanged?.(x.data.name); }); const R = {}; for (const x of socks(room)) { const k = x.data.master ? 1 : 0; R[k] = R[k] || [roster(room, !!k), members(room, !!k)]; x.emit('roster', R[k][0]); x.emit('members', R[k][1]); } }
-function upd(room) { if (room) { lists(room); io.to(room).emit('micq', micq(room)); } }
+function upd(room) { if (room) { if(room===musicRoom)void musicLobby.tick(); lists(room); io.to(room).emit('micq', micq(room)); } }
 const MAXVIEW = 6;
 // ---- room moderation: owner (or site admin via ADMIN_KEY) > room admins > users. All checks are server-side. ----
 const MOD = {}; const KICK_MS = 5 * 60e3;
@@ -489,6 +496,7 @@ io.on('connection', s => {
   }
   const same = id => { const t = io.sockets.sockets.get(id); return t && t.data.name && t.data.room === s.data.room && (!t.data.inc || s.data.master) ? t : null; };
   s.on('idle', on => { if (!s.data.name || s.data.idle === !!on) return; s.data.idle = !!on; upd(s.data.room); });
+  s.on('music:state',cb=>{if(typeof cb==='function')cb(s.data.room===musicRoom?musicLobby.state():null);});
   s.on('avmode', on => { if (!s.data.name) return; s.data.music = !!on; upd(s.data.room); });
   s.on('voice', on => { if (!s.data.name) return; s.data.voice = !!on; if (!on) s.data.talk = false; upd(s.data.room); });
   s.on('talk', (on, cb) => { const ack = typeof cb === 'function' ? cb : () => {}; if (!s.data.name || !s.data.voice) return ack({ error: 'Voice is off.' }); const room = s.data.room;
