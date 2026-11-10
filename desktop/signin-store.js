@@ -25,15 +25,17 @@ function createSigninStore({ file, crypto, now = () => Date.now() }) {
   return {
     canSavePasswords: canSave,
     // Safe to hand to the page: names and whether a password is saved, never the password.
-    list: () => sorted().map(e => ({ name: e.name, saved: !!e.pw })),
+    list: () => sorted().map(e => ({ name: e.name, saved: !!e.pw, invisible: !!e.inv })),
     // Record a successful sign-in. save=true stores the password encrypted; save=false forgets it.
-    // password=null with save=true keeps whatever is already saved.
-    record(name, { password = null, save = false } = {}) {
+    // password=null with save=true keeps whatever is already saved. invisible (true/false) is remembered per name;
+    // leave it undefined to keep the previous choice.
+    record(name, { password = null, save = false, invisible } = {}) {
       name = String(name || '').trim();
       if (!NAME_RE.test(name)) return false;
       let e = find(name);
       if (!e) { e = { name }; data.names.push(e); }
       e.name = name; e.used = Math.max(now(), ...data.names.map(x => (x.used || 0) + 1));
+      if (invisible === true) e.inv = true; else if (invisible === false) delete e.inv;
       if (!save) delete e.pw;
       else if (password != null && canSave()) e.pw = crypto.encryptString(String(password)).toString('base64');
       else if (!canSave()) delete e.pw;

@@ -115,7 +115,7 @@ ipcMain.handle('yc-signin', async (e, o) => {
   if (!password) return { error: 'Enter your password.' };
   const r = await siteRequest('POST', '/api/login', { name, password, remember: false });
   if (r.status !== 200 || !r.json.ok) return { error: r.json.error || (r.status ? 'Sign-in failed.' : 'Could not reach Razzle. Check your connection and try again.') };
-  names.record(r.json.name || name, { password: typed, save: !!o.save });
+  names.record(r.json.name || name, { password: typed, save: !!o.save, invisible: typeof o.invisible === 'boolean' ? o.invisible : undefined });
   return { ok: true, name: r.json.name || name };
 });
 // After a sign-in the page did itself (sign-up, room sign-in), remember the name if it really is the signed-in one.

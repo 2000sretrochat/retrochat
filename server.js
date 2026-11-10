@@ -89,7 +89,7 @@ app.get('/av/:name', async (req, res) => {
   if (a) return res.type(a.mime).send(a.buf);
   res.type('image/svg+xml').send(defaultAv(n));
 });
-geo.admin(app, n => acc.isOnline(n) || users.has(String(n).toLowerCase())); // admin-key only
+geo.admin(app, n => acc.isConnected(n) || users.has(String(n).toLowerCase())); // admin-key only
 app.get('/healthz', (q, r) => r.send('ok')); app.get('/api/version', (q, r) => r.json({ version: VERSION, messenger: MESSENGER_VERSION, label: 'Razzle Messenger ' + MESSENGER_VERSION + ' (Beta)' }));
 const MESSENGER_VERSION = (() => { try { return require('./desktop/package.json').version; } catch { return ''; } })();
 const roomList = (adult, vm) => Object.entries(ROOMS).filter(([n]) => adult || !adultR(n)).map(([name, cat]) => { const ss = seen(name, vm); return { name, cat, path: PATH[name] || [], topic: TOPICS[name], rating: rateOf(name), mics: micsOf(name), count: ss.length + botsIn(name).length, cams: ss.filter(x => x.data.cam).length, owner: UROOMS.get(name)?.owner || null, icon: UROOMS.get(name)?.icon || '', user: UROOMS.has(name) }; });
@@ -435,7 +435,7 @@ io.on('connection', s => {
       if (o && mine && !s.data.master) { o.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); o.disconnect(true); users.delete(name.toLowerCase()); }
       else if (o && mine && s.data.master) return cb({ error: 'You are already in a room with this screen name in another tab.' });
       else if (o) return cb({ error: 'That screen name is in use right now. Try another.' }); }
-    if (s.data.guest && acc.isOnline(name)) return cb({ error: 'That screen name is in use right now. Try another.' });
+    if (s.data.guest && acc.isConnected(name)) return cb({ error: 'That screen name is in use right now. Try another.' });
     await loadPrefs();
     users.set(name.toLowerCase(), s.id); s.data.name = name;
     if (s.data.acct && db.status().ready) { try { s.data.av = (await db.q('select avatar from users where id=$1', [s.data.acct.id]))[0]?.avatar || ''; } catch { } }

@@ -51,7 +51,7 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
       rem.closest('label').style.display = 'none';
       row.insertAdjacentHTML('beforeend', '<label style="font-weight:normal"><input type="checkbox" id="iSave"> Save password</label>');
     }
-    const save = $('iSave');
+    const save = $('iSave'), inv = $('iInv');
     if (save && !canSave) { save.disabled = true; save.parentNode.title = 'Password saving is not available on this computer.'; }
 
     const clearSaved = () => { if (savedFor) { savedFor = null; pw.value = ''; } };
@@ -60,6 +60,7 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
       name.value = e ? e.name : n;
       if (e && e.saved) { savedFor = e.name; pw.value = MARK; if (save) save.checked = true; }
       else { savedFor = null; pw.value = ''; if (save) save.checked = false; }
+      if (inv) inv.checked = !!(e && e.invisible); // "Sign in as invisible" is remembered per screen name
     };
     const close = () => list.classList.remove('open');
     const render = () => {
@@ -108,7 +109,7 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
     api.signIn = async () => {
       const n = name.value.trim();
       const useSaved = savedFor && savedFor.toLowerCase() === n.toLowerCase() && pw.value === MARK;
-      const r = await D.signIn({ name: n, password: useSaved ? null : pw.value, save: !!(save && save.checked) }).catch(() => ({ error: 'Sign-in failed.' }));
+      const r = await D.signIn({ name: n, password: useSaved ? null : pw.value, save: !!(save && save.checked), invisible: !!(inv && inv.checked) }).catch(() => ({ error: 'Sign-in failed.' }));
       if (r && r.ok) { savedFor = null; refresh(); }
       return r || { error: 'Sign-in failed.' };
     };
