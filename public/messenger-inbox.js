@@ -1,12 +1,14 @@
 /* Shared notification bell for browser, desktop, and Social Messenger. */
-window.createMessengerInbox = function ({ respond, openMessage }) {
+window.createMessengerInbox = function ({ respond, openMessage, onRefresh }) {
   const requests = new Map();
   const bell = document.createElement('button');
   bell.type = 'button';
   bell.className = 'messenger-bell';
   bell.setAttribute('aria-label', 'Notifications');
   bell.setAttribute('aria-expanded', 'false');
-  bell.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0v5l2 3H4l2-3V9Zm4 11a2 2 0 0 0 4 0"/></svg>';
+  // design Nov 10 (item 9): outline bell when quiet, filled orange bell on a navy backing when something is unread
+  bell.innerHTML = '<svg class="bell-quiet" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 14.5h-13l1-1c.9-.9 1.5-2 1.5-4V7a4 4 0 0 1 8 0v2.5c0 2 .6 3.1 1.5 4l1 1ZM8 16.8a2.3 2.3 0 0 0 4 0"/></svg>'
+    + '<svg class="bell-on" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 2.2a4.9 4.9 0 0 0-4.9 4.9v2.2c0 1.9-.7 2.9-1.8 4l-.3.3c-.5.5-.1 1.4.6 1.4h12.8c.7 0 1.1-.9.6-1.4l-.3-.3c-1.1-1.1-1.8-2.1-1.8-4V7.1A4.9 4.9 0 0 0 10 2.2ZM7.8 16.2h4.4a2.2 2.2 0 0 1-4.4 0Z"/></svg>';
   const badge = document.createElement('small');
   bell.append(badge);
   const panel = document.createElement('section');
@@ -18,6 +20,7 @@ window.createMessengerInbox = function ({ respond, openMessage }) {
 
   function row(label, actions) {
     const item = document.createElement('div');
+    item.className = 'mn-line';
     const title = document.createElement('span');
     title.textContent = label;
     item.append(title);
@@ -44,7 +47,7 @@ window.createMessengerInbox = function ({ respond, openMessage }) {
     b.textContent = (item.display_name || item.name) + ' ' + (VERB[item.kind] || 'has new activity');
     b.title = 'Open in Social';
     b.onclick = () => { close(); window.open('/social-next/?post=' + encodeURIComponent(item.post_id), '_blank', 'noopener'); };
-    const d = document.createElement('div'); d.append(b); panel.append(d);
+    const d = document.createElement('div'); d.className = 'mn-line mn-social' + (item.seen ? '' : ' unread'); d.append(b); panel.append(d);
   }
   async function loadSocial() {
     try {
@@ -84,13 +87,32 @@ window.createMessengerInbox = function ({ respond, openMessage }) {
     } catch { }
   }
 
-  function section(title) {
+  function section(title, count, extra) {
     const heading = document.createElement('h3');
+    heading.className = 'mn-head' + (extra ? ' ' + extra : '');
     heading.textContent = title;
+    if (count) { const b = document.createElement('span'); b.className = 'rz-badge'; b.textContent = count > 99 ? '99+' : count; heading.append(' ', b); }
     panel.append(heading);
+  }
+  // design Nov 10 (item 3): an offline message gets an envelope row with preview, time and an unread dot
+  function offlineRow(m) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'mn-offline unread';
+    const icon = document.createElement('span'); icon.className = 'mn-msg-icon';
+    icon.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="15" height="11" rx="2"/><path d="m3 6 7 5 7-5"/></svg>';
+    const body = document.createElement('span'); body.className = 'mn-offline-body';
+    const title = document.createElement('b'); title.textContent = m.from + ' sent an offline message';
+    const text = document.createElement('small'); text.textContent = window.rzDecode ? window.rzDecode(m.text) : String(m.text || '');
+    const when = document.createElement('small'); when.className = 'mn-time'; when.textContent = window.rzWhen ? window.rzWhen(m.t) : '';
+    body.append(title, text, when);
+    const dot = document.createElement('span'); dot.className = 'mn-dot'; dot.setAttribute('role', 'img'); dot.setAttribute('aria-label', 'Unread');
+    b.append(icon, body, dot);
+    b.onclick = () => { close(); openMessage(m.from); };
+    panel.append(b);
   }
 
   function refresh() {
+    try { onRefresh && onRefresh(); } catch { }
     const pending = Object.values(window.pmHeld || {}).filter(messages => messages.length);
     const count = requests.size + pending.reduce((total, messages) => total + messages.length, 0) + social.filter(n => !n.seen).length;
     // unread PMs already have their own IM sound, so they only shake the bell; requests/Social also chime
@@ -99,14 +121,12 @@ window.createMessengerInbox = function ({ respond, openMessage }) {
     lastCount = count; lastQuiet = quiet;
     bell.classList.toggle('has-unread', !!count);
     badge.hidden = !count;
-    badge.textContent = count;
+    badge.textContent = count > 99 ? '99+' : count;
     bell.setAttribute('aria-label', count ? 'Notifications, '+count+' unread' : 'Notifications');
     if (panel.hidden) return;
     panel.replaceChildren();
-    section('Social');
-    if (!social.length) row(socialLoaded ? 'No Social notifications' : 'Loading Social notifications...', []);
-    for (const item of social.slice(0, 30)) socialRow(item);
-    section('Contact requests');
+    // order (design Nov 10): Contact requests, Unread messages (offline messages first), then Social
+    section('Contact requests', requests.size);
     if (!requests.size) row('No pending requests', []);
     for (const request of requests.values()) {
       const reply = async accepted => {
@@ -114,22 +134,31 @@ window.createMessengerInbox = function ({ respond, openMessage }) {
         if (result.error) { window.alert(result.error); return; }
         remove(request.name);
       };
-      row(request.name+' wants to add you', [['Accept and add back', () => reply(true)], ['Decline', () => reply(false)]]);
+      row(request.name+' sent a contact request', [['Accept and add back', () => reply(true)], ['Decline', () => reply(false)]]);
     }
-    section('Unread messages');
+    const unreadTotal = pending.reduce((total, messages) => total + messages.length, 0);
+    section('Unread messages', unreadTotal);
     if (!pending.length) row('No unread messages', []);
+    const offline = pending.flat().filter(message => message.receivedOffline && message.offlineId).sort((a, b) => (b.t || 0) - (a.t || 0));
+    for (const message of offline.slice(0, 30)) offlineRow(message);
     for (const messages of pending) {
-      const offline = messages.filter(message => message.receivedOffline).length;
-      row(messages[0].from+' · '+messages.length+' unread'+(offline?' ('+offline+' offline)':''), [['Open', () => {
+      const live = messages.filter(message => !(message.receivedOffline && message.offlineId)).length;
+      if (!live) continue;
+      row(live+' new message'+(live === 1 ? '' : 's')+' from '+messages[0].from, [['Open', () => {
         close();
         openMessage(messages[0].from);
       }]]);
     }
+    section('Social', social.filter(n => !n.seen).length, 'mn-social-head');
+    if (!social.length) row(socialLoaded ? 'No Social notifications' : 'Loading Social notifications...', []);
+    for (const item of social.slice(0, 30)) socialRow(item);
     // keep the whole dropdown inside the window at any width (it used to hang off the left edge in a narrow window)
-    const bounds = bell.getBoundingClientRect(), w = Math.min(panel.offsetWidth || 290, innerWidth - 16), top = bounds.bottom + 4;
+    // right-aligned to the bell, width min(336px, viewport - 24px), 12px inset from the window edges
+    const bounds = bell.getBoundingClientRect(), w = Math.min(336, innerWidth - 24), top = bounds.bottom + 4;
+    panel.style.width = w + 'px';
     panel.style.top = top + 'px';
     panel.style.right = 'auto';
-    panel.style.left = Math.max(8, Math.min(bounds.right - w, innerWidth - w - 8)) + 'px';
+    panel.style.left = Math.max(12, Math.min(bounds.right - w, innerWidth - w - 12)) + 'px';
     panel.style.maxHeight = Math.max(120, innerHeight - top - 8) + 'px';
   }
 

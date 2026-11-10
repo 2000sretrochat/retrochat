@@ -96,15 +96,32 @@
   S.on('rec:ended', ({ id }) => { if (cur && cur.id === id) stop(true); });
   S.on('disconnect', () => { if (cur) stop(true); });
 
-  // Minimal master-only hooks in the Actions menu (plain text items; the final look comes from the design pass).
-  const dd = document.getElementById('mClear') && document.getElementById('mClear').parentNode;
-  if (dd && !document.getElementById('mRecA')) {
-    dd.insertAdjacentHTML('beforeend', '<hr class=mst><div id=mRecA class=mst>Record: Audio only</div><div id=mRecV class=mst>Record: Video only</div><div id=mRecB class=mst>Record: Both</div><div id=mRecS class=mst style="display:none">Stop Recording</div>');
-    const ui = () => { ['mRecA', 'mRecV', 'mRecB'].forEach(i => document.getElementById(i).style.display = cur ? 'none' : ''); document.getElementById('mRecS').style.display = cur ? '' : 'none'; };
-    const go = mode => start(mode).then(r => { ui(); if (r.error) alert(r.error); });
-    document.getElementById('mRecA').onclick = () => go('audio'); document.getElementById('mRecV').onclick = () => go('video'); document.getElementById('mRecB').onclick = () => go('both');
-    document.getElementById('mRecS').onclick = () => stop(false).then(r => { ui(); if (r.saved) alert('Recording saved: ' + r.saved); });
+  // Master-only Record menu (design handoff Nov 10, item 6): a Record button in the room header opens
+  // Audio only / Video only / Both, a divider, then Stop. Start items are disabled while recording; Stop is disabled when idle.
+  const ICON = { mic: '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="6" height="11" rx="3"/><path d="M4.5 9v1a5.5 5.5 0 0 0 11 0V9M10 15.5v3M7 18.5h6"/></svg>', cam: '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="10" height="10" rx="2"/><path d="m12.5 9 5-3v8l-5-3"/></svg>', rec: '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6" fill="currentColor" stroke="none"/></svg>', stop: '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="10" height="10" rx="1"/></svg>' };
+  const slot = document.getElementById('hmst');
+  if (slot && !document.getElementById('mRecA')) {
+    slot.insertAdjacentHTML('afterend', '<span class=rz-recwrap><button type=button class="hb rz-recbtn" id=bRec aria-haspopup=menu aria-expanded=false title="Record this room (masters)">' + ICON.rec + '<span>Record</span></button>' +
+      '<div class=rz-menu id=recMenu role=menu hidden>' +
+      '<button type=button role=menuitem class=rz-menu-row id=mRecA>' + ICON.mic + '<span>Audio only</span></button>' +
+      '<button type=button role=menuitem class=rz-menu-row id=mRecV>' + ICON.cam + '<span>Video only</span></button>' +
+      '<button type=button role=menuitem class=rz-menu-row id=mRecB>' + ICON.rec + '<span>Both</span></button>' +
+      '<div class=rz-menu-sep role=separator></div>' +
+      '<button type=button role=menuitem class="rz-menu-row rz-stop" id=mRecS>' + ICON.stop + '<span>Stop</span></button></div></span>');
+    const $ = id => document.getElementById(id), menu = $('recMenu'), btn = $('bRec');
+    const ui = () => { ['mRecA', 'mRecV', 'mRecB'].forEach(i => { $(i).disabled = !!cur; }); $('mRecS').disabled = !cur; btn.classList.toggle('on', !!cur); };
+    const hide = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    const place = () => { const r = btn.getBoundingClientRect(), w = menu.offsetWidth || 160, h = menu.offsetHeight || 140;
+      menu.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+      menu.style.top = (r.bottom + 4 + h > innerHeight - 8 ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px'; };
+    btn.onclick = e => { e.stopPropagation(); if (!menu.hidden) return hide(); ui(); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); place(); };
+    document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target)) hide(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { hide(); btn.focus(); } });
+    const go = mode => { hide(); start(mode).then(r => { ui(); if (r.error) alert(r.error); }); };
+    $('mRecA').onclick = () => go('audio'); $('mRecV').onclick = () => go('video'); $('mRecB').onclick = () => go('both');
+    $('mRecS').onclick = () => { hide(); stop(false).then(r => { ui(); if (r.saved) alert('Recording saved: ' + r.saved); }); };
     S.on('rec:ended', () => setTimeout(ui, 0));
+    ui();
   }
   window.RazzleRecorder = { start, stop: () => stop(false), get active() { return cur ? { id: cur.id, mode: cur.mode, bytes: cur.bytes, room: cur.room } : null; }, dot };
 })();

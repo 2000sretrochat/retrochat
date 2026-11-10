@@ -139,6 +139,17 @@ function ulog(level, m) {
     fs.appendFileSync(f, new Date().toISOString() + ' ' + level + ' ' + line + '\n');
   } catch {}
 }
+// Tray: pixel-aligned R bubble (design handoff Nov 10). Windows picks 16 or 32 px from the ICO for the display scale;
+// elsewhere the 16 px PNG gets the 32 px one as its 2x representation. Falls back to the app icon if the files are missing.
+function trayIcon() {
+  const b = n => path.join(__dirname, 'build', n);
+  try {
+    if (process.platform === 'win32' && fs.existsSync(b('razzle-tray.ico'))) { const ico = nativeImage.createFromPath(b('razzle-tray.ico')); if (!ico.isEmpty()) return ico; }
+    const img = nativeImage.createFromPath(b('tray-16.png'));
+    if (!img.isEmpty()) { const x2 = nativeImage.createFromPath(b('tray-32.png')); if (!x2.isEmpty()) img.addRepresentation({ scaleFactor: 2, width: 32, height: 32, buffer: x2.toPNG() }); return img; }
+  } catch { }
+  return icon.resize({ width: 16, height: 16 });
+}
 function refreshTray() {
   if (!tray) return;
   const t = [{ label: 'Open Razzle Messenger', click: show }];
@@ -152,13 +163,20 @@ function updSet(p) {
   if (win && !win.isDestroyed()) win.setProgressBar(UPD.status === 'downloading' ? Math.max(0.01, (UPD.percent || 0) / 100) : -1);
   if (UPD.status !== was) refreshTray();
 }
-const note = (type, message, detail) => dialog.showMessageBox(win && !win.isDestroyed() ? win : undefined, { type, buttons: ['OK'], title: 'Razzle Messenger', message, detail, icon });
+// Update dialogs stay native (design handoff Nov 10, item 8: "reuse the native update dialog"); copy follows the design.
+const UPD_COPY = {
+  checking: 'Checking for updates…', none: "You're up to date.", downloading: 'An update is downloading.',
+  ready: 'Update ready to install', readyDetail: 'Razzle Messenger has downloaded an update. Restart the app to install it.',
+  error: "Couldn't check for updates. Try again later."
+};
+const note = (type, message, detail, title = 'Razzle Messenger') => dialog.showMessageBox(win && !win.isDestroyed() ? win : undefined, { type, buttons: ['OK'], title, message, detail, icon });
+const updNote = (type, message, detail) => note(type, message, detail, 'Razzle Messenger Update');
 async function promptRestart() {
   const { response } = await dialog.showMessageBox(win && !win.isDestroyed() ? win : undefined, {
-    type: 'info', buttons: ['Restart to update', 'Later'], defaultId: 0, cancelId: 1, noLink: true, title: 'Razzle Messenger', icon,
-    message: 'Razzle Messenger ' + UPD.version + ' (Beta) is ready to install.', detail: 'Razzle Messenger will close, update, and open again. You will need to sign in again.'
+    type: 'info', buttons: ['Later', 'Restart and Install'], defaultId: 1, cancelId: 0, noLink: true, title: 'Razzle Messenger Update', icon,
+    message: UPD_COPY.ready, detail: UPD_COPY.readyDetail + ' (Version ' + UPD.version + ' Beta. You will need to sign in again.)'
   });
-  if (response !== 0 || !updater) return;
+  if (response !== 1 || !updater) return;
   ulog('info', 'user chose restart to update ' + UPD.version);
   await signOutSession().catch(() => {});
   quitting = true; updater.quitAndInstall(true, true);
@@ -173,7 +191,7 @@ function initUpdater() {
   updater.on('download-progress', p => updSet({ status: 'downloading', percent: Math.round(p.percent || 0) }));
   updater.on('update-not-available', () => {
     updSet({ status: 'none', version: null });
-    if (manualUpd) { manualUpd = false; note('info', "You're on the latest version (" + app.getVersion() + ' Beta).'); }
+    if (manualUpd) { manualUpd = false; updNote('info', UPD_COPY.none, 'Installed version: ' + app.getVersion() + ' (Beta)'); }
   });
   updater.on('update-downloaded', i => {
     updSet({ status: 'downloaded', version: i.version, percent: 100 });
@@ -183,18 +201,19 @@ function initUpdater() {
   updater.on('error', e => {
     ulog('error', (e && e.message || String(e)).split('\n')[0]);
     updSet({ status: UPD.status === 'downloaded' ? 'downloaded' : 'error' });
-    if (manualUpd) { manualUpd = false; note('warning', "Couldn't check for updates right now.", 'Please try again later. If this keeps happening, download the latest installer from the Razzle website.'); }
+    if (manualUpd) { manualUpd = false; updNote('warning', UPD_COPY.error, 'If this keeps happening, download the latest installer from the Razzle website.'); }
   });
   const bg = () => { if (!['checking', 'downloading', 'downloaded'].includes(UPD.status)) updater.checkForUpdates().catch(() => {}); }; // failures arrive via the 'error' event
   setTimeout(bg, 10e3); setInterval(bg, 4 * 3600e3);
   ulog('info', 'updater ready, installed ' + app.getVersion());
 }
 function manualCheck() {
-  if (!updater) return note('info', UPD.status === 'dev' ? 'Updates are checked only in the installed app.' : "Couldn't check for updates right now.", 'Installed version: ' + app.getVersion() + ' (Beta)');
+  if (!updater) return updNote('info', UPD.status === 'dev' ? 'Updates are checked only in the installed app.' : UPD_COPY.error, 'Installed version: ' + app.getVersion() + ' (Beta)');
   if (UPD.status === 'downloaded') return promptRestart();
   manualUpd = true;
-  if (UPD.status === 'downloading') return note('info', 'Downloading Razzle Messenger ' + UPD.version + ' (' + (UPD.percent || 0) + '%)...', "You'll be asked to restart when it's ready.");
-  if (UPD.status !== 'checking') updater.checkForUpdates().catch(() => {});
+  if (UPD.status === 'downloading') return updNote('info', UPD_COPY.downloading, 'Razzle Messenger ' + UPD.version + ' (' + (UPD.percent || 0) + '%). You will be asked to restart when it is ready.');
+  if (UPD.status === 'checking') return updNote('info', UPD_COPY.checking);
+  updater.checkForUpdates().catch(() => {});
 }
 ipcMain.handle('yc-upd-state', e => fromSite(e) ? { ...UPD, current: app.getVersion() } : null);
 ipcMain.handle('yc-upd-check', e => { if (fromSite(e)) manualCheck(); return true; });
@@ -223,7 +242,7 @@ app.whenReady().then(async () => {
   // No silent auto-login: a session left over from last time (crash, shutdown, update) is ended before the sign-in screen loads.
   await signOutSession().catch(() => {});
   create();
-  tray = new Tray(icon.resize({ width: 16, height: 16 }));
+  tray = new Tray(trayIcon());
   tray.setToolTip('Razzle Messenger ' + app.getVersion() + ' (Beta)');
   refreshTray();
   tray.on('click', show);

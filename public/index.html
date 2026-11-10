@@ -172,7 +172,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 </style>
 <style id="fr-inbox-css">
 </style>
-<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/messenger-inbox.js"></script><script src="/site-links.js"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script></head><body>
+<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css"></head><body>
 <div class="auth-site-header" hidden><header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
@@ -228,6 +228,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
    <div class=mind><input type="text" id="smsg" maxlength="60" placeholder="What's on your mind?"><i data-i=pencil data-s=16></i></div></div></div>
   <div id="avpick"></div>
   <div id="search"><div class=srch><i data-i=search data-s=18></i><input type="text" id="q" placeholder="Search contacts..."></div></div>
+  <div id="offlinePanel" hidden></div>
   <div id="tabs"><div class="on">Contacts</div></div>
   <div id="list"><div id="reqs"></div><div id="tree"></div></div>
   <div class=yonline style="font-size:11px;color:#2a7a2a;text-align:center;padding:2px"></div><div id="bottom"><button class=btn id="bAdd"><i data-i=user data-s=18></i> Add Contact</button><button class="btn pri" id="bRooms"><i data-i=chat data-s=18></i> Browse Rooms</button></div>
@@ -319,7 +320,8 @@ async function consumeAddParam(){try{const add=new URLSearchParams(location.sear
 async function signOut(){if(!confirm('Sign out of '+APP_NAME.join('')+' Messenger?'))return;await api('/api/logout');S&&S.disconnect();location.reload()}
 $('mOut').onclick=$('wx').onclick=signOut;
 // ---------- connect ----------
-const messengerInbox=createMessengerInbox({respond:(name,accept)=>emit("m:respond",{name,accept}),openMessage:openIm});
+window.offlinePanel=createOfflinePanel({el:document.getElementById("offlinePanel"),held:()=>window.pmHeld,openMessage:openIm,dismiss:ids=>emit("m:offline-dismiss",ids)});
+const messengerInbox=createMessengerInbox({respond:(name,accept)=>emit("m:respond",{name,accept}),openMessage:openIm,onRefresh:()=>window.offlinePanel.render()});
 function holdMessage(message){
   const key=message.from.toLowerCase(), held=window.pmHeld ||= {};
   const messages=held[key] ||= [];
@@ -483,7 +485,7 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  <div class=imenu><div data-m=prof>View Profile</div><div data-m=invite>Invite to Room</div><div data-m=fmt>Text style (bold, color, font)</div><div data-a=block>Block</div><div data-a=rep>Report</div><div data-m=close>Close window</div></div></div>
  <div class=tools><button class=tb data-a=voice title="Start a voice call"><span>&#127908;</span>Call</button><button class=tb data-a=video title="Start a webcam call"><span>&#128247;</span>Webcam</button>
  <button class=tb data-a=buzz title="BUZZ! (Ctrl+G)"><span>&#128243;</span>Buzz</button><button class=tb data-a=aud title="Send an Audible"><span>&#128264;</span>Audibles</button><button class=tb data-a=imv title="IMVironment: theme this conversation for both of you"><span>&#127774;</span>IMVironment</button><button class=tb data-a=rep title="Report this user"><span>&#9873;</span>Report</button></div>
- <div class=call><video class=them autoplay playsinline></video><video class=me autoplay playsinline muted></video><div class=cs></div><button class=hang style="background:#d9534f;color:#fff;border-color:#a33">Hang Up</button></div>
+ <div class=call><div class=callbar><div class=cleft><span class=cstatus></span><div class=cs></div></div><div class=cbtns><button type=button class="rzb camt" aria-pressed=false hidden></button><button type=button class="rzb danger hang">Hang Up</button></div></div><div class=cstage hidden><span class=cpeer></span><video class=them autoplay playsinline></video><video class=me autoplay playsinline muted></video></div></div>
  <div class=peer></div><div class=log></div><div class=typ></div>
  <div class=fmt><span class=smb title=Smileys>${RCSmileys.html(':)')}</span><button data-s=b><b>B</b></button><button data-s=i><i>I</i></button><button data-s=u><u>U</u></button>${COLORS.map(c=>`<span class=sw data-c="${c}" style="background:${c}"></span>`).join('')}
  <select class=font>${['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'].map(f=>`<option>${f}</option>`).join('')}</select><div class=smp></div></div>
@@ -522,12 +524,12 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  w.querySelectorAll('.mbar>div').forEach(m=>m.onclick=e=>{if(e.target.closest('.dd'))return;const o=m.classList.contains('open');w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'));if(!o)m.classList.add('open')});
  w.querySelectorAll('[data-m]').forEach(d=>d.onclick=()=>{const a=d.dataset.m;w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'));
   if(a=='prof')YProf.show(name,{me:ME&&ME.name});else if(a=='invite')invite(name);else if(a=='close')w.querySelector('.tbar .x').click();else if(a=='clearin')ta.value='';else if(a=='fmt')w.querySelector('.fmt').classList.toggle('open');else if(a=='buzz')buzz(name);else if(a=='voice')startCall(w,name,'audio');else if(a=='video')startCall(w,name,'video');else if(a=='help')alert('Enter sends. Shift+Enter adds a new line. Ctrl+G sends a BUZZ.')});
- w.querySelectorAll('[data-a=voice]').forEach(b=>b.onclick=()=>startCall(w,name,'audio'));w.querySelectorAll('[data-a=video]').forEach(b=>b.onclick=()=>startCall(w,name,'video'));w.querySelector('.hang').onclick=()=>endCall(w,true);
+ w.querySelectorAll('[data-a=voice]').forEach(b=>b.onclick=()=>startCall(w,name,'audio'));w.querySelectorAll('[data-a=video]').forEach(b=>b.onclick=()=>startCall(w,name,'video'));w.querySelector('.hang').onclick=()=>endCall(w,true);w.querySelector('.camt').onclick=()=>toggleCamera(w);
  return w}
 async function buzz(n){const w=openIm(n);const r=await emit('m:buzz',{to:n});if(r.error)return sys(w,r.error);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(ME.name)}: BUZZ!!!</div>`);scroll(w)}
 function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.target.closest('.x'))return;const ox=e.clientX-w.offsetLeft,oy=e.clientY-w.offsetTop;
  const mv=e=>{w.style.left=Math.max(0,e.clientX-ox)+'px';w.style.top=Math.max(0,e.clientY-oy)+'px'},up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};addEventListener('pointermove',mv);addEventListener('pointerup',up)}}
-const {startCall,onCall,onCallAns,onSig,onHang,disconnect:disconnectCalls,endCall}=createMessengerCalls({
+const {startCall,onCall,onCallAns,onSig,onHang,disconnect:disconnectCalls,endCall,toggleCamera}=createMessengerCalls({
  socket:()=>S,contact:name=>contacts[name.toLowerCase()],openIm,findIm:name=>ims[name.toLowerCase()],notice:sys,toast,
  sound:type=>tone(type==='ring'?[[440,.18,'sine'],[480,.18,'sine'],[440,.18,'sine'],[480,.18,'sine']]:[[480,.12,'sine'],[320,.22,'sine']])
 });

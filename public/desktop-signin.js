@@ -31,7 +31,27 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
 .rzn-row:last-child{border-bottom:0}.rzn-row span{flex:1;overflow:hidden;text-overflow:ellipsis}
 .rzn-row button{flex:none;margin:0}
 .rzn-empty{padding:10px;color:var(--muted,#667);text-align:center}
-.rzn-done{display:flex;justify-content:flex-end;margin-top:10px}.rzn-done button{flex:none;margin:0}`;
+.rzn-done{display:flex;justify-content:flex-end;margin-top:10px}.rzn-done button{flex:none;margin:0}
+/* design handoff Nov 10 (item 7): 36px screen-name control, 32px rows, Edit pinned under a divider, stacked checks */
+.rzn-wrap{height:36px}
+.rzn-wrap #iName{height:36px!important;min-height:36px!important;padding:0 8px!important;box-sizing:border-box}
+.rzn-btn{width:32px;height:36px!important;min-height:36px!important;display:inline-grid!important;place-items:center;color:#00205B!important}
+.rzn-btn svg{width:16px;height:16px}
+.rzn-list{border:1px solid #9DB3CC;border-radius:4px;box-shadow:0 3px 6px #00205b1a;padding:4px;max-height:none;overflow:visible;margin-top:2px;font:13px/1.4 Tahoma,'Segoe UI',sans-serif}
+.rzn-list.open{display:flex;flex-direction:column}
+.rzn-opts{max-height:192px;overflow:auto}
+.rzn-list div[data-n],.rzn-list .rzn-edit,.rzn-list .rzn-empty{display:flex;align-items:center;gap:8px;min-height:32px;padding:4px 8px;border-radius:3px;color:#132849;box-sizing:border-box}
+.rzn-list div[data-n]:hover,.rzn-list div.sel,.rzn-list .rzn-edit:hover{background:#DBEBFF;color:#132849}
+.rzn-list .rzn-edit{border-top:1px solid #C6D5E7;border-radius:0 0 3px 3px;margin-top:4px}
+.rzn-list .rzn-edit svg{width:16px;height:16px;flex:none}
+.rzn-list .rzn-pw{margin-left:auto}
+#fIn.rzn-on #iPw+.row{margin-top:12px}
+#fIn.rzn-on .row{display:flex;flex-direction:column;gap:8px;margin-bottom:0}
+#fIn.rzn-on .row+.row{margin-top:8px}
+#fIn.rzn-on .row label{display:flex;align-items:center;gap:6px;min-height:20px;margin:0;cursor:pointer}
+#fIn.rzn-on .row input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:#0033A0;flex:none}
+#fIn.rzn-on #bIn{margin-top:12px}
+@media (pointer:coarse){#fIn.rzn-on .row label{min-height:44px}.rzn-list div[data-n],.rzn-list .rzn-edit{min-height:44px}}`;
     document.head.appendChild(st);
   }
 
@@ -42,7 +62,9 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
     const wrap = document.createElement('div'); wrap.className = 'rzn-wrap';
     name.parentNode.insertBefore(wrap, name); wrap.appendChild(name);
     const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'rzn-btn'; btn.id = 'iNameMore';
-    btn.setAttribute('aria-label', 'Saved screen names'); btn.setAttribute('aria-haspopup', 'listbox'); btn.innerHTML = '&#9662;';
+    btn.setAttribute('aria-label', 'Saved screen names'); btn.setAttribute('aria-haspopup', 'listbox');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 5 5 5-5"/></svg>';
+    const form = $('fIn'); if (form) form.classList.add('rzn-on');
     const list = document.createElement('div'); list.className = 'rzn-list'; list.id = 'iNameList'; list.setAttribute('role', 'listbox');
     wrap.append(btn, list);
     // "Remember me" (30-day browser cookie) is replaced by "Save password" in the desktop app.
@@ -64,9 +86,10 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
     };
     const close = () => list.classList.remove('open');
     const render = () => {
-      list.innerHTML = names.map(e => `<div role="option" data-n="${esc(e.name)}">${esc(e.name)}${e.saved ? '<span class="rzn-pw">password saved</span>' : ''}</div>`).join('')
-        + (names.length ? '<hr>' : '<div class="rzn-empty" style="cursor:default">No saved screen names yet</div><hr>')
-        + '<div data-edit="1">Edit...</div>';
+      const cur = name.value.trim().toLowerCase();
+      list.innerHTML = '<div class="rzn-opts">' + (names.map(e => `<div role="option" data-n="${esc(e.name)}"${e.name.toLowerCase() === cur ? ' class="sel" aria-selected="true"' : ''}>${esc(e.name)}${e.saved ? '<span class="rzn-pw">password saved</span>' : ''}</div>`).join('')
+        || '<div class="rzn-empty" style="cursor:default">No saved screen names yet</div>') + '</div>'
+        + '<div class="rzn-edit" data-edit="1" role="option"><svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 13 9-9 3 3-9 9-4 1zM11 6l3 3"/></svg><span>Edit</span></div>';
       btn.style.display = '';
     };
     btn.onclick = e => { e.preventDefault(); e.stopPropagation(); render(); list.classList.toggle('open'); };

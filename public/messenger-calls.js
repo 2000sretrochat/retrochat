@@ -21,11 +21,39 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
         (error,response)=>resolve(error?{error:'Messenger did not respond.'}:response||{}));
     });
   }
+  // Call bar (design Nov 10): status · camera toggle · Hang Up. Each side controls its own camera; a voice call can
+  // turn into a webcam call (and back) without hanging up. The video stage collapses when both cameras are off.
+  const ICON={on:'<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="10" height="10" rx="2"/><path d="m12.5 9 5-3v8l-5-3"/></svg>',off:'<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l14 14M9 5h1.5a2 2 0 0 1 2 2v2l5-3v8l-2-1M3 6.5a2 2 0 0 0-.5 1.3V13a2 2 0 0 0 2 2h7"/></svg>'};
+  const clock=ms=>{const t=Math.max(0,Math.floor(ms/1000));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');};
+  function render(window) {
+    const call=window._call, panel=window.querySelector('.call');
+    if(!panel)return;
+    const el=selector=>{const node=panel.querySelector(selector);return node&&typeof node.setAttribute==='function'?node:null;};
+    const stage=el('.cstage'), toggle=el('.camt'), me=el('video.me');
+    const mine=!!call?.camOn, theirs=!!call?.theirCam, live=!!call&&call.phase!=='ringing';
+    if(stage)stage.hidden=!call||(!mine&&!theirs);
+    if(me)me.hidden=!mine;
+    const peerLabel=el('.cpeer');if(peerLabel){peerLabel.textContent=call?call.peer+' · Camera off':'';peerLabel.hidden=theirs;}
+    (panel.querySelectorAll('video.them')||[]).forEach(video=>{video.hidden=!theirs;});
+    if(toggle){
+      toggle.hidden=!live;
+      toggle.setAttribute('aria-pressed',String(mine));
+      toggle.classList.toggle('active',mine);
+      toggle.innerHTML=(mine?ICON.off:ICON.on)+'<span>'+(mine?'Turn off webcam':'Turn on webcam')+'</span>';
+      toggle.disabled=!!call?.camBusy||call?.phase!=='connected';
+    }
+    const status=el('.cstatus');
+    if(status){
+      const kind=stage&&!stage.hidden?'Video call':'Voice call';
+      status.innerHTML=call&&call.phase==='connected'?'<b>'+kind+'</b> <span class=ctime>'+clock(Date.now()-(call.connectedAt||Date.now()))+'</span>':'';
+    }
+  }
   function show(window,message,buttons=false) {
     const panel=window.querySelector('.call'), label=panel.querySelector('.cs');
     panel.classList.toggle('on',Boolean(window._call));
-    panel.querySelectorAll('video').forEach(video=>video.style.display=window._call?.kind==='video'?'':'none');
+    if(!panel.querySelector('.cstage'))panel.querySelectorAll('video').forEach(video=>video.style.display=window._call?.kind==='video'?'':'none');
     label.textContent=message;
+    render(window);
     if(buttons) for(const [text,accept] of [['Answer',true],['Decline',false]]) {
       const button=document.createElement('button');
       button.type='button';button.textContent=text;
@@ -44,6 +72,8 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
     window._call=null;
     calls.delete(window);
     stopRinging(call);
+    clearInterval(call.tick);
+    call.camTrack?.stop();
     clearTimeout(call.recovery);
     if(notify)void send(call,'m:hang',{reason});
     call.unwatchMic?.();
@@ -61,7 +91,7 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
     call.timeout=setTimeout(()=>endCall(window,true,'No answer. Call ended.','no-answer'),30000);
   }
   function begin(window,peer,kind,role,id) {
-    const call={peer,kind,role,id,phase:'ringing',candidates:[],queue:Promise.resolve()};
+    const call={peer,kind,role,id,phase:'ringing',candidates:[],queue:Promise.resolve(),camOn:kind==='video',theirCam:kind==='video'};
     window._call=call;
     calls.add(window);
     return call;
@@ -160,12 +190,18 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
     if(call.pc)return call.pc;
     const pc=call.pc=new RTCPeerConnection(config);
     stream.getTracks().forEach(track=>pc.addTrack(track,stream));
+    call.videoSender=(typeof pc.getSenders==='function'?pc.getSenders():[]).find(item=>item.track&&item.track.kind==='video')||null;
     pc.onicecandidate=event=>{
       if(event.candidate&&active(window,call))void send(call,'m:sig',{data:{ice:event.candidate}});
     };
     pc.ontrack=event=>{
       if(!active(window,call))return;
       let player=window.querySelector('.call video.them');
+      if(call.kind==='audio'&&event.track.kind==='video'){
+        // their camera came on during a voice call: show it; the <audio> element keeps playing their voice
+        player.muted=true;player.srcObject=new MediaStream([event.track]);player.play().catch(()=>{});
+        call.theirCam=true;render(window);return;
+      }
       if(call.kind==='audio'){
         if(!call.audio){call.audio=document.createElement('audio');window.append(call.audio);}
         player=call.audio;
@@ -186,9 +222,9 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
       clearTimeout(call.recovery);
       if(pc.connectionState==='connected'){
         clearTimeout(call.timeout);
-        call.phase='connected';
+        if(call.phase!=='connected'){call.phase='connected';call.connectedAt=Date.now();clearInterval(call.tick);call.tick=setInterval(()=>active(window,call)?render(window):clearInterval(call.tick),1000);}
         const label=window.querySelector('.call .cs'),play=label.querySelector('.call-play');
-        show(window,'In a '+(call.kind==='video'?'webcam':'voice')+' call with '+call.peer);
+        show(window,'');
         if(play)label.append(' ',play);
       }else if(pc.connectionState==='failed'){
         endCall(window,true,'Could not connect. One of the networks may be blocking the call.');
@@ -224,9 +260,13 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
         else if(call.candidates.length<256)call.candidates.push(data.ice);
         return;
       }
+      if(typeof data.cam==='boolean'){call.theirCam=data.cam;render(window);return;}
       if(!data.sdp||call.phase==='ringing')return;
       const pc=await peerConnection(window,call);
       if(!pc)return;
+      const collision=data.sdp.type==='offer'&&(call.makingOffer||pc.signalingState!=='stable');
+      if(collision&&call.role==='caller')return; // impolite side keeps its own offer; the callee rolls back
+      if(collision)await pc.setLocalDescription({type:'rollback'}).catch(()=>{});
       await pc.setRemoteDescription(data.sdp);
       for(const candidate of call.candidates.splice(0))await pc.addIceCandidate(candidate);
       if(data.sdp.type==='offer'){
@@ -234,6 +274,40 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
         if(active(window,call))await signal(call,{sdp:pc.localDescription});
       }
     }).catch(error=>{if(active(window,call))endCall(window,true,error.message||'The call could not connect.');});
+  }
+  // Turn my webcam on/off in a connected call (voice -> webcam upgrade and back).
+  async function toggleCamera(window) {
+    const call=window._call;
+    if(!call||call.phase!=='connected'||call.camBusy||!call.pc)return;
+    call.camBusy=true;render(window);
+    try {
+      const pc=call.pc;
+      let sender=call.videoSender||pc.getSenders().find(item=>item.track&&item.track.kind==='video');
+      if(!call.camOn){
+        const yav=globalThis.YAV;
+        const media=await navigator.mediaDevices.getUserMedia({video:yav&&yav.camConstraints?yav.camConstraints():{width:{ideal:640},height:{ideal:360}},audio:false});
+        if(!active(window,call)){media.getTracks().forEach(track=>track.stop());return;}
+        const track=media.getVideoTracks()[0];
+        call.camTrack=track;
+        if(sender){await sender.replaceTrack(track);}
+        else{
+          sender=call.videoSender=pc.addTrack(track,call.stream||media);
+          call.makingOffer=true;
+          try{await pc.setLocalDescription(await pc.createOffer());await signal(call,{sdp:pc.localDescription});}
+          finally{call.makingOffer=false;}
+        }
+        call.camOn=true;
+        const me=window.querySelector('.call video.me');if(me){me.srcObject=new MediaStream([track]);me.play().catch(()=>{});}
+      }else{
+        if(sender)await sender.replaceTrack(null).catch(()=>{});
+        (call.camTrack||call.stream?.getVideoTracks()[0])?.stop();
+        call.camTrack=null;call.camOn=false;
+        const me=window.querySelector('.call video.me');if(me)me.srcObject=null;
+      }
+      await send(call,'m:sig',{data:{cam:call.camOn}});
+    } catch(error) {
+      if(active(window,call))notice(window,error.name==='NotAllowedError'?'Allow access to your camera to turn on your webcam.':'Could not turn on your webcam. Check the camera and try again.');
+    } finally { call.camBusy=false; if(active(window,call))render(window); }
   }
   function onHang(event) {
     const window=find(event);
@@ -243,5 +317,5 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
     for(const window of calls)endCall(window,false,'Messenger disconnected. Call ended.');
   }
   addEventListener('beforeunload',()=>{for(const window of calls)endCall(window,false,'');});
-  return {startCall,onCall,onCallAns,onSig,onHang,disconnect,endCall};
+  return {startCall,onCall,onCallAns,onSig,onHang,disconnect,endCall,toggleCamera};
 };

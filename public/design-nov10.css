@@ -1,0 +1,161 @@
+/* Razzle Messenger design handoff (Nov 10, 2026) — shared tokens and the 12 design items.
+   Navy #00205B · action #0033A0 · orange #FF9900 · surface #F1F6FC · border #C6D5E7 · edge #9DB3CC · hover #DBEBFF */
+:root{--rz-navy:#00205B;--rz-action:#0033A0;--rz-orange:#FF9900;--rz-surface:#F1F6FC;--rz-border:#C6D5E7;--rz-edge:#9DB3CC;--rz-hover:#DBEBFF;--rz-text:#132849;--rz-muted:#526781;--rz-focus:#356AA6}
+.rz-ico{display:inline-block;width:16px;height:16px;flex:none;vertical-align:middle}
+/* shared design button (modern.css styles every <button> with !important, so these must too) */
+.rzb,.call .cs button{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:4px 10px!important;border:1px solid #9DB3CC!important;border-radius:4px!important;background:#F1F6FC!important;color:#00205B!important;font:13px/1.2 Tahoma,'Segoe UI',sans-serif!important;cursor:pointer;box-shadow:none!important;white-space:nowrap}
+.rzb:hover{background:#DBEBFF!important;border-color:#356AA6!important}
+.rzb.active,.rzb.primary{background:#0033A0!important;border-color:#0033A0!important;color:#fff!important}
+.rzb.danger{background:#B43434!important;border-color:#d67171!important;color:#fff!important}
+.rzb.danger:hover{background:#9d2a2a!important}
+.rzb:disabled,.rzb[aria-disabled=true]{background:#E7EEF7!important;color:#526781!important;border-color:#B3C4D8!important;opacity:1!important;cursor:default}
+.rzb[hidden]{display:none!important}
+.rzb svg{width:16px;height:16px;flex:none}
+.rzb:focus-visible,.rz-focus:focus-visible{outline:2px solid #356AA6!important;outline-offset:2px}
+.rzi{display:inline-flex!important;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;padding:0!important;border:1px solid #9DB3CC!important;border-radius:4px!important;background:#F1F6FC!important;color:#00205B!important;box-shadow:none!important;cursor:pointer}
+.rzi:hover{background:#DBEBFF!important;border-color:#356AA6!important}
+.rzi:disabled{background:#E7EEF7!important;color:#526781!important;border-color:#B3C4D8!important;opacity:1!important;cursor:default}
+.rzi svg{width:16px;height:16px}
+@media (pointer:coarse){.rzb{min-height:44px}.rzi{width:44px;height:44px}}
+
+/* ---- 1. Voice -> webcam in a 1:1 call ---- */
+.call.on{display:flex;flex-direction:column;align-items:stretch;flex-wrap:nowrap;padding:0;gap:0;background:#00205B;color:#fff;container-type:inline-size;flex:none}
+.call .callbar{display:flex;align-items:center;gap:8px;padding:8px;flex-wrap:wrap;font:13px/1.4 Tahoma,'Segoe UI',sans-serif}
+.call .cleft{flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.call .cstatus:empty{display:none}
+.call .cstatus b{font-weight:700}
+.call .cs{flex:1;min-width:0}
+.call .cs:empty{display:none}
+.call .cbtns{display:flex;gap:8px;align-items:center}
+.call .cstage{position:relative;aspect-ratio:16/9;min-height:0;overflow:hidden;background:#071933;max-height:min(45vh,320px);width:100%}
+.call .cstage[hidden]{display:none}
+.call .cstage video{display:block;border:0;background:transparent}
+.call .cstage video[hidden]{display:none!important}
+.call .cstage video.them{width:100%!important;height:100%!important;object-fit:contain}
+.call .cstage video.me{position:absolute;right:8px;bottom:8px;width:clamp(64px,25%,112px)!important;height:auto!important;aspect-ratio:4/3;object-fit:cover;border:1px solid #00A3E0;border-radius:3px;background:#000}
+@container (max-width:360px){.call .cleft{flex-basis:100%}.call .cbtns{flex:1 1 100%}.call .cbtns .rzb{flex:1}}
+.call .cstatus .ctime{margin-left:4px;font-variant-numeric:tabular-nums}
+.call .cstage{display:grid;place-items:center}
+.call .cstage .cpeer{color:#E4EDFF;font-size:13px}
+.call .cstage .cpeer[hidden]{display:none}
+.call .cstage video.them{position:absolute;inset:0}
+
+/* ---- 2. Offline Messages panel (below the contact toolbar) ---- */
+.rz-offline{background:#fff;border-top:1px solid #C6D5E7;border-bottom:1px solid #C6D5E7;font:13px/1.4 Tahoma,'Segoe UI',sans-serif;color:#132849;flex:none;max-height:40vh;overflow:auto}
+.rz-offline[hidden]{display:none!important}
+.rz-offline-head{display:flex;align-items:center;gap:6px;min-height:36px;padding:8px 10px;background:#F1F6FC;color:#00205B;border-bottom:1px solid #C6D5E7;position:sticky;top:0;z-index:1}
+.rz-offline-head .rz-badge{margin-left:auto}
+.rz-badge{display:inline-grid;place-items:center;box-sizing:border-box;min-width:16px;height:16px;padding:0 4px;border:1px solid #fff;border-radius:10px;background:#00205B;color:#fff;font:700 10px/1 Tahoma,'Segoe UI',sans-serif}
+.rz-offline-row{display:flex;align-items:center;gap:8px;min-height:52px;padding:8px;border-bottom:1px solid #C6D5E7}
+.rz-offline-row:last-child{border-bottom:0}
+.rz-offline-open{all:unset;display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer;border-radius:3px}
+.rz-offline-open:focus-visible{outline:2px solid #356AA6;outline-offset:2px}
+.rz-avatar{width:28px;height:28px;flex:none;display:grid;place-items:center;border-radius:4px;background:#DBEBFF;color:#00205B;font-weight:700}
+.rz-offline-body{flex:1;min-width:0}
+.rz-offline-body b{display:block;font-size:13px;font-weight:600;color:#00205B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rz-offline-body small{display:block;font-size:12px;color:#405875;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rz-offline-row time{flex:none;white-space:nowrap;font-size:11px;color:#526781}
+.rz-offline-x{all:unset;box-sizing:border-box;width:28px;height:28px;flex:none;display:grid;place-items:center;border-radius:4px;color:#405875;cursor:pointer}
+.rz-offline-x:hover{background:#DBEBFF}
+.rz-offline-x:focus-visible{outline:2px solid #356AA6;outline-offset:2px}
+.rz-offline-x:disabled{opacity:.5;cursor:default}
+@media (max-width:360px){.rz-offline-body small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}}
+@media (pointer:coarse){.rz-offline-x{width:44px;height:44px}}
+/* modern.css paints every <button> with !important; reset the row-style buttons */
+.rz-offline-open,.rz-offline-x{border:0!important;box-shadow:none!important;background:transparent!important;padding:0!important;border-radius:4px!important;color:inherit!important;font:inherit!important;min-height:0!important}
+.rz-offline-x{color:#405875!important}
+.rz-offline-x:hover{background:#DBEBFF!important}
+
+/* ---- 5. + Invite picker (rooms) ---- */
+.yprof.invp{left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(392px,calc(100vw - 24px))!important;max-width:none!important;max-height:calc(100vh - 24px)!important;display:flex;flex-direction:column;overflow:hidden!important;border:1px solid #9DB3CC!important;border-radius:8px!important;font:13px/1.4 Tahoma,'Segoe UI',sans-serif;color:#132849}
+.yprof.invp .pb{padding:12px!important;display:flex;flex-direction:column;min-height:0;flex:1}
+.invp .ivh{color:#00205B;font-weight:700}
+.invp .ivql{display:block;margin:8px 0 4px;font-size:12px;color:#526781}
+.invp .pb input#ivq{height:34px;min-height:34px;padding:0 8px!important;border:1px solid #9DB3CC!important;border-radius:3px!important;font:13px Tahoma,'Segoe UI',sans-serif!important;flex:none}
+.invp .ivl{flex:1 1 auto;min-height:44px;max-height:none;overflow:auto;margin:8px 0 0;border:1px solid #C6D5E7;border-radius:4px}
+.invp .ivr{min-height:44px;padding:8px!important;gap:8px;border-bottom:1px solid #C6D5E7}
+.invp .ivr:last-child{border-bottom:0}
+.invp .ivr.sel{background:#EAF3FF}
+.invp .ivr:not(.off):hover{background:#DBEBFF}
+.invp .ivr .yav,.invp .ivr .av,.invp .ivr .ivav{width:28px!important;height:28px!important;border-radius:4px!important;flex:none}
+.invp .ivt{flex:1;min-width:0;display:flex;flex-direction:column}
+.invp .ivn{font-weight:600;color:#00205B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.invp .ivs{font-size:12px}
+.invp .ivr input{width:16px!important;height:16px!important;margin:0;accent-color:#0033A0;flex:none}
+.invp .pbtn{display:flex;justify-content:flex-end;gap:8px;margin:0!important;padding-top:12px;flex:none}
+.invp .pbtn .rzb{min-height:32px}
+@media (pointer:coarse){.invp .ivr input{width:20px!important;height:20px!important}}
+
+/* ---- 6. Record menu (masters) + recording indicator; shared compact menu ---- */
+.rz-recwrap{display:inline-flex;position:relative}
+.rz-menu{position:fixed;z-index:6000;box-sizing:border-box;min-width:160px;width:max-content;max-width:calc(100vw - 16px);padding:4px;background:#fff;border:1px solid #9DB3CC;border-radius:4px;box-shadow:0 3px 10px #00205b1f;font:13px/1.4 Tahoma,'Segoe UI',sans-serif;color:#132849}
+.rz-menu[hidden]{display:none!important}
+.rz-menu-row{all:unset;box-sizing:border-box;display:flex!important;align-items:center;gap:8px;width:100%;min-height:32px;padding:4px 8px!important;border:0!important;border-radius:3px!important;background:transparent!important;color:#132849!important;font:13px/1.4 Tahoma,'Segoe UI',sans-serif!important;box-shadow:none!important;cursor:pointer;white-space:nowrap}
+.rz-menu-row:hover:not(:disabled),.rz-menu-row:focus-visible{background:#DBEBFF!important}
+.rz-menu-row:focus-visible{outline:2px solid #356AA6;outline-offset:-2px}
+.rz-menu-row:disabled{color:#526781!important;cursor:default;opacity:.6}
+.rz-menu-row svg{width:16px;height:16px;flex:none}
+.rz-menu-sep{height:0;border-top:1px solid #C6D5E7;margin:4px 0}
+.rz-menu-row.rz-stop{color:#9A3030!important}
+@media (pointer:coarse){.rz-menu-row{min-height:44px}}
+#recDot.rec-dot,.rec-dot{width:6px;height:6px;margin-left:-4px;border-radius:50%;background:#FFB020;align-self:center} /* .rnw gap 10 - 4 = 6px after the room name */
+
+/* ---- 10. Room controls: My Rooms Edit, camera size, music bar ---- */
+.guest-room-join.rz-edit,#login #rlist .guest-room-join.rz-edit:not(.selected-entry){display:inline-flex!important;align-items:center;gap:6px;height:28px!important;min-height:28px!important;padding:0 8px!important;border:1px solid #9DB3CC!important;border-radius:4px!important;background:#F1F6FC!important;color:#00205B!important;font:13px/1 Tahoma,'Segoe UI',sans-serif!important;box-shadow:none!important;cursor:pointer}
+#login #rlist .guest-room-join.rz-edit:hover,.guest-room-join.rz-edit:hover{background:#DBEBFF!important;border-color:#356AA6!important}
+.guest-room-join.rz-edit svg{width:14px;height:14px;flex:none}
+#camsz{gap:4px;align-items:center}
+#camsz button{all:unset;box-sizing:border-box;display:grid!important;place-items:center;width:28px!important;height:28px!important;padding:0!important;border:1px solid #9DB3CC!important;border-radius:4px!important;background:#F1F6FC!important;color:#00205B!important;cursor:pointer;opacity:1!important}
+#camsz button:hover:not(:disabled){background:#DBEBFF!important;border-color:#356AA6!important}
+#camsz button:disabled{background:#E7EEF7!important;color:#526781!important;border-color:#B3C4D8!important;opacity:1!important;cursor:default}
+#camsz button svg{width:16px;height:16px}
+#camsz button:focus-visible{outline:2px solid #356AA6;outline-offset:2px}
+#camSzL{min-width:44px;padding:0 4px;text-align:center;font:12px/20px Tahoma,'Segoe UI',sans-serif;color:#00205B;background:#F1F6FCE6;border-radius:3px}
+@media (pointer:coarse){#camsz button{width:44px!important;height:44px!important}}
+#npme.rz-music{display:grid;grid-template-columns:auto minmax(85px,1fr) minmax(65px,1fr) minmax(65px,1fr) auto;align-items:end;gap:8px;padding:8px;background:#F1F6FC;border-top:1px solid #C6D5E7;font:12px/1.3 Tahoma,'Segoe UI',sans-serif;color:#132849}
+#npme .rz-music-l{display:flex;align-items:center;gap:6px;align-self:center;font-weight:700;font-size:13px;white-space:nowrap;color:#00205B}
+#npme .rz-music-f{display:grid;gap:4px;font-size:12px;min-width:0}
+#npme select,#npme input{box-sizing:border-box;width:100%!important;min-width:0;height:32px;min-height:32px;padding:0 8px!important;border:1px solid #9DB3CC!important;border-radius:3px!important;background:#fff!important;font:13px Tahoma,'Segoe UI',sans-serif!important;color:#132849}
+#npme .rzb{min-height:32px}
+@media (max-width:520px){#npme.rz-music{grid-template-columns:1fr 1fr}#npme .rzb{grid-column:1/-1;justify-self:end}}
+@media (max-width:350px){#npme.rz-music{grid-template-columns:1fr}}
+
+/* ---- 11. Largest cam size: give big video a ceiling so the conversation stays usable ---- */
+/* >=720px: video and chat side by side; the people list becomes the existing People toggle overlay */
+@media (min-width:720px){
+ #chat:has(#camstrip.cs3.has){display:grid!important;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);grid-template-rows:auto minmax(0,1fr);grid-auto-rows:auto;column-gap:8px}
+ #chat:has(#camstrip.cs3.has)>*{grid-column:1/-1}
+ #chat:has(#camstrip.cs3.has)>#camstrip{grid-column:1;grid-row:2;flex-direction:column;align-items:stretch;overflow:auto;min-height:0;padding:8px!important;gap:8px;border-bottom:0}
+ #chat:has(#camstrip.cs3.has)>#main{grid-column:2;grid-row:2;min-height:0;position:relative}
+ #chat:has(#camstrip.cs3.has)>#camstrip .tile{width:100%!important;flex:1 1 0;min-height:0;display:flex;background:#071933}
+ #chat:has(#camstrip.cs3.has)>#camstrip .tile video{width:100%!important;height:100%!important;min-height:0;object-fit:contain}
+ #chat:has(#camstrip.cs3.has) #bPpl{display:inline-flex}
+ #chat:has(#camstrip.cs3.has) #mpane{position:absolute;right:0;top:0;bottom:0;width:min(240px,60vw)!important;z-index:30;background:var(--card,#fff);box-shadow:-4px 0 14px rgba(0,0,0,.18);display:none!important}
+ #chat.pplon:has(#camstrip.cs3.has) #mpane{display:flex!important}
+}
+/* <720px: stacked; video capped at min(38% of the room height, 240px) so ~160px of chat (with composer) stays */
+@media (max-width:719.98px){
+ #chat:has(#camstrip.cs3.has)>#camstrip{flex:0 1 auto!important;min-height:64px;height:calc(min(38vh,240px) + 20px);overflow:hidden}
+ #chat:has(#camstrip.cs3.has)>#camstrip .tile{width:auto!important;height:100%;min-height:0}
+ #chat:has(#camstrip.cs3.has)>#camstrip .tile video{width:auto!important;height:100%!important;max-height:240px;aspect-ratio:4/3;object-fit:contain}
+ #chat:has(#camstrip.cs3.has)>#main{flex:1 0 160px!important;min-height:160px!important}
+}
+/* <=600px uses the legacy stacked mobile room (people under chat, page scrolls): keep the chat log usable */
+@media (max-width:600px){#chat:has(#camstrip.cs3.has)>#camstrip{flex:none!important}#chat:has(#camstrip.cs3.has)>#main{flex:none!important;height:auto!important}#chat:has(#camstrip.cs3.has) #log{flex:none!important;min-height:160px!important;height:clamp(160px,36vh,300px)!important}}
+#chat #log{min-height:0;overflow-y:auto}
+/* very short rooms (<340px of content): the room body scrolls and the composer stays reachable */
+@media (max-height:340px){#chat:has(#camstrip.has){overflow-y:auto!important}#chat:has(#camstrip.has)>#main{min-height:160px!important;flex:none!important}#chat:has(#camstrip.has)>#camstrip{flex:none!important}}
+
+/* ---- 12. User right-click menu + PM pop-out ---- */
+.yctx.rz-ctx{box-sizing:border-box;min-width:164px;padding:4px!important;border:1px solid #9DB3CC!important;border-radius:4px!important;box-shadow:0 3px 10px #00205b1f!important;background:#fff!important;color:#132849!important;font:13px/1.4 Tahoma,'Segoe UI',sans-serif}
+.yctx.rz-ctx div{display:flex;align-items:center;gap:8px;min-height:32px;padding:4px 8px!important;border-radius:3px!important;color:#132849}
+.yctx.rz-ctx div:hover{background:#DBEBFF!important;color:#132849!important}
+.yctx.rz-ctx svg,.yctx.rz-ctx .rz-ci{width:16px;height:16px;flex:none;display:inline-block}
+.yctx.rz-ctx .rz-csep{border-top:1px solid #C6D5E7;border-radius:0 0 3px 3px!important;margin-top:4px}
+@media (pointer:coarse){.yctx.rz-ctx div{min-height:44px}}
+.pmwin.rz-popped{position:fixed!important;inset:0!important;width:auto!important;height:auto!important;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;border:0!important;border-radius:0!important;box-shadow:none!important}
+.pmwin.rz-popped .pl{height:auto!important;min-height:0;margin:0!important;padding:10px!important;overflow-y:auto;border-radius:0!important}
+.pmwin.rz-popped form{display:flex;align-items:center;gap:8px;margin:0!important;padding:8px;border-top:1px solid #C6D5E7}
+.pmwin.rz-popped form input{min-height:36px;box-sizing:border-box}
+.pmwin.rz-popped .adph-c{margin:0 auto 8px}
+.room-title-action svg{width:16px;height:16px;vertical-align:-3px}

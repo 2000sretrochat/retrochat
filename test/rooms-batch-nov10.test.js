@@ -43,7 +43,7 @@ test('right panel: PM/Report buttons gone, Ignore/Block mirror the selected pers
   assert.match(rooms, /function mbtnSync\(\)/);
   assert.match(rooms, /Un<u>i<\/u>gnore/);
   assert.match(rooms, /'Unblock':'Block'/);
-  assert.match(rooms, /data-c=rep>Report/); // still in the right-click menu
+  assert.match(rooms, /data-c=rep>[\s\S]{0,40}Report/); // still in the right-click menu
 });
 
 test('music rooms: share your own audio + now playing; House DJs dormant', () => {
@@ -59,7 +59,7 @@ test('music rooms: share your own audio + now playing; House DJs dormant', () =>
 
 test('cams: own-cam viewer list no longer dims the video; 3 cam sizes persisted', () => {
   assert.match(rooms, /\.tile \.camvw\{bottom:auto!important;max-height:45%!important/);
-  assert.match(rooms, /id="camLess"[\s\S]{0,200}id="camMore"/);
+  assert.match(rooms, /id="camLess"[\s\S]{0,700}id="camMore"/);
   assert.match(rooms, /localStorage\.rzCamSize/);
   assert.match(rooms, /#camstrip\.cs3 \.tile video\{height:285px\}/);
 });
@@ -82,10 +82,10 @@ test('status dropdown has no bullet characters; footer logo is a homepage link',
 });
 
 test('Messenger bell: Social section, stays inside the window, unread fill, shake + throttled chime', () => {
-  assert.match(inbox, /section\('Social'\)/);
+  assert.match(inbox, /section\('Social'/);
   assert.match(inbox, /\/social-next\/api\/notifications/);
   assert.match(inbox, /\/social-next\/api\/notifications\/read/);
-  assert.match(inbox, /panel\.style\.left = Math\.max\(8, Math\.min\(bounds\.right - w, innerWidth - w - 8\)\)/);
+  assert.match(inbox, /panel\.style\.left = Math\.max\(12, Math\.min\(bounds\.right - w, innerWidth - w - 12\)\)/);
   assert.match(inbox, /classList\.toggle\('has-unread'/);
   assert.match(inbox, /now - lastChime < 4000/);
   assert.match(inbox, /ycNotifSound === 'off'/);

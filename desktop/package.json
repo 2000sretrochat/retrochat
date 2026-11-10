@@ -26,7 +26,10 @@
       "micvol.js",
       "signin-store.js",
       "build/icon.png",
-      "build/icon.ico"
+      "build/icon.ico",
+      "build/tray-16.png",
+      "build/tray-32.png",
+      "build/razzle-tray.ico"
     ],
     "publish": [
       {

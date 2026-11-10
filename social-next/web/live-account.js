@@ -190,19 +190,34 @@
     try {
       inbox=await api('/notifications');inbox.requests.forEach(remember);
       const seen=new Set(read('seenSharedRequests',[]));
-      const count=inbox.notifications.filter(item=>!item.seen).length+inbox.requests.filter(item=>!seen.has(item.name)).length;
+      inbox.offlineMessages=Array.isArray(inbox.offlineMessages)?inbox.offlineMessages:[];
+      const count=inbox.notifications.filter(item=>!item.seen).length+inbox.requests.filter(item=>!seen.has(item.name)).length+inbox.offlineMessages.filter(item=>!item.read).length;
       const bell=$('#notification-bell'),badge=$('#notification-count');
       bell.classList.toggle('has-unread',count>0);badge.hidden=!count;badge.textContent=count?String(count):'';
       bell.setAttribute('aria-label',count?'Notifications, '+count+' new':'Notifications');
       if(current==='following')relationshipPanel();
     } catch {console.warn('Notification refresh unavailable');}
   }
+  // Offline messages (design handoff Nov 10, item 3): under "Unread messages", above Post activity.
+  const ENVELOPE='<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="15" height="11" rx="2"/><path d="m3 6 7 5 7-5"/></svg>';
+  function offlineWhen(ms) {
+    const d=new Date(+ms||Date.now()),now=new Date(),day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime(),diff=Math.round((day(now)-day(d))/864e5);
+    return diff<=0?d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):diff===1?'Yesterday':d.toLocaleDateString([],{month:'short',day:'numeric'});
+  }
+  function offlineSection() {
+    const list=(inbox.offlineMessages||[]).slice().sort((a,b)=>(b.t||0)-(a.t||0));
+    if(!list.length)return '<h3 class="offline-subhead">Unread messages</h3><p>No unread messages.</p>';
+    // text arrives HTML-escaped from the server already, so it is inserted as-is
+    return '<h3 class="offline-subhead">Unread messages</h3>'+list.slice(0,30).map(item=>'<button type="button" class="offline-note'+(item.read?'':' unread')+'" data-shared-offline="'+Number(item.offlineId)+'" data-from="'+esc(item.from)+'">'+
+      '<span class="offline-icon">'+ENVELOPE+'</span><span class="offline-body"><b>'+esc(item.from)+' sent an offline message</b><small>'+String(item.text||'')+'</small><small class="offline-time">'+esc(offlineWhen(item.t))+'</small></span>'+
+      (item.read?'':'<span class="offline-dot" role="img" aria-label="Unread"></span>')+'</button>').join('');
+  }
   openNotifications=function() {
     let panel=document.querySelector('#notification-dropdown');
     if(panel){panel.remove();$('#notification-bell').setAttribute('aria-expanded','false');return;}
     panel=document.createElement('section');panel.id='notification-dropdown';panel.setAttribute('aria-label','Notifications');panel.tabIndex=-1;
     panel.innerHTML='<h2>Notifications</h2><h3>Friend requests</h3>'+(inbox.requests.map(requestMarkup).join('') || '<p>No pending requests.</p>')+
-      '<h3>Post activity</h3>'+(inbox.notifications.map(item=>'<button class="text-action notification-post" data-shared-notification="'+item.post_id+'">'+esc(item.display_name)+' '+
+      offlineSection()+'<h3>Post activity</h3>'+(inbox.notifications.map(item=>'<button class="text-action notification-post" data-shared-notification="'+item.post_id+'">'+esc(item.display_name)+' '+
         ({post:'posted on your wall',comment:'commented on your post',like:'liked your post'}[item.kind] || '')+'</button>').join('') || '<p>No post activity yet.</p>');
     document.querySelector('body > header').appendChild(panel);$('#notification-bell').setAttribute('aria-expanded','true');panel.focus();
     save('seenSharedRequests',inbox.requests.map(item=>item.name));
@@ -322,7 +337,7 @@
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button)return;
     const d=button.dataset;
-    if(!Object.keys(d).some(key=>['sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','sharedAccept','sharedDecline','sharedNotification','liveMessage','liveRequest','liveRemove'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
+    if(!Object.keys(d).some(key=>['sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','sharedAccept','sharedDecline','sharedNotification','sharedOffline','liveMessage','liveRequest','liveRemove'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
     event.preventDefault();event.stopImmediatePropagation();
     try {
       if(d.sharedLike){like(d.sharedLike);return;}
@@ -346,6 +361,11 @@
       else if(d.liveRemove){if(confirm('Remove this friend?'))await friendAction(d.liveRemove,'remove');return;}
       else if(d.sharedAccept){await friendAction(d.sharedAccept,'accept');openNotifications();return;}
       else if(d.sharedDecline){await friendAction(d.sharedDecline,'decline');openNotifications();return;}
+      else if(d.sharedOffline){
+        document.querySelector('#notification-dropdown')?.remove();$('#notification-bell').setAttribute('aria-expanded','false');
+        await api('/offline-messages/read','POST',{ids:[Number(d.sharedOffline)]}).catch(()=>{});
+        privateChat(d.from);refreshNotifications();return;
+      }
       else if(d.sharedNotification){document.querySelector('#notification-dropdown')?.remove();$('#dialog').close();show('feed');await refreshView();document.querySelector('[data-post-id="'+CSS.escape(d.sharedNotification)+'"]')?.scrollIntoView({block:'center'});return;}
       await refreshView();if(current==='profile' && window.profileName.toLowerCase()!==me.toLowerCase())profile(window.profileName);
     } catch(error){toast(error.message);}
