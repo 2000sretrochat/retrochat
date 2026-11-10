@@ -4,19 +4,87 @@ on:
   push:
     branches: [main]
     paths: ['desktop/**', '.github/workflows/desktop.yml']
+
+concurrency:
+  group: desktop-windows-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
     runs-on: windows-latest
-    defaults: { run: { working-directory: desktop } }
+    defaults:
+      run:
+        working-directory: desktop
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 22
       - run: npm install --no-audit --no-fund
-      - run: npx electron-builder --win nsis --x64 --publish never
-        env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+      - name: Check release version
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = node -p "require('./package.json').version"
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Invalid Windows release version" }
+          $tag = "v$version"
+          $versions = gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName,isDraft
+          if ($LASTEXITCODE -ne 0) { throw "Could not list GitHub releases" }
+          $releases = ConvertFrom-Json -InputObject ($versions -join "`n")
+          $existing = $releases | Where-Object tagName -eq $tag
+          $newer = $releases | Where-Object { !$_.isDraft -and $_.tagName -match '^v\d+\.\d+\.\d+$' -and [version]$_.tagName.Substring(1) -gt [version]$version }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "publish=$(-not $newer -and (-not $existing -or $existing.isDraft))".ToLowerInvariant() >> $env:GITHUB_OUTPUT
+      - name: Build Windows installer
+        if: steps.release.outputs.publish != 'true'
+        run: npx electron-builder --win nsis --x64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Build and stage Windows update
+        if: steps.release.outputs.publish == 'true'
+        run: npx electron-builder --win nsis --x64 --publish always
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Verify update assets and publish
+        if: steps.release.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          $manifest = Get-Content -Raw dist/latest.yml
+          $expectedVersion = $env:RELEASE_TAG.Substring(1)
+          if ($manifest -notmatch ('(?m)^version:\s*' + [regex]::Escape($expectedVersion) + '\s*$')) { throw "Wrong update version" }
+          $installer = 'RazzleMessenger-Setup.exe'
+          $assets = @($installer, 'latest.yml', "$installer.blockmap")
+          $digest = [Convert]::ToBase64String([Security.Cryptography.SHA512]::HashData([IO.File]::ReadAllBytes((Resolve-Path "dist/$installer"))))
+          if (!$manifest.Contains($installer) -or !$manifest.Contains($digest)) { throw "Update metadata does not match installer" }
+          $release = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --json isDraft,assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or !$release.isDraft) { throw "Expected a draft release" }
+          foreach ($asset in $assets) {
+            if ($asset -notin $release.assets.name) { throw "Missing draft release asset: $asset" }
+          }
+          $download = Join-Path $env:RUNNER_TEMP 'verified-razzle-release'
+          gh release download $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --dir $download --pattern 'RazzleMessenger-Setup.exe*' --pattern latest.yml
+          if ($LASTEXITCODE -ne 0) { throw "Could not verify staged assets" }
+          foreach ($asset in $assets) {
+            if ((Get-FileHash "dist/$asset").Hash -ne (Get-FileHash "$download/$asset").Hash) { throw "Draft asset mismatch: $asset" }
+          }
+          gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw "Could not publish Windows update" }
       - uses: actions/upload-artifact@v4
         with:
           name: RazzleMessenger-Setup
-          path: desktop/dist/RazzleMessenger-Setup.exe
+          path: |
+            desktop/dist/RazzleMessenger-Setup.exe
+            desktop/dist/RazzleMessenger-Setup.exe.blockmap
+            desktop/dist/latest.yml
           retention-days: 30
+
