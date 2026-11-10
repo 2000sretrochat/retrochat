@@ -8,3 +8,14 @@
 .messenger-notifications>div>span{flex:1 1 100%;overflow-wrap:anywhere}
 .im .log .msg,.im .log .msg.me{align-self:flex-start!important;flex-direction:row!important;text-align:left!important}
 .im .log :is(.tm,.tm2,.sys,.bz){text-align:left!important;align-self:flex-start!important}
+
+/* unread: bell fills with the Razzle logo orange (#FF9900 from razzle-social.svg) */
+#menu .messenger-bell.has-unread{color:#FF9900!important}
+.messenger-bell.has-unread svg{fill:#FF9900}
+.messenger-bell.has-unread small{background:#FF9900;color:#3a2200;font-weight:700}
+.messenger-bell.shake svg{animation:mbShake .5s ease-in-out 1;transform-origin:50% 10%}
+@keyframes mbShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-14deg)}40%{transform:rotate(11deg)}60%{transform:rotate(-7deg)}80%{transform:rotate(4deg)}}
+@media (prefers-reduced-motion:reduce){.messenger-bell.shake svg{animation:none}}
+.messenger-notifications .messenger-social-item{all:unset;cursor:pointer;flex:1 1 100%;overflow-wrap:anywhere;padding:2px 0}
+.messenger-notifications .messenger-social-item.unread{font-weight:700}
+.messenger-notifications .messenger-social-item:hover,.messenger-notifications .messenger-social-item:focus-visible{text-decoration:underline}

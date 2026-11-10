@@ -222,7 +222,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  </div>
  <div id="main">
   <div id="me"><div class="av" id="myav" title="Change display image"></div><div class="info"><div class="nm" id="myname"></div>
-   <div class=stw><span class="sdot available" id=stdot></span><select id="stsel"><option value="available">&#9679; Available</option><option value="busy">&#9679; Busy</option><option value="away">&#9679; Away</option><option value="brb">&#9679; Be Right Back</option><option value="invisible">&#9675; Invisible</option><option disabled>──────────</option><option value="showroom">&#128172; Show the room I'm in</option></select></div>
+   <div class=stw><span class="sdot available" id=stdot></span><select id="stsel"><option value="available">Available</option><option value="busy">Busy</option><option value="away">Away</option><option value="brb">Be Right Back</option><option value="invisible">Invisible</option><option disabled>──────────</option><option value="showroom">&#128172; Show the room I'm in</option></select></div>
    <div class=mind><input type="text" id="smsg" maxlength="60" placeholder="What's on your mind?"><i data-i=pencil data-s=16></i></div></div></div>
   <div id="avpick"></div>
   <div id="search"><div class=srch><i data-i=search data-s=18></i><input type="text" id="q" placeholder="Search contacts..."></div></div>
@@ -230,7 +230,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
   <div id="list"><div id="reqs"></div><div id="tree"></div></div>
   <div class=yonline style="font-size:11px;color:#2a7a2a;text-align:center;padding:2px"></div><div id="bottom"><button class=btn id="bAdd"><i data-i=user data-s=18></i> Add Contact</button><button class="btn pri" id="bRooms"><i data-i=chat data-s=18></i> Browse Rooms</button></div>
  </div>
- <div id="foot"><span class=lgs2></span><span class="brandname appname"></span></div>
+ <div id="foot"><a id="footBrand" href="https://razzlesocial.com" target="_blank" rel="noopener noreferrer" title="Visit razzlesocial.com" style="display:contents;color:inherit;text-decoration:none;cursor:pointer"><span class=lgs2 style="cursor:pointer"></span><span class="brandname appname" style="cursor:pointer"></span></a></div>
 </div>
 <aside class="auth-chat-art" aria-hidden="true">
   <svg viewBox="0 0 460 340" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -422,7 +422,8 @@ $('mMove').onclick=()=>{const n=need();if(!n)return;modal('Move '+n,`Move to gro
 $('mIm').onclick=()=>{const n=need();n&&openIm(n)};$('mBuzz').onclick=()=>{const n=need();n&&buzz(n)};
 $('mRooms').onclick=$('bRooms').onclick=()=>{const b=$('brw')||brEl;b.classList.add('on');b.style.zIndex=++zTop;if(YD){if(b._pw){try{b._pw.focus()}catch(e){}}else ydPop(b,'ybrowse',760,640,'Browse Chat Rooms',()=>{b.classList.remove('on');document.body.appendChild(b)})}loadBr()};const brEl=$('brw');
 let brTab='mine',brRooms=[];drag($('brw'));$('brX').onclick=()=>{brEl.classList.remove('on');brEl._pw&&brEl._pw.close()};
-document.querySelectorAll('#brw .tabs div').forEach(t=>t.onclick=()=>{brTab=t.dataset.t;document.querySelectorAll('#brw .tabs div').forEach(x=>x.classList.toggle('on',x==t));drawBr()});
+// tabs live in the Browse window, which the desktop app pops out into its own window: toggle siblings, not this document
+$('brw').querySelectorAll('.tabs div').forEach(t=>t.onclick=()=>{brTab=t.dataset.t;t.parentNode.querySelectorAll('div').forEach(x=>x.classList.toggle('on',x==t));drawBr()});
 $('brq').oninput=drawBr;$('brR').onclick=loadBr;$('brC').onclick=()=>window.open('/rooms.html?create=1','yapprooms');
 async function loadBr(){try{brRooms=YBrowse.favs(await fetch('/api/rooms').then(r=>r.json()),true)}catch{brRooms=[]}drawBr()}
 setInterval(()=>{if($('brw').classList.contains('on'))loadBr()},5000);
@@ -437,7 +438,11 @@ function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLo
  $('brl').querySelectorAll('[data-fav]').forEach(e=>e.onclick=async()=>{const r=brRooms.find(x=>x.name==e.dataset.fav);if(await YBrowse.toggle(r.name,!r.fav,true))loadBr();else toast('Could not save favorite.')});
  if(brTab=='all'&&!brRooms.some(r=>r.rating=='R'))$('brl').insertAdjacentHTML('beforeend','<div style="padding:10px;text-align:center"><a href="#" id=br18 style="color:#e67e22">Show R-rated rooms (18+)...</a></div>');
  $('br18')&&($('br18').onclick=async e=>{e.preventDefault();if(!YProf.confirm18())return;const r=await fetch('/api/adult',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})});if(!r.ok)return alert('Could not save that.');loadBr()});
- $('brl').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>window.open('/rooms.html?room='+encodeURIComponent(b.dataset.r),'yapprooms'))}
+ $('brl').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>window.open('/rooms.html?room='+encodeURIComponent(b.dataset.r),'yapprooms'));
+ // one room per screen name: my room gets Edit, and Create Room is hidden once I have one
+ const own=(brRooms.find(r=>r.owner&&me&&r.owner.toLowerCase()==me)||{}).name;$('brC').style.display=own&&!(ME&&ME.m)?'none':'';
+ if(own&&brTab=='mine')$('brl').querySelectorAll('.rrow').forEach(rw=>{const j=rw.querySelector('[data-r]');if(j&&j.dataset.r==own){j.insertAdjacentHTML('beforebegin',`<button class="btn" data-edit="${escT(own)}" title="Change your room name, topic and settings">Edit</button>`)}});
+ $('brl').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>window.open('/rooms.html?edit='+encodeURIComponent(b.dataset.edit),'yapprooms'))}
 $('mProf').onclick=()=>{const n=need();n&&YProf.show(n,{me:ME&&ME.name})};$('mMyProf').onclick=()=>YProf.edit();$('mSet').onclick=()=>YSet.open();
 $('mInv').onclick=()=>{const n=need();n&&invite(n)};
 $('mHelp').onclick=()=>alert('Add a Contact sends a buddy request. Once they accept, double-click their name to PM.\nUse the PM window buttons for BUZZ!, voice calls and webcam.\nChange your status and message at the top. Right-click a contact for more options.');

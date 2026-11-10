@@ -14,7 +14,8 @@ function bindRoomMusic(socket,panel){
   let room='',track=null,listen=false,trackId=null;
   const say=k=>{note.textContent=k?WHY[k]||'':'';};
   function sync(){
-    panel.hidden=room!=='Music Lobby';
+    // House DJs are on hold (members share their own music now); set window.RZ_HOUSE_DJS=true to bring the panel back.
+    panel.hidden=!(window.RZ_HOUSE_DJS&&room==='Music Lobby');
     text.textContent=track?(track.pausedAt?'DJ paused for the mic · ':'Now playing · ')+track.title+
       (track.artist?' by '+track.artist:'')+' · '+track.dj+' · Next DJ: '+track.nextDj:'Waiting for a track';
     if(track&&[WHY.empty,WHY.off,WHY.multi,WHY.starting].includes(note.textContent))say(''); // a track showed up

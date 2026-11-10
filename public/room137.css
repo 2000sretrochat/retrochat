@@ -314,6 +314,8 @@ body.chat-room-active #social-chat-layout { display: none; }
 .room-popout #room-popout, .room-popout body.chat-room-active #social-chat-header,
 .room-popout body.chat-room-active #social-chat-layout { display: none !important; }
 html.room-popout body.chat-room-active #chat[style*="flex"] { inset: 0 !important; }
+/* Desktop app room window: no Social sidebar/header, so the room fills the whole window (was offset 260px/98px and clipped when maximized) */
+html.yd body.chat-room-active #chat[style*="flex"], html.yd #chat[style*="flex"] { inset: 0 !important; width: auto !important; height: auto !important; }
 
 #login #rlist .guest-room-join:not(.selected-entry) { background: #edf5fc !important; color: #003876 !important; }
 #room-popout-status { margin: 22px; color: var(--ink); font-weight: 650; }

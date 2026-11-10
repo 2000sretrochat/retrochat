@@ -372,7 +372,8 @@
   }
   document.querySelector('.live-social-local-note')?.remove();
   document.querySelectorAll('.home-demo').forEach(node=>node.remove());
-  Promise.all([api('/people').then(rows=>{people=rows;rows.forEach(remember);suggestions();}),refreshView(),refreshNotifications()]).catch(error=>toast(error.message));
+  const linkedPost=new URLSearchParams(location.search).get('post'); // from the Messenger bell: /social-next/?post=<id>
+  Promise.all([api('/people').then(rows=>{people=rows;rows.forEach(remember);suggestions();}),refreshView(),refreshNotifications()]).then(()=>{if(linkedPost&&/^[0-9a-f-]{8,64}$/i.test(linkedPost)){show('feed');refreshView().then(()=>document.querySelector('[data-post-id="'+CSS.escape(linkedPost)+'"]')?.scrollIntoView({block:'center'}));}}).catch(error=>toast(error.message));
   setInterval(()=>{if(document.visibilityState==='visible'){refreshNotifications();if(!$('#dialog').open && current==='feed')refreshView();}},20000);
   window.addEventListener('focus',()=>{refreshNotifications();if(!$('#dialog').open)refreshView();});
   window.socialApi=api;window.socialRefresh=refreshView;

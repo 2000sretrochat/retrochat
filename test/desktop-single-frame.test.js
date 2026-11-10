@@ -24,7 +24,7 @@ test('desktop hides messenger fake chrome and duplicate blue room tbar', () => {
 test('desktop keeps full rich room body under menus (rhead/log/people/voice/input)', () => {
   const need = [
     /id=["']?rhead["']?/, /id=["']?bInv["']?/, /id=["']?cam["']?/, /id=["']?vbtn["']?/,
-    /id=["']?hmst["']?/, /id=["']?log["']?/, /id=["']?mem["']?/, /id=["']?bIm["']?/,
+    /id=["']?hmst["']?/, /id=["']?log["']?/, /id=["']?mem["']?/, /id=["']?bIgn["']?/, /id=["']?bBlock["']?/,
     /id=["']?bIgn["']?/, /id=["']?vrow["']?/, /id=["']?talk["']?/, /id=["']?form["']?/,
     /id=["']?msg["']?/, /id=["']?bAa["']?/, /id=["']?bSm["']?/,
     />Room</, />Edit</, />View</, />Actions</, />Help</,
