@@ -1226,7 +1226,7 @@ relationshipPanel = function () {
   $('#subheading').textContent = 'Friend requests need approval.';
   document.querySelectorAll('.menu button').forEach((button, index) => button.classList.toggle('selected', index === 4));
   const rows = (list, action) => list.map(name => '<div class="suggestion">' + profileAvatar(name) + profileUserLink(name) +
-    (action ? '<button class="secondary" data-friend-action="' + action + '" data-friend-name="' + esc(name) + '">' + action + '</button>' : '') + (action === 'Remove' ? '<button class="secondary" data-friend-action="Block" data-friend-name="' + esc(name) + '">Block</button>' : '') + '</div>').join('') || '<p>None yet.</p>';
+    (action ? '<button class="secondary" data-friend-action="' + action + '" data-friend-name="' + esc(name) + '">' + (action === 'Accept' ? 'Accept and add back' : action) + '</button>' : '') + (action === 'Remove' ? '<button class="secondary" data-friend-action="Block" data-friend-name="' + esc(name) + '">Block</button>' : '') + '</div>').join('') || '<p>None yet.</p>';
   $('#content').innerHTML = '<section class="directory"><h2>Friends</h2>' + rows(following, 'Remove') +
     '<h2>Incoming requests</h2>' + rows(followers.filter(name => !following.includes(name) && !blocked.includes(name)), 'Accept') +
     '<h2>Sent requests</h2>' + rows(requests.filter(name => !following.includes(name))) +
@@ -1350,7 +1350,7 @@ function openNotifications() {
   updateNotificationBadge();
   modal('<h2>Notifications</h2><h3>Friend requests</h3>' + (pending.map(name =>
     '<div class="notification-row">' + profileAvatar(name) + profileUserLink(name) +
-    '<button type="button" class="secondary" data-notification-request="accept" data-name="' + esc(name) + '">Accept</button>' +
+    '<button type="button" class="secondary" data-notification-request="accept" data-name="' + esc(name) + '">Accept and add back</button>' +
     '<button type="button" class="text-action" data-notification-request="decline" data-name="' + esc(name) + '">Decline</button></div>'
   ).join('') || '<p>No pending requests.</p>') + '<h3>Post activity</h3>' + (activity.map(item =>
     '<button type="button" class="text-action notification-post" data-notification-post="' + esc(item.id) + '">' +

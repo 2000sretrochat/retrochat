@@ -2,7 +2,7 @@
   "name": "razzle-messenger-desktop",
   "productName": "Razzle Messenger",
   "version": "13.10.1",
-  "description": "Razzle Messenger desktop app",
+  "description": "Razzle Messenger desktop app (Beta)",
   "author": "Razzle Social",
   "license": "UNLICENSED",
   "main": "main.js",

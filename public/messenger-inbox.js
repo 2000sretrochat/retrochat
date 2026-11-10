@@ -57,7 +57,7 @@ window.createMessengerInbox = function ({ respond, openMessage }) {
         if (result.error) { window.alert(result.error); return; }
         remove(request.name);
       };
-      row(request.name+' wants to add you', [['Accept', () => reply(true)], ['Decline', () => reply(false)]]);
+      row(request.name+' wants to add you', [['Accept and add back', () => reply(true)], ['Decline', () => reply(false)]]);
     }
     section('Unread messages');
     if (!pending.length) row('No unread messages', []);

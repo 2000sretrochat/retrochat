@@ -90,7 +90,8 @@ app.get('/av/:name', async (req, res) => {
   res.type('image/svg+xml').send(defaultAv(n));
 });
 geo.admin(app, n => acc.isOnline(n) || users.has(String(n).toLowerCase())); // admin-key only
-app.get('/healthz', (q, r) => r.send('ok')); app.get('/api/version', (q, r) => r.json({ version: VERSION }));
+app.get('/healthz', (q, r) => r.send('ok')); app.get('/api/version', (q, r) => r.json({ version: VERSION, messenger: MESSENGER_VERSION, label: 'Razzle Messenger ' + MESSENGER_VERSION + ' (Beta)' }));
+const MESSENGER_VERSION = (() => { try { return require('./desktop/package.json').version; } catch { return ''; } })();
 const roomList = (adult, vm) => Object.entries(ROOMS).filter(([n]) => adult || !adultR(n)).map(([name, cat]) => { const ss = seen(name, vm); return { name, cat, path: PATH[name] || [], topic: TOPICS[name], rating: rateOf(name), mics: micsOf(name), count: ss.length + botsIn(name).length, cams: ss.filter(x => x.data.cam).length, owner: UROOMS.get(name)?.owner || null, icon: UROOMS.get(name)?.icon || '', user: UROOMS.has(name) }; });
 // favorites + "mine" (owner/admin) decoration for a signed-in account
 const userFromReq = req => acc.userFromCookie(req.headers.cookie);

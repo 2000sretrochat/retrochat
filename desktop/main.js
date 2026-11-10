@@ -84,7 +84,7 @@ app.whenReady().then(() => {
   ses.setDisplayMediaRequestHandler((req, cb) => desktopCapturer.getSources({ types: ['screen', 'window'] }).then(src => cb({ video: src[0], audio: 'loopback' })).catch(() => cb({})), { useSystemPicker: true });
   create();
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
-  tray.setToolTip('Razzle Messenger');
+  tray.setToolTip('Razzle Messenger ' + app.getVersion() + ' (Beta)');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Open Razzle Messenger', click: show },
     { type: 'separator' },

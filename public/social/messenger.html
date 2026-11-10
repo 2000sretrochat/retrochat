@@ -350,7 +350,7 @@ function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLo
 $('mProf').onclick=()=>{const n=need();n&&YProf.show(n,{me:ME&&ME.name})};$('mMyProf').onclick=()=>YProf.edit();$('mSet').onclick=()=>YSet.open();
 $('mInv').onclick=()=>{const n=need();n&&invite(n)};
 $('mHelp').onclick=()=>alert('Add a Contact sends a buddy request. Once they accept, double-click their name to PM.\nUse the PM window buttons for BUZZ!, voice calls and webcam.\nChange your status and message at the top. Right-click a contact for more options.');
-$('mAbout').onclick=()=>alert(APP_NAME.join('')+' Messenger - an original nostalgia project.');
+$('mAbout').onclick=async()=>{const v=await fetch('/api/version').then(r=>r.json()).then(j=>j.messenger||'').catch(()=>'');alert(APP_NAME.join('')+' Messenger'+(v?' '+v:'')+' (Beta) - an original nostalgia project.')};
 const invOk=n=>{const c=contacts[String(n).toLowerCase()];return !c||(c.online&&c.status=='available'&&!c.idle)};
 async function invite(n){if(!invOk(n))return toast(escT(n)+" isn't available for invites.");let r=await emit('m:invite',{to:n});
  if(r&&r.error&&/Join a chat room first/.test(r.error)){const rs=await fetch('/api/rooms').then(r=>r.json());return modal('Invite '+n+' to a Chat Room',`You're not in a room right now. Pick one:<br>Room:<select id=ir>${rs.map(r=>`<option value="${escT(r.name)}">${escT(r.name)} (${r.count})</option>`).join('')}</select>`,async()=>{const r=await emit('m:invite',{to:n,room:$('ir').value});if(!r.error){const w=openIm(n);sys(w,'You invited '+n+' to '+r.room+'.')}return r},'Invite')}

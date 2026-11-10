@@ -28,7 +28,7 @@
     host.innerHTML = '<button type="button" class="fi-toggle">Requests <span class="fi-badge">' + incoming.length + '</span></button>' +
       '<div class="fi-drop" hidden>' + incoming.map(r =>
         '<div class="fi-row" data-n="' + r.name.replace(/"/g, '&quot;') + '"><b>' + r.name + '</b> wants to add you' +
-        '<div class="fi-acts"><button data-y="1">Accept</button><button data-y="0">Decline</button></div></div>'
+        '<div class="fi-acts"><button data-y="1">Accept and add back</button><button data-y="0">Decline</button></div></div>'
       ).join('') + '</div>';
     const drop = host.querySelector('.fi-drop');
     host.querySelector('.fi-toggle').onclick = () => { drop.hidden = !drop.hidden; };

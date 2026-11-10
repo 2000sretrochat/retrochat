@@ -56,8 +56,9 @@ module.exports = function friendSite(app, express, acc) {
       if ((await db.q('select 1 from blocks where owner=$1 and blocked=$2', [t.id, u.id])).length) return res.json(generic);
       // Lift own block if re-adding
       await db.q('delete from blocks where owner=$1 and blocked=$2', [u.id, t.id]);
-      // Reciprocal pending → accept
-      if ((await db.q('select 1 from requests where from_id=$1 and to_id=$2', [t.id, u.id])).length) {
+      // Reciprocal pending (or a Razzle bot member) → accept, so both people see each other
+      const botMember = (await db.q('select 1 from social_bot_members where user_id=$1', [t.id])).length > 0;
+      if (botMember || (await db.q('select 1 from requests where from_id=$1 and to_id=$2', [t.id, u.id])).length) {
         await db.q('delete from requests where (from_id=$1 and to_id=$2) or (from_id=$2 and to_id=$1)', [u.id, t.id]);
         await db.q('insert into contacts(owner,contact) values($1,$2),($2,$1) on conflict do nothing', [u.id, t.id]);
         try {

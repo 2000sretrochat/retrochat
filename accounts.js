@@ -168,6 +168,7 @@ function sockets(io, hooks) {
     const pl = { from: from.name, room, rating: hooks.roomRating ? hooks.roomRating(room) : 'PG-13' }; toUser(t.id, 'm:invite', pl); hooks.toRoomUser && hooks.toRoomUser(t.name, 'room-invite', pl);
     return { ok: true, room, name: t.name }; };
   hooks.toUser = toUser; toUserFn = toUser; isOnlineFn = n => !!hooks.onlineName(n);
+  let offlineStore = null; const offlineBox = () => offlineStore ||= require('./offline-messages').createOfflineMessages({ db, isOnline: n => !!hooks.onlineName(n), toUser });
 
   io.on('connection', async s => {
     const acct = s.data.acct; if (!acct) return;
@@ -186,8 +187,9 @@ function sockets(io, hooks) {
       const groups = (await db.q('select name from groups where owner=$1 order by name', [uid])).map(r => r.name);
       const reqs = await pendingRequests(uid);
       const bl = (await db.q('select u.name from blocks b join users u on u.id=b.blocked where b.owner=$1', [uid])).map(r => r.name);
-      const off = options?.offlineInbox ? await db.q(`select o.id,u.name,o.body,extract(epoch from o.created)*1000 as t
-        from offline o join users u on u.id=o.from_id where o.to_id=$1
+      const off = options?.offlineInbox ? await db.q(`select o.id,u.name,o.body,extract(epoch from o.created)*1000 as t,
+        exists(select 1 from contacts c where c.owner=$1 and c.contact=o.from_id) as contact
+        from offline o join users u on u.id=o.from_id where o.to_id=$1 and o.read_at is null
         and not exists(select 1 from blocks b where b.owner=$1 and b.blocked=o.from_id) order by o.id`, [uid])
         : await db.q(`with delivered as (
         delete from offline o using users u where u.id=o.from_id and o.to_id=$1
@@ -198,7 +200,7 @@ function sockets(io, hooks) {
       const st = state.get(uid);
       return { me: { name: u.name, status: st.status, msg: st.msg, avatar: st.avatar, showRoom: st.showRoom !== false, m: !!s.data.master }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.group)])],
         contacts: cs, requests: reqs, blocked: bl,
-        offline: off.map(o => ({ from: o.name, t: Math.round(o.t), id: 'offline:'+o.id, ...o.body, offlineId:o.id })) };
+        offline: off.map(o => ({ from: o.name, t: Math.round(o.t), id: 'offline:'+o.id, ...o.body, offlineId:o.id, contact: o.contact !== false })) };
     }));
     s.on('m:contacts', safe(async () => ready ? {contacts:await contactList(uid),requests:await pendingRequests(uid)} : {error:'Sign in first.'}));
     s.on('m:offline-read', safe(async ids => {
@@ -208,6 +210,10 @@ function sockets(io, hooks) {
       toUser(uid,'m:offline-read',rows.map(row=>row.id));
       return {ok:true};
     }));
+    // Offline Messages area (top of the online list): data hooks for the Messenger UI.
+    s.on('m:offline-list', safe(async (o = {}) => ready ? { ok: true, messages: await offlineBox().list(uid, { includeRead: !!o?.all }), unread: await offlineBox().unreadCount(uid) } : { error: 'Sign in first.' }));
+    s.on('m:offline-dismiss', safe(async ids => ready ? offlineBox().dismiss(uid, ids) : { error: 'Sign in first.' }));
+    s.on('m:offline-send', safe(async ({ to, text } = {}) => { if (!ready || flood()) return { error: 'Slow down a little.' }; return offlineBox().send({ id: uid, name: me, master: !!s.data.master }, to, text); }));
     s.on('m:status', safe(async ({ status, msg }) => {
       if (!ready) return; const st = state.get(uid); if (STATUSES.includes(status)) st.status = status; if (typeof msg === 'string') st.msg = esc(msg.trim().slice(0, 60));
       await db.q('update users set status=$2,status_msg=$3 where id=$1', [uid, st.status, st.msg]); for (const x of online.get(uid)) if (x !== s) x.emit('m:self', { status: st.status, msg: st.msg });

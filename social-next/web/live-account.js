@@ -177,7 +177,7 @@
       '<div class="suggestion">'+profileAvatar(person.name)+profileUserLink(person.name)+'<button class="follow" data-live-request="'+esc(person.name)+'">Add friend</button></div>').join('') || '<p>No new suggestions right now.</p>';
   };
   const requestMarkup=person=>'<div class="notification-row">'+profileAvatar(person.name)+profileUserLink(person.name)+
-    '<button class="secondary" data-shared-accept="'+esc(person.name)+'">Accept</button><button class="text-action" data-shared-decline="'+esc(person.name)+'">Decline</button></div>';
+    '<button class="secondary" data-shared-accept="'+esc(person.name)+'">Accept and add back</button><button class="text-action" data-shared-decline="'+esc(person.name)+'">Decline</button></div>';
   relationshipPanel=function() {
     current='following';$('.write').hidden=true;$('.feed-nav').hidden=true;
     $('#heading').textContent='Friends';$('#subheading').textContent='Your Razzle contacts and requests.';

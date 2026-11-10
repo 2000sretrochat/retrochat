@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const geo = require('../geo');
 const bots = require('../bots');
+const {createOfflineMessages,registerOfflineRoutes} = require('../offline-messages');
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const feelings = new Set(['','Happy','Excited','Grateful','Relaxed','Hopeful','Loved','Proud','Curious','Tired','Bored','Sad','Worried','Frustrated','Lonely']);
@@ -99,6 +100,8 @@ function registerApi(router, express, db, accounts, io, botChat) {
     }
     next();
   });
+  const offline=createOfflineMessages({db,isOnline:name=>!!accounts.isOnline?.(name),toUser:(...args)=>accounts.toUser?.(...args)});
+  registerOfflineRoutes(router,offline,run);
   router.get('/api/settings',run(async(req,res) => {
     const [row] = await db.q('select value from social_settings where user_id=$1',[req.socialAccount.id]);
     res.json(row?.value || {});
@@ -264,7 +267,9 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const requests=await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
       coalesce(s.value->>'portrait','') as portrait from requests r join users u on u.id=r.from_id
       left join social_settings s on s.user_id=u.id where r.to_id=$1 order by r.created desc`,[req.socialAccount.id]);
-    res.json({notifications,requests});
+    // Offline messages show up as Social notifications (UI renders them; see offlineMessages[]).
+    const offlineMessages=await offline.list(req.socialAccount.id);
+    res.json({notifications,requests,offlineMessages});
   }));
   router.post('/api/friends/:name',run(async(req,res) => {
     const actor=req.socialAccount.id, action=req.body?.action;
@@ -291,6 +296,15 @@ function registerApi(router, express, db, accounts, io, botChat) {
         await db.q('delete from requests where (from_id=$1 and to_id=$2) or (from_id=$2 and to_id=$1)',[actor,target.id]);
         accounts.contactsChanged?.(actor);
       }else {
+        // They already asked me: sending my own request accepts theirs, so we become friends both ways.
+        const mutual=await db.q(`with pending as (delete from requests where from_id=$2 and to_id=$1 returning from_id,to_id)
+          insert into contacts(owner,contact) select to_id,from_id from pending union select from_id,to_id from pending
+          on conflict do nothing returning owner`,[actor,target.id]);
+        if(mutual.length){
+          await db.q('delete from requests where from_id=$1 and to_id=$2',[actor,target.id]);
+          accounts.contactsChanged?.(actor,target.id);
+          return res.json({ok:true,accepted:true});
+        }
         await db.q('insert into requests(from_id,to_id) values($1,$2) on conflict do nothing',[actor,target.id]);
         accounts.contactsChanged?.(target.id);
       }
