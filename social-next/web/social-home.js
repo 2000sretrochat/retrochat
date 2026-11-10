@@ -45,8 +45,12 @@ function openPreviewAccount() {
 }
 
 const interestChoices = [
-  'Government', 'Politics', 'Republicans', 'Trump', 'Christianity', 'Islam',
-  'Cars', 'Food', 'Travel', 'Music', 'Photography', 'Gaming', 'Movies', 'Books',
+  'Music', 'Movies', 'TV', 'Books', 'Podcasts', 'Gaming', 'Board Games',
+  'Food', 'Cooking', 'Baking', 'Coffee', 'Travel', 'Photography', 'Art',
+  'Writing', 'Crafts', 'DIY', 'Gardening', 'Pets', 'Nature', 'Hiking',
+  'Camping', 'Fitness', 'Sports', 'Dancing', 'Cars', 'Motorcycles',
+  'Technology', 'Science', 'History', 'Languages', 'Comedy', 'Volunteering',
+  'Family', 'Education', 'Politics', 'Faith and Spirituality',
 ];
 const samplePeopleDetails = {
   NightOwl: { sex: 'Female', age: 29, location: 'Portland, Oregon, United States', interests: ['Music', 'Travel'] },

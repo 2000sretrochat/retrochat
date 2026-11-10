@@ -36,9 +36,19 @@ function attachSocialNext(app, express, accounts, db, io) {
   });
   registerApi(router, express, db, accounts, io);
   router.get('/bot-portrait/:index.svg',async(req,res)=>{
-    const index=Number(req.params.index);if(!Number.isInteger(index)||index<0||index>=61)return res.sendStatus(404);
-    const image=await fs.promises.readFile(path.join(assets,'directory-bot-photos.jpg'));
-    res.type('image/svg+xml').set('Cache-Control','private,max-age=86400').send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${index%8*160} ${Math.floor(index/8)*160} 160 160"><image width="1280" height="1280" href="data:image/jpeg;base64,${image.toString('base64')}"/></svg>`);
+    const index=Number(req.params.index);
+    if(!Number.isInteger(index)||index<0||index>=64)return res.sendStatus(404);
+    const preview=index>=61;
+    const canvas=preview?1254:1280;
+    const tile=[0,1,3][index-61];
+    // The photo sheet's row edges vary. Keep the crop inside each photograph.
+    const rowTop=[0,172,340,518,691,852,1012,1164];
+    const overlays={19:320,20:320,22:320,26:480,32:640,45:800,46:800,50:960,55:960};
+    const size=preview?627:[24,37,38,42,47].includes(index)?104:index>=56?112:136;
+    const x=preview?tile%2*627:index%8*160+(160-size)/2;
+    const y=preview?Math.floor(tile/2)*627:(overlays[index]??rowTop[Math.floor(index/8)])+2;
+    const image=await fs.promises.readFile(path.join(assets,preview?'bot-profile-photos.jpg':'directory-bot-photos.jpg'));
+    res.type('image/svg+xml').set('Cache-Control','private,max-age=86400').send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${size} ${size}"><image width="${canvas}" height="${canvas}" href="data:image/jpeg;base64,${image.toString('base64')}"/></svg>`);
   });
   router.get('/rooms.html',(_req,res)=>res.redirect(302,'/rooms.html'));
   router.get('/country', (_req, res) => res.json({country: null}));

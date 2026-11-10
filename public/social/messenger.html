@@ -136,7 +136,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 .rrow .uc{display:flex;align-items:center;gap:6px;color:var(--muted);width:60px;font-size:13px}
 #brw .ft{display:flex;gap:10px;padding:14px 16px}
 @media (max-width:760px){#brw{left:0!important;top:0!important;width:100%;max-width:none}.im{width:100%!important}}
-</style><link rel="stylesheet" href="/social/embed.css"></head><body>
+</style><link rel="stylesheet" href="/social/embed.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/messenger-inbox.js"></script></head><body>
 <div id="mwin" class="win">
  <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
  <div id="menu">
@@ -204,7 +204,7 @@ let sound=localStorage.ycSound!=='off';window.addEventListener('ycsound',()=>{so
 // ---------- sounds (generated with WebAudio; original) ----------
 let AC=null;function tone(seq){if(!sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();let t=AC.currentTime;
  for(const [f,d,type] of seq){const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.8}}catch{}}
-const SND={on:()=>tone([[660,.12],[880,.12],[1175,.22]]),off:()=>tone([[880,.12],[660,.12],[440,.25]]),im:()=>tone([[988,.08],[1319,.14]]),buzz:()=>tone([[110,.12,'square'],[95,.12,'square'],[110,.12,'square'],[95,.18,'square']]),ring:()=>tone([[784,.18],[988,.18],[784,.18],[988,.3]])};
+const SND={on:()=>tone([[660,.12],[880,.12],[1175,.22]]),off:()=>tone([[880,.12],[660,.12],[440,.25]]),im:()=>tone([[988,.08],[1319,.14]]),buzz:()=>tone([[196,.07,'triangle'],[294,.07,'triangle'],[392,.09,'sine'],[523,.15,'triangle']]),ring:()=>tone([[784,.18],[988,.18],[784,.18],[988,.3]])};
 $('mSound').onclick=()=>{sound=!sound;localStorage.ycSound=sound?'on':'off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')};$('mSound').textContent='Sounds: '+(sound?'On':'Off');
 function toast(html,av,name){const d=document.createElement('div');d.className='toast';d.innerHTML=(av!==undefined&&name?avHtml(av,'sm',name):'')+'<div>'+html+'</div>';$('toasts').appendChild(d);setTimeout(()=>d.remove(),5000);d.onclick=()=>d.remove()}
 // ---------- modal ----------
@@ -235,23 +235,56 @@ $('bUp').onclick=doUp;$('fUp').addEventListener('keydown',e=>{if(e.key=='Enter')
 async function signOut(){if(!confirm('Sign out of '+APP_NAME.join('')+' Messenger?'))return;await api('/api/logout');S&&S.disconnect();location.reload()}
 $('mOut').onclick=$('wx').onclick=signOut;
 // ---------- connect ----------
+const messengerInbox=createMessengerInbox({respond:(name,accept)=>emit("m:respond",{name,accept}),openMessage:openIm});
+function holdMessage(message){
+  const key=message.from.toLowerCase(), held=window.pmHeld ||= {};
+  const messages=held[key] ||= [];
+  if(message.id && messages.some(item=>item.id===message.id))return;
+  messages.push(message);messengerInbox.refresh();
+}
+async function refreshContacts(){
+  const result=await emit("m:contacts");if(result.error)return;
+  contacts=Object.fromEntries(result.contacts.map(contact=>[contact.name.toLowerCase(),contact]));
+  for(const contact of result.contacts)if(!groups.includes(contact.group))groups.push(contact.group);
+  messengerInbox.reset(result.requests);render();
+}
 function start(){$('signin').style.display='none';$('main').style.display='flex';S=io({auth:{client:'social'},reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
- S.on('connect',async()=>{const r=await emit('m:init');if(r.error)return alert(r.error);ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
+ S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
   $('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
-  $('reqs').innerHTML='';r.requests.forEach(showReq);render();
-  if(r.offline.length){const by={};r.offline.forEach(m=>(by[m.from]=by[m.from]||[]).push(m));for(const f in by){const w=openIm(f);sys(w,'Messages sent while you were offline:');by[f].forEach(m=>line(w,f,m,true))}SND.im();toast('You have <b>'+r.offline.length+'</b> offline message(s).')}});
+  $('reqs').innerHTML='';messengerInbox.reset(r.requests);render();
+  for(const message of r.offline)holdMessage({...message,receivedOffline:true});
+ });
  YAv.listen(S,(n,av)=>{const k=n.toLowerCase();if(contacts[k]){contacts[k].avatar=av;render();ims[k]&&peerInfo(ims[k],n)}if(ME&&k==ME.name.toLowerCase()){ME.avatar=av;setMyAv()}});
  {const d=document.createElement('div');d.id='cdot';d.textContent='Reconnecting…';d.style.cssText='display:none;position:fixed;bottom:8px;left:8px;z-index:999;background:rgba(0,0,0,.55);color:#fff;padding:2px 9px;border-radius:10px;font:500 11px system-ui;pointer-events:none';document.body.appendChild(d);let t=0;S.on('disconnect',()=>{clearTimeout(t);t=setTimeout(()=>{if(!S.connected)d.style.display=''},3000)});S.on('connect',()=>{clearTimeout(t);d.style.display='none'})}
  S.on('m:presence',p=>{const k=p.name.toLowerCase(),c=contacts[k];if(!c)return;const was=c.online;Object.assign(c,p);render();
   if(!was&&p.online){localStorage.ycDoor!='off'&&SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar,p.name)}else if(was&&!p.online){localStorage.ycDoor!='off'&&SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar,p.name)}
   const w=ims[k];w&&peerInfo(w,p.name)});
  S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();$('stsel').value=x.status;$('smsg').value=dec(x.msg);roomMode(x.msg=='[room]')});
- S.on('m:request',showReq);S.on('m:contact',c=>{contacts[c.name.toLowerCase()]=c;if(!groups.includes(c.group))groups.push(c.group);render();document.querySelector(`.rq[data-n="${CSS.escape(c.name.toLowerCase())}"]`)?.remove()});
+ S.on('m:contacts-changed',refreshContacts);
+S.on('m:offline-read',ids=>{
+  const read=new Set(ids);
+  for(const [name,messages] of Object.entries(window.pmHeld||{})){
+    const unread=messages.filter(message=>!read.has(message.offlineId));
+    if(unread.length)pmHeld[name]=unread;else delete pmHeld[name];
+  }
+  messengerInbox.refresh();
+ });
+ S.on('m:request',showReq);S.on('m:contact',c=>{contacts[c.name.toLowerCase()]=c;if(!groups.includes(c.group))groups.push(c.group);render();messengerInbox.remove(c.name)});
  S.on('m:broadcast',({text})=>{SND.im();alert('System message:\n\n'+text)});S.on('m:signedout',()=>location.reload());S.on('m:gone',({name})=>{delete contacts[name.toLowerCase()];render()});S.on('m:toast',({text})=>{SND.im();toast(text)});
  S.on('m:imv',d=>{const w=ims[String(d.with).toLowerCase()];if(w){setImv(w,d.env);sys(w,escT(d.by)+(d.env=='none'?' turned off the IMVironment.':' changed the IMVironment to '+YAud.IMVS[d.env]+'.'))}});
  S.on('m:seen',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;let e=w.querySelector('.yseen');if(!e){e=document.createElement('div');e.className='yseen';e.style.cssText='font:10px Tahoma;color:#888;text-align:right;padding:0 6px';w.querySelector('.typ').before(e)}e.textContent='Seen '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})});
- window.pmUnread=window.pmUnread||{};function pmBadge(){const n=Object.values(pmUnread).reduce((a,b)=>a+b,0);let b=document.getElementById('pmBadge');if(!b){b=document.createElement('span');b.id='pmBadge';b.style.cssText='position:fixed;top:6px;right:44px;z-index:50;background:#e0245e;color:#fff;border-radius:10px;padding:1px 7px;font-size:12px;cursor:pointer';b.title='Unread PMs - click to open';b.onclick=()=>{for(const k of Object.keys(pmUnread)){openIm(k);delete pmUnread[k]}pmBadge()};document.body.append(b)}b.style.display=n?'':'none';b.textContent=n+' PM'+(n>1?'s':'');document.querySelectorAll('.ct').forEach(e=>{const u=pmUnread[(e.dataset.n||'').toLowerCase()];e.style.fontWeight=u?'700':''})}
-S.on('m:im',m=>{if(localStorage.ycPmPop=='off'&&!ims[m.from.toLowerCase()]){const k=m.from.toLowerCase();(window.pmHeld=window.pmHeld||{})[k]=(pmHeld[k]||[]).concat([m]);pmUnread[k]=(pmUnread[k]||0)+1;pmBadge();SND.im();try{window.YappDesktop&&YappDesktop.notify('New PM',m.from+' sent you a PM')}catch(e){}return}const w=openIm(m.from);line(w,m.from,m);if(!document.hidden)S.emit('m:seen',{to:m.from});else addEventListener('visibilitychange',function f(){if(!document.hidden){S.emit('m:seen',{to:m.from});removeEventListener('visibilitychange',f)}});{const e=w.querySelector('.yseen');e&&e.remove()}if(m.aud)YAud.play(m.aud,w);clearTyp(w);SND.im();if(document.hidden)document.title='* '+m.from+' says...'});
+ S.on("m:im",message=>{
+   if(localStorage.ycPmPop==="off"&&!ims[message.from.toLowerCase()]){
+     holdMessage(message);SND.im();
+     try{window.YappDesktop?.notify("New PM",message.from+" sent you a PM")}catch{}
+     return;
+   }
+   const w=openIm(message.from);line(w,message.from,message);
+   if(!document.hidden)S.emit("m:seen",{to:message.from});
+   else addEventListener("visibilitychange",function seen(){if(!document.hidden){S.emit("m:seen",{to:message.from});removeEventListener("visibilitychange",seen)}});
+   w.querySelector(".yseen")?.remove();if(message.aud)YAud.play(message.aud,w);
+   clearTyp(w);SND.im();if(document.hidden)document.title="* "+message.from+" says...";
+ });
  S.on('m:im-echo',m=>{const w=openIm(m.to);line(w,ME.name,m)});
  S.on('m:typing',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;w.querySelector('.typ').textContent=from+' is typing...';clearTimeout(w._tt);w._tt=setTimeout(()=>clearTyp(w),4000)});
  S.on('m:buzz',({from})=>{const w=openIm(from);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(from)}: BUZZ!!!</div>`);scroll(w);SND.buzz();if(localStorage.ycShake!='off')for(const el of [w,$('mwin')]){el.classList.remove('buzzing');void el.offsetWidth;el.classList.add('buzzing')}});
@@ -284,13 +317,7 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=Object.values(con
  document.querySelectorAll('.ct:not(.wct)').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>openIm(e.dataset.n).querySelector('textarea').focus();
   e.querySelectorAll('[data-jr]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();window.open('/rooms.html?room='+encodeURIComponent(a.dataset.jr),'yapprooms')});
   e.oncontextmenu=ev=>{ev.preventDefault();sel=e.dataset.n;render();$('mInv').style.opacity=invOk(sel)?'':'.45';$('mInv').title=invOk(sel)?'':sel+" isn't available for invites";document.querySelectorAll('#menu>div')[1].classList.add('open')}})}
-function showReq(r){$('reqs').insertAdjacentHTML('beforeend',`<div class=rq data-n="${escT(r.name.toLowerCase())}"><b>${escT(r.name)}</b> wants to add you as a contact.${r.msg?'<br><i>"'+r.msg+'"</i>':''}<div style="margin-top:4px"><button class=pri data-y=1>Accept</button><button data-y=0>Decline</button></div></div>`);
- const d=$('reqs').lastElementChild;d.querySelectorAll('button').forEach(b=>b.onclick=async()=>{const x=await emit('m:respond',{name:r.name,accept:b.dataset.y=='1'});if(x.error)alert(x.error);d.remove()});SND.im();toast('<b>'+escT(r.name)+'</b> sent you a contact request.');reqPop(r)}
-const reqQ=[];function reqPop(r){reqQ.push(r);if(reqQ.length==1)reqNext()}
-function reqNext(){const r=reqQ[0];if(!r)return;try{window.focus();window.YappDesktop&&YappDesktop.notify('Contact request',r.name+' wants to add you')}catch(e){}
- let o=document.createElement('div');o.id='rqPop';o.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center';
- o.innerHTML=`<div style="background:var(--card,#fff);color:var(--ink,#12213F);border-radius:12px;padding:16px;width:min(320px,92vw);box-shadow:0 8px 24px rgba(0,0,0,.3)"><b>Contact Request</b><p><b>${escT(r.name)}</b> wants to add you as a contact.${r.msg?'<br><i>"'+r.msg+'"</i>':''}</p><div style="display:flex;gap:6px;justify-content:flex-end"><button class=pri data-a=y>Accept</button><button data-a=n>Decline</button><button data-a=b>Block</button></div></div>`;document.body.append(o);
- o.querySelectorAll('button').forEach(b=>b.onclick=async()=>{const a=b.dataset.a;let x;if(a=='b'){if(!confirm('Block '+r.name+'?'))return;x=await emit('m:block',{name:r.name});if(x&&x.name)blockedL.push(x.name)}else x=await emit('m:respond',{name:r.name,accept:a=='y'});if(x&&x.error)alert(x.error);document.querySelector(`.rq[data-n="${CSS.escape(r.name.toLowerCase())}"]`)?.remove();o.remove();reqQ.shift();reqNext()})}
+function showReq(request){messengerInbox.add(request);SND.im();toast(escT(request.name)+' sent you a contact request.');}
 const addC=()=>modal('Add a Contact','Screen name:<input type=text id=an maxlength=20>Message (optional):<input type=text id=am maxlength=120 placeholder="Hi, it\'s me!">',async()=>{const r=await emit('m:add',{name:$('an').value.trim(),msg:$('am').value});if(!r.error)toast(r.text);return r},'Send Request');
 $('bAdd').onclick=$('mAdd').onclick=addC;
 const need=()=>{if(!sel){alert('Select a contact first.');return null}return sel};
@@ -335,7 +362,9 @@ const ts=t=>`<span class=ts>[${new Date(t||Date.now()).toLocaleTimeString([],{ho
 const scroll=w=>{const l=w.querySelector('.log');l.scrollTop=l.scrollHeight};
 const sys=(w,t)=>{w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=sys>${ts()}${escT(t)}</div>`);scroll(w)};
 const clearTyp=w=>{w.querySelector('.typ').textContent=''};
-function line(w,from,m,old){const mine=ME&&from.toLowerCase()==ME.name.toLowerCase();const col=mine||!m.color||m.color=='#000000'?'':`color:${m.color};`;
+function line(w,from,m,old){
+ if(m.id){const seen=w._messageIds ||= new Set();if(seen.has(m.id))return;seen.add(m.id);if(seen.size>1000)seen.delete(seen.values().next().value);}
+ const mine=ME&&from.toLowerCase()==ME.name.toLowerCase();const col=mine||!m.color||m.color=='#000000'?'':`color:${m.color};`;
  const sty=`${col}font-family:'${m.f||'Arial'}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;const c=contacts[from.toLowerCase()],av=mine?ME.avatar:(c?c.avatar:'');
  const tm=new Date(m.t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
  w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg${mine?' me':''}" title="${escT(from)}">${avHtml(av,'',from)}<div class=bb><span style="${sty}">${YGif.render(m.text)||RCSmileys.replace(m.text)}</span><div class=tm>${tm}${m.offline?' &middot; delivered when they sign in':''}</div></div><div class=tm2>${tm}${m.offline?' &middot; delivered later':''}</div></div>`);scroll(w)}
@@ -345,7 +374,7 @@ function peerInfo(w,n){const c=contacts[n.toLowerCase()],st=c?(c.online?(c.idle?
 let zTop=20;
 function setImv(w,env){[...w.classList].filter(c=>c.startsWith('imv-')).forEach(c=>w.classList.remove(c));if(env&&env!='none')w.classList.add('imv-'+env)}
 async function reportUser(who){const why=prompt('Report '+who+' to the site moderators.\nWhat happened?','');if(why===null)return;const r=await fetch('/api/report',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({who,why})}).then(r=>r.json()).catch(()=>({error:'Network error'}));alert(r.error||'Thanks. Your report was sent to the site moderators.')}
-function openIm(n){const w0=openIm0(n),k=n.toLowerCase();if(window.pmHeld&&pmHeld[k]){const h=pmHeld[k];delete pmHeld[k];delete pmUnread[k];h.forEach(m=>line(w0,m.from,m));pmBadge()}return w0}
+function openIm(n){const w0=openIm0(n),k=n.toLowerCase();if(window.pmHeld&&pmHeld[k]){const h=pmHeld[k];delete pmHeld[k];h.forEach(m=>line(w0,m.from,m));const ids=h.map(m=>m.offlineId).filter(Boolean);for(let i=0;i<ids.length;i+=200)emit('m:offline-read',ids.slice(i,i+200));messengerInbox.refresh()}return w0}
 function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTop;if(ims[k]._pw)try{ims[k]._pw.focus()}catch(e){}return ims[k]}const name=(contacts[k]||{}).name||n;
  const w=document.createElement('div');w.className='im win';const i=Object.keys(ims).length;w.style.left=(330+i*28)+'px';w.style.top=(30+i*28)+'px';w.style.zIndex=++zTop;w.dataset.n=name;
  w.innerHTML=`<div class=tbar><span class=lgs>${YI.logo(24)}</span>${escT(name)} &ndash; Private Message<span class=sp></span><span class="wb x"><i data-i=close data-s=16></i></span></div>
@@ -369,7 +398,7 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  w.querySelector('.font').onchange=e=>{st.f=e.target.value;ta.style.fontFamily=st.f};
  const smp=w.querySelector('.smp');smp.innerHTML=RCSmileys.ordered.map(m=>`<span data-k="${m.esc}">${m.html}</span>`).join('');
  w.querySelector('.smb').onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};smp.querySelectorAll('span[data-k]').forEach(e=>e.onclick=()=>{ta.value+=' '+dec(e.dataset.k)+' ';smp.classList.remove('open');ta.focus()});
- const send=async()=>{const t=ta.value.trim();if(!t)return;ta.value='';const r=await emit('m:im',{to:name,text:t,...st});if(r.error)return sys(w,r.error);{const e=w.querySelector('.yseen');e&&e.remove()}line(w,ME.name,r)};
+ const send=async()=>{const t=ta.value.trim();if(!t)return;ta.value='';const r=await emit('m:im',{to:name,text:t,clientId:crypto.randomUUID(),...st});if(r.error)return sys(w,r.error);{const e=w.querySelector('.yseen');e&&e.remove()}line(w,ME.name,r)};
  w.querySelector('.gifb').onclick=e=>{e.stopPropagation();YGif.picker(e.currentTarget,tok=>{ta.value=tok;send()})};
  w.querySelector('form').onsubmit=e=>{e.preventDefault();send()};let lt=0;
  const pop=(btn,items,fn)=>{document.querySelectorAll('.ypop').forEach(x=>x.remove());const p=document.createElement('div');p.className='ypop';p.style.cssText='position:fixed;z-index:9999;background:var(--card,#fff);border:1px solid #7f9db9;box-shadow:2px 2px 6px #0004;padding:2px 0;font:12px Tahoma';const r=btn.getBoundingClientRect();p.style.left=r.left+'px';p.style.top=(r.bottom+2)+'px';
@@ -378,7 +407,7 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  w.querySelectorAll('[data-a=imv]').forEach(b=>b.onclick=()=>pop(b,Object.entries(YAud.IMVS),async env=>{const r=await emit('m:imv',{to:name,env});if(r.error)sys(w,r.error)}));
  w.querySelectorAll('[data-a=rep]').forEach(b=>b.onclick=()=>reportUser(name));
  emit('m:imv-get',{with:name}).then(r=>setImv(w,r.env));
- ta.addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();send()}else if(e.ctrlKey&&e.key.toLowerCase()=='g'){e.preventDefault();buzz(name)}else if(e.key.length==1&&Date.now()-lt>2500){lt=Date.now();S.emit('m:typing',{to:name})}});
+ ta.addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();if(!e.repeat&&!e.isComposing)send()}else if(e.ctrlKey&&e.key.toLowerCase()=='g'){e.preventDefault();buzz(name)}else if(e.key.length==1&&Date.now()-lt>2500){lt=Date.now();S.emit('m:typing',{to:name})}});
  w.querySelectorAll('[data-a=buzz]').forEach(b=>b.onclick=()=>buzz(name));const im=w.querySelector('.imenu');
  w.querySelector('[data-a=more]').onclick=e=>{e.stopPropagation();im.classList.toggle('open')};w.querySelector('[data-a=aa]').onclick=()=>w.querySelector('.fmt').classList.toggle('open');
  w.querySelector('[data-a=sm]').onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};w.addEventListener('click',e=>{if(!e.target.closest('[data-a=more]'))im.classList.remove('open');if(!e.target.closest('.mbar'))w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'))});

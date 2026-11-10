@@ -1,0 +1,10 @@
+#menu .messenger-bell{display:inline-flex;align-items:center;gap:4px;padding:4px 7px!important;min-height:28px!important;border:0!important;border-radius:5px!important;background:transparent!important;color:#123a65!important;box-shadow:none!important}
+.messenger-bell small{background:#004990;color:white;border-radius:8px;padding:1px 4px;font:11px 'Segoe UI',sans-serif}
+.messenger-bell small[hidden],.messenger-notifications[hidden]{display:none!important}
+.messenger-notifications{position:fixed;z-index:5001;width:min(290px,calc(100vw - 16px));max-height:min(360px,68vh);overflow:auto;padding:12px;background:var(--card,#fff);color:var(--ink,#153653);border:1px solid var(--line,#c7d8e8);border-radius:8px;box-shadow:0 10px 26px #173b6033;font:13px 'Segoe UI',sans-serif}
+.messenger-notifications h3{font-size:13px;margin:0 0 8px}
+.messenger-notifications h3:not(:first-child){margin-top:16px}
+.messenger-notifications>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0}
+.messenger-notifications>div>span{flex:1 1 100%;overflow-wrap:anywhere}
+.im .log .msg,.im .log .msg.me{align-self:flex-start!important;flex-direction:row!important;text-align:left!important}
+.im .log :is(.tm,.tm2,.sys,.bz){text-align:left!important;align-self:flex-start!important}

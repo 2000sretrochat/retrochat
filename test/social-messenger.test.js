@@ -28,7 +28,7 @@ function setup() {
     await connected(s); return s;
   };
   const send = async (s, event, data) => { let result; const cb = r => { result = r; }; if (data === undefined) await s.handlers[event](cb); else await s.handlers[event](data, cb); return result; };
-  return { socket, send };
+  return { socket, send, accounts:mod.exports };
 }
 test('real account handlers permit one Social and one normal messenger together', async () => {
   const { socket, send } = setup(), desktop = await socket(1), social = await socket(1, 'social');
@@ -56,4 +56,26 @@ test('account call handlers deliver signals to one chosen recipient window', asy
 test('an unauthenticated Social client gets no account handlers', async () => {
   const { socket } = setup(), anonymous = await socket(null, 'social');
   assert.deepEqual(Object.keys(anonymous.handlers), []);
+});
+
+test('a Social friendship change reaches both open Messenger clients', async () => {
+  const {socket,send,accounts}=setup(),alice=await socket(1),bob=await socket(2);
+  await send(alice,'m:init');
+  await send(bob,'m:init');
+  accounts.contactsChanged(1,2);
+  assert.equal(alice.events.filter(event=>event[0]==='m:contacts-changed').length,1);
+  assert.equal(bob.events.filter(event=>event[0]==='m:contacts-changed').length,1);
+  assert.ok(Array.isArray((await send(alice,'m:contacts')).contacts));
+});
+
+test('repeating the same Messenger send ID delivers one message', async () => {
+  const {socket,send}=setup(),alice=await socket(1),bob=await socket(2);
+  await send(alice,'m:init');
+  await send(bob,'m:init');
+  const message={to:'Bob',text:'Hello',clientId:'8bbb7749-8859-43af-b98f-30b2b552a8c5'};
+  const [first,second]=await Promise.all([send(alice,'m:im',message),send(alice,'m:im',message)]);
+  assert.equal(first.id,second.id);
+  assert.equal(bob.events.filter(event=>event[0]==='m:im').length,1);
+  await send(alice,'m:im',{...message,clientId:'e49d4c07-3a65-4205-a020-2fae045487ab'});
+  assert.equal(bob.events.filter(event=>event[0]==='m:im').length,2);
 });

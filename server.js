@@ -1,4 +1,4 @@
-// YappChat server (repo: retrochat). Auth hook: replace `identify()` later for accounts; media hook: add /api/media-token for LiveKit.
+// Razzle server (repo: retrochat). Auth hook: replace `identify()` later for accounts; media hook: add /api/media-token for LiveKit.
 const FLOOD = require('./flood');
 const express = require('express'), http = require('http'), { Server } = require('socket.io');
 const acc = require('./accounts'), db = require('./db'), geo = require('./geo');
@@ -249,7 +249,7 @@ app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.
   res.status(404).json({ error: 'No such user.' }); });
 app.post('/api/profile', express.json(), async (req, res) => { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in to edit your profile.' });
   const b = req.body || {}; let age = b.age === '' || b.age == null ? null : parseInt(b.age, 10);
-  if (age !== null && !(age >= 18 && age <= 120)) return res.status(400).json({ error: 'Age must be between 18 and 120 (or left blank). YappChat is for adults 18+.' });
+  if (age !== null && !(age >= 18 && age <= 120)) return res.status(400).json({ error: 'Age must be between 18 and 120 (or left blank). Razzle is for adults 18+.' });
   const displayName = b.displayName == null ? null : PCLEAN(b.displayName, 30);
   const [updated] = await db.q(`update users set
     display_name_changed_at = case when $2::text is not null and display_name is distinct from $2

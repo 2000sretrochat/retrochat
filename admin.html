@@ -1,10 +1,10 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>YappChat Admin</title>
+<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Razzle Administration</title>
 <style>body{font:14px system-ui,Arial;margin:0;background:#f4f7fb;color:#10234a}header{background:linear-gradient(90deg,#4AB7F2,#1877E8);color:#fff;padding:12px 20px;display:flex;gap:12px;align-items:center}
 header b{font-size:18px}main{padding:16px 20px}input{padding:8px 12px;border:1px solid #c9d6ea;border-radius:10px;font:inherit}button{padding:8px 14px;border:0;border-radius:10px;background:#1877E8;color:#fff;cursor:pointer}
 .card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(16,35,74,.08);padding:14px;margin-bottom:16px;overflow:auto}h2{font-size:15px;margin:0 0 8px}
 table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #eef2f8;vertical-align:top;white-space:nowrap}th{color:#5a6b8a;font-size:12px;text-transform:uppercase}
 .on{color:#1a9a4a;font-weight:600}.off{color:#999}details{font-size:12px}.sm{color:#5a6b8a;font-size:12px}#gate{max-width:360px;margin:80px auto;text-align:center}</style></head><body>
-<header><b>YappChat Admin</b><span class=sm style="color:#e8f3ff">Owner only &middot; IPs and locations are private</span><span style="flex:1"></span><input id=q placeholder="Search name, IP, location..." style="width:280px"><button id=rf>Refresh</button><button id=lo style="background:#10234a">Lock</button></header>
+<header><b>Razzle Administration</b><span class=sm style="color:#e8f3ff">Owner only &middot; IPs and locations are private</span><span style="flex:1"></span><input id=q placeholder="Search name, IP, location..." style="width:280px"><button id=rf>Refresh</button><button id=lo style="background:#10234a">Lock</button></header>
 <div id=gate><h2>Enter admin key</h2><input id=k type=password style="width:100%"><br><br><button id=go>Unlock</button><p id=er style="color:#c0392b"></p></div>
 <main id=app hidden><div class=card><h2>Chat rooms (ratings)</h2><table id=tR></table></div><div class=card><h2>Online now</h2><table id=tOn></table></div><div class=card><h2>Accounts</h2><table id=tA></table></div><div class=card><h2>Guests (this server session)</h2><table id=tG></table></div><div class=card><h2>Guest sign-in log (database)</h2><table id=tL></table></div></main>
 <script>

@@ -1,7 +1,7 @@
 // Outbound email via Resend HTTP when RESEND_API_KEY + MAIL_FROM are set.
 // No SMTP dependency. Used for password reset, verify, and welcome mail.
 const enabled = () => !!(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
-const appName = () => { const n = String(process.env.APP_NAME || 'Razzle').trim(); return n || 'Razzle'; };
+const appName = () => { const n = String(process.env.APP_NAME || 'Razzle').trim(); return !n || /^yappchat$/i.test(n) ? 'Razzle' : n; };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function sendMail({ to, subject, text, html }) {

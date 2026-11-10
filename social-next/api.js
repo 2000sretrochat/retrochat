@@ -121,7 +121,7 @@ function registerApi(router, express, db, accounts, io) {
   router.get('/api/people',run(async(req,res) => {
     const search = text(req.query.q,80);
     const rows = await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
-      coalesce(s.value->>'portrait','') as portrait,u.age,u.sex,exists(select 1 from social_bot_members where user_id=u.id) as bot,
+      coalesce(s.value->>'portrait','') as portrait,u.age,u.sex,${req.socialAccount.master?'exists(select 1 from social_bot_members where user_id=u.id)':'false'} as bot,
       case when coalesce(s.value->>'visibility','public')='private' and u.id<>$1 and ${req.socialAccount.master?'false':'true'} then '' else u.location end as location
       from users u left join social_settings s on s.user_id=u.id where not u.banned and not coalesce(u.deactivated,false)
       and not exists(select 1 from social_restrictions where user_id=u.id and service='social')
@@ -138,7 +138,7 @@ function registerApi(router, express, db, accounts, io) {
     const owner = row.id === req.socialAccount.id;
     const restricted = row.settings.visibility === 'private' && !owner && !row.friend && !req.socialAccount.master;
     const result = {id:row.id,name:row.name,displayName:row.display_name || row.name,age:row.age,sex:row.sex,
-      status:row.profile_status,memberSince:row.created,private:restricted,owner,friend:row.friend,bot:row.bot,
+      status:row.profile_status,memberSince:row.created,private:restricted,owner,friend:row.friend,bot:!!(req.socialAccount.master&&row.bot),
       settings:restricted ? {portrait:row.settings.portrait || '',visibility:'private'} : publicSettings(row.settings)};
     if (!restricted) Object.assign(result,{location:row.location,bio:row.bio,interests:row.interests});
     res.json(result);
@@ -248,16 +248,25 @@ function registerApi(router, express, db, accounts, io) {
         insert into contacts(owner,contact) select to_id,from_id from pending union select from_id,to_id from pending
         on conflict do nothing returning owner`,[target.id,actor]);
       if (!added.length) fail('Request is no longer pending.',409);
-    } else if (action==='decline') await db.q('delete from requests where from_id=$1 and to_id=$2',[target.id,actor]);
-    else if (action==='remove') await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)',[actor,target.id]);
+      accounts.contactsChanged?.(actor,target.id);
+    } else if (action==='decline') {
+      await db.q('delete from requests where from_id=$1 and to_id=$2',[target.id,actor]);
+      accounts.contactsChanged?.(actor);
+    } else if (action==='remove') {
+      await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)',[actor,target.id]);
+      accounts.contactsChanged?.(actor,target.id);
+    }
     else if (action==='request') {
       const [blocked]=await db.q('select 1 from blocks where (owner=$1 and blocked=$2) or (owner=$2 and blocked=$1)',[actor,target.id]);
       if (blocked) fail('This request cannot be sent.',403);
       if(target.bot){
         await db.q('insert into contacts(owner,contact) values($1,$2),($2,$1) on conflict do nothing',[actor,target.id]);
         await db.q('delete from requests where (from_id=$1 and to_id=$2) or (from_id=$2 and to_id=$1)',[actor,target.id]);
-        accounts.toUser?.(actor,'m:contact',{name:target.name,group:'Friends',online:false,status:'offline',avatar:target.avatar});
-      }else await db.q('insert into requests(from_id,to_id) values($1,$2) on conflict do nothing',[actor,target.id]);
+        accounts.contactsChanged?.(actor);
+      }else {
+        await db.q('insert into requests(from_id,to_id) values($1,$2) on conflict do nothing',[actor,target.id]);
+        accounts.contactsChanged?.(target.id);
+      }
     } else fail('Unknown friend action.');
     res.json({ok:true,accepted:action==='request'&&!!target.bot});
   }));
@@ -275,6 +284,7 @@ function registerApi(router, express, db, accounts, io) {
   router.get('/api/admin',run(async(req,res) => {
     admin(req);
     const users=await db.q(`select u.id,u.name,u.display_name,u.is_master,u.deactivated,u.banned,u.last_ip,u.last_loc,
+      exists(select 1 from social_bot_members where user_id=u.id) as bot,
       coalesce((select json_agg(json_build_object('service',r.service,'reason',r.reason)) from social_restrictions r where r.user_id=u.id),'[]') as restrictions
       from users u order by u.created desc limit 200`);
     const posts=await db.q(`select p.id,p.body,p.image<>' ' and p.image<>'' as has_image,p.author_id,p.created,p.removed,
