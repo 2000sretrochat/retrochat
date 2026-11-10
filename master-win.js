@@ -1,5 +1,22 @@
-// In-app Master Console window (served only to masters via /api/master/ui.js)
+// Master Console windows (served only to masters via /api/master/ui.js).
+let messengerMasterPopup = null;
 window.openMasterConsole = function () {
+  if (document.getElementById('mwin')) {
+    if (messengerMasterPopup && !messengerMasterPopup.closed) {
+      messengerMasterPopup.focus();
+      return;
+    }
+    const width = Math.min(1000, screen.availWidth || 1000);
+    const height = Math.min(720, screen.availHeight || 720);
+    messengerMasterPopup = window.open('/master', 'razzleMasterConsole',
+      'popup=yes,width=' + width + ',height=' + height + ',resizable=yes,scrollbars=yes');
+    if (messengerMasterPopup) {
+      messengerMasterPopup.focus();
+      return;
+    }
+    alert('Allow pop-ups for Razzle to open the Master Console in its own window.');
+    return;
+  }
   let w = document.getElementById('ymcw'); if (w) { w.style.display = ''; w.classList.remove('min'); if (innerWidth < 980 || innerHeight < 680) w.classList.add('max'); w.style.zIndex = ++window._ymz; return; }
   window._ymz = window._ymz || 9000;
   if (!document.getElementById('ymcs')) { const st = document.createElement('style'); st.id = 'ymcs'; st.textContent = `
