@@ -44,7 +44,7 @@
     button.title = label; button.setAttribute('aria-label', label); button.innerHTML = svg; old.replaceWith(button); return button;
   };
   const min = control(controls[0], 'dock-minimize', 'Collapse Messenger', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16h14"/></svg>');
-  const pop = control(controls[1], 'dock-popout', 'Pop out Messenger and rooms', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7M21 3l-10 10M10 5H4v15h15v-6"/></svg>');
+  const pop = control(controls[1], 'dock-popout', 'Open Messenger in a new window', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7M21 3l-10 10M10 5H4v15h15v-6"/></svg>');
   const close = control(controls[2], 'wx', docked ? 'Hide Messenger' : 'Close Messenger window', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'); close.classList.add('x');
   let collapsed = false;
   min.onclick = () => {
@@ -59,7 +59,6 @@
     addEventListener('message', event => {
       if(event.origin===location.origin && event.source===opener && event.data?.source==='chatbabble-social' && event.data.action==='open-chat' && typeof event.data.name==='string' && /^[A-Za-z][A-Za-z0-9_.]{2,19}$/.test(event.data.name) && ME && S?.connected)openIm(event.data.name);
     });
-    const showRooms = setInterval(() => { if (!ME || !S?.connected) return; clearInterval(showRooms); document.getElementById('bRooms').click(); }, 200);
     return;
   }
   const send = payload => parent.postMessage({ source: 'chatbabble-messenger', ...payload }, location.origin);
