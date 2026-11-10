@@ -27,6 +27,7 @@ function createMusicLobby({db,occupied,humanTurn,emit}) {
     finally{ticking=false;}
   }
   const list=()=>db.q('select id,title,artist,duration from room_music_tracks order by slot');
+  const count=async()=>Number((await db.q('select count(*)::int as n from room_music_tracks'))[0]?.n||0);
   async function add({title,artist,duration,audio}){
     const valid=Buffer.isBuffer(audio)&&audio.length>=4&&
       (audio.toString('ascii',0,3)==='ID3'||(audio[0]===255&&(audio[1]&224)===224));
@@ -56,6 +57,6 @@ function createMusicLobby({db,occupied,humanTurn,emit}) {
     if(!range || start>end || !Number.isSafeInteger(start))return res.status(416).set('Content-Range','bytes */'+size).end();
     return res.status(206).set('Content-Range','bytes '+start+'-'+end+'/'+size).send(bytes.subarray(start,end+1));
   }
-  return {room,state,tick,list,add,remove,audio};
+  return {room,state,tick,list,count,add,remove,audio};
 }
 module.exports={createMusicLobby,room};
