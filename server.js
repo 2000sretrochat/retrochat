@@ -554,7 +554,12 @@ io.on('connection', s => {
   s.on('room:invite', async ({ to } = {}, cb) => { if (typeof cb !== 'function') return; if (!s.data.name || !s.data.room) return cb({ error: 'Join a room first.' });
     if (!s.data.acct) return cb({ error: 'Sign in to invite people to rooms.' }); if (isBot(to)) return cb({ error: String(to) + " isn't available for invites." });
     try { cb(await AH.invite({ uid: s.data.acct.id, name: s.data.acct.name, master: !!s.data.master, room: s.data.room }, to)); } catch (e) { cb({ error: 'Could not send invite.' }); } });
-  s.on('room:invite-decline', ({ from } = {}) => { if (!s.data.name) return; AH.toRoomUser(String(from || ''), 'invite-declined', { name: s.data.name }); });
+  s.on('room:invite-many', async ({ to } = {}, cb) => { if (typeof cb !== 'function') return; if (!s.data.name || !s.data.room) return cb({ error: 'Join a room first.' });
+    if (!s.data.acct) return cb({ error: 'Sign in to invite people to rooms.' });
+    try { cb(await AH.inviteMany({ uid: s.data.acct.id, name: s.data.acct.name, master: !!s.data.master, room: s.data.room }, (Array.isArray(to) ? to : []).filter(n => !isBot(n)))); } catch (e) { cb({ error: 'Could not send invites.' }); } });
+  // Reject: the invite just disappears (no notice to the inviter). Accept: returns the room to join if the invite is still valid.
+  s.on('room:invite-decline', ({ id } = {}) => { if (!s.data.acct) return; AH.inviteAnswer({ uid: s.data.acct.id, name: s.data.acct.name }, id, false); });
+  s.on('room:invite-accept', ({ id } = {}, cb) => { if (typeof cb !== 'function') return; if (!s.data.acct) return cb({ error: 'Sign in first.' }); cb(AH.inviteAnswer({ uid: s.data.acct.id, name: s.data.acct.name }, id, true)); });
   s.on('pm', async ({ to, text } = {}, cb) => { if (!s.data.name) return; if (isBot(to)) return cb && cb({ ok: true }); const id = users.get(String(to || '').toLowerCase()); const t0 = id && io.sockets.sockets.get(id), t = t0 && (!t0.data.inc || s.data.master) ? t0 : null;
     text = String(text || '').trim().slice(0, MAXLEN); if (!text) return; { const fl = FLOOD.check(s.data.acct?.name || s.data.name, text, s.data.master); if (fl) return cb && cb({ error: fl }); } if (!t) return cb && cb({ error: to + ' is not online.' });
     if (s.data.guest && !s.data.master && !(s.data.pmFrom && s.data.pmFrom.has(t.data.name.toLowerCase()))) return cb && cb({ error: 'Guests can only reply to private messages. Get a free screen name to start a conversation.' });

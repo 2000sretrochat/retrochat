@@ -380,7 +380,7 @@ S.on('m:offline-read',ids=>{
  S.on('m:im-echo',m=>{const w=openIm(m.to);line(w,ME.name,m)});
  S.on('m:typing',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;w.querySelector('.typ').textContent=from+' is typing...';clearTimeout(w._tt);w._tt=setTimeout(()=>clearTyp(w),4000)});
  S.on('m:buzz',({from})=>{const w=openIm(from);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(from)}: BUZZ!!!</div>`);scroll(w);SND.buzz();if(localStorage.ycShake!='off')for(const el of [w,$('mwin')]){el.classList.remove('buzzing');void el.offsetWidth;el.classList.add('buzzing')}});
- S.on('m:invite',({from,room,rating})=>{SND.im();invPopup(from,room,rating,()=>emit('m:invite-decline',{from}))});S.on('m:invite-declined',({name})=>toast(escT(name)+' declined your invitation.'));
+ S.on('m:invite',({id,from,room,rating,ttl})=>{SND.im();invPopup(from,room,rating,()=>emit('m:invite-decline',{id}),id,ttl)});S.on('m:invite-gone',({id})=>{invPops[id]?.remove();delete invPops[id]});
  S.on('m:call',onCall);S.on('m:callans',onCallAns);S.on('m:sig',onSig);S.on('m:hang',onHang);S.on('disconnect',disconnectCalls);
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=isRoomSignIn?(returnToSocial?'Join · Razzle Social':'Sign in · Razzle Chat'):APP_NAME.join('')+' Messenger'});
@@ -446,9 +446,10 @@ const invOk=n=>{const c=contacts[String(n).toLowerCase()];return !c||(c.online&&
 async function invite(n){if(!invOk(n))return toast(escT(n)+" isn't available for invites.");let r=await emit('m:invite',{to:n});
  if(r&&r.error&&/Join a chat room first/.test(r.error)){const rs=await fetch('/api/rooms').then(r=>r.json());return modal('Invite '+n+' to a Chat Room',`You're not in a room right now. Pick one:<br>Room:<select id=ir>${rs.map(r=>`<option value="${escT(r.name)}">${escT(r.name)} (${r.count})</option>`).join('')}</select>`,async()=>{const r=await emit('m:invite',{to:n,room:$('ir').value});if(!r.error){const w=openIm(n);sys(w,'You invited '+n+' to '+r.room+'.')}return r},'Invite')}
  if(r&&r.error)return toast(escT(r.error));if(r&&r.ok){const w=openIm(n);sys(w,'You invited '+n+' to '+r.room+'.')}}
-function invPopup(from,room,rating,onDecline){const d=document.createElement('div');d.className='win on';d.style.cssText='position:fixed;right:18px;bottom:18px;width:300px;z-index:9999';
- d.innerHTML=`<div class=tbar><span>Chat Room Invitation</span></div><div style="padding:12px"><b>${escT(from)}</b> has invited you to join the chat room <b>${escT(room)}</b>${rating=='R'?' <span style="color:#c00">(R, 18+)</span>':''}.<div style="margin-top:10px;text-align:right"><button class="btn" data-a=d>Decline</button> <button class="btn pri" data-a=j>Join</button></div></div>`;
- document.body.appendChild(d);d.querySelector('[data-a=j]').onclick=()=>{window.open('/rooms.html?room='+encodeURIComponent(room),'yapprooms');d.remove()};d.querySelector('[data-a=d]').onclick=()=>{onDecline&&onDecline();d.remove()};setTimeout(()=>d.remove(),120e3)}
+const invPops={};
+function invPopup(from,room,rating,onDecline,id,ttl){const d=document.createElement('div');if(id)invPops[id]=d;d.className='win on';d.style.cssText='position:fixed;right:18px;bottom:18px;width:300px;z-index:9999';
+ d.innerHTML=`<div class=tbar><span>Chat Room Invitation</span></div><div style="padding:12px"><b>${escT(from)}</b> has invited you to join the chat room <b>${escT(room)}</b>${rating=='R'?' <span style="color:#c00">(R, 18+)</span>':''}.<div style="margin-top:10px;text-align:right"><button class="btn" data-a=d>Reject</button> <button class="btn pri" data-a=j>Accept</button></div></div>`;
+ document.body.appendChild(d);d.querySelector('[data-a=j]').onclick=async()=>{d.remove();if(id){const r=await emit('m:invite-accept',{id});if(!r||!r.ok)return toast(escT((r&&r.error)||'This invitation has expired.'))}window.open('/rooms.html?room='+encodeURIComponent(room),'yapprooms')};d.querySelector('[data-a=d]').onclick=()=>{onDecline&&onDecline();d.remove()};setTimeout(()=>{d.remove();delete invPops[id]},ttl||120e3)}
 // ---------- IM windows ----------
 const ims={};const COLORS=['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033','#8b5cf6'];
 const ts=t=>`<span class=ts>[${new Date(t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}]</span>`;
