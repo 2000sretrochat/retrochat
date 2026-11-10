@@ -11,7 +11,7 @@ const L=[
 ['O:-)','angel','dot','smile','halo','bob'],[':-B','nerd','glasses','teeth','',''],['=;','talk to the hand','dot','flat','hand','wag'],[':-c','call me','dot','smile','phone','wag'],
 [':)]','on the phone','dot','smile','phone',''],['~X(','at wits\' end','x','wave','steam','shake'],[':-h','wave','dot','smile','hand','wag'],[':-t','time out','dot','flat','tee',''],
 ['8->','daydreaming','up','smile','dream','bob'],['I-)','sleepy','closed','flat','zzz','bob'],['8-|','rolling eyes','up','flat','','spin2'],['L-)','loser','dot','smile','L','wag'],
-[':-&','sick','dot','wave','green',''],[':-$','don\'t tell anyone','dot','zip','',''],['[-(','not talking','dot','flat','arms',''],[':O)','clown','dot','grin','nose','bob'],
+[':-&','sick','queasy','puke','green','retch'],[':-$','don\'t tell anyone','dot','zip','',''],['[-(','not talking','dot','flat','arms',''],[':O)','clown','dot','grin','nose','bob'],
 ['8-}','silly','up','wave','','wag'],['<:-P','party','dot','tongue','hat','bob'],['(:|','yawn','closed','o','',''],['=P~','drooling','dot','tongue','drool',''],
 [':-?','thinking','dot','slant','q','bob'],['#-o','d\'oh','closed','o','hand','shake'],['=D>','applause','dot','grin','clap','pulse'],[':-SS','nail biting','dot','teeth','sweat','shake'],
 ['@-)','hypnotized','spiral','flat','','spin2'],[':^o','liar','dot','o','nose',''],[':-w','waiting','dot','flat','clock','wag'],[':-<','sigh','closed','frown','',''],
@@ -29,10 +29,11 @@ const L=[
 [':bz','bee','dot','smile','antenna','wag'],['[..]','transformer','dot','flat','',''],
 [':-)','happy','dot','smile','',''],[':-(','sad','dot','frown','',''],[';-)','winking','wink','smile','','winkA'],[':-D','big grin','dot','grin','','bob'],
 [':-P','tongue','dot','tongue','','wag'],[':-x','love struck','heart','smallo','','pulse'],[':O','surprise','big','o','','pulse'],[':*','kiss','dot','kiss','kisses','pulse'],
+['|-)','sleepy','closed','flat','zzz','bob'],['\\:D/','dancing','dot','grin','','spin2'],['O:)','angel','dot','smile','halo','bob'],['0-+','april','dot','smile','',''],['🤮','sick','queasy','puke','green','retch'],
 ];
 const ORDER=L.map(r=>r[0]);L.sort((a,b)=>b[0].length-a[0].length);
 const OV=(x)=>`<ellipse cx="${x}" cy="8.6" rx="1.3" ry="2"/><circle cx="${x-.4}" cy="7.8" r=".45" fill="#fff"/>`;
-const eye={dot:OV(7.5)+OV(14.5),wink:'<g class="wo">'+OV(7.5)+'</g><path class="wc" d="M5.6 9.2q1.9-1.6 3.8 0" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>'+OV(14.5),
+const eye={queasy:'<path d="M5 8l4 1.8-4 1M17 8l-4 1.8 4 1" fill="none" stroke="#234321" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>',dot:OV(7.5)+OV(14.5),wink:'<g class="wo">'+OV(7.5)+'</g><path class="wc" d="M5.6 9.2q1.9-1.6 3.8 0" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>'+OV(14.5),
 lash:'<g>'+OV(7.5)+OV(14.5)+'<path d="M5.6 7.2L3.6 5.2M6.6 6.5L5.6 4M7.9 6.3L7.9 3.7M16.4 7.2l2-2M15.4 6.5l1-2.5M14.1 6.3v-2.6" stroke="#000" stroke-width=".9" stroke-linecap="round"/></g>',
 heart:'<path d="M5.5 8.5a1.2 1.2 0 0 1 2-1 1.2 1.2 0 0 1 2 1L7.5 11zM12.5 8.5a1.2 1.2 0 0 1 2-1 1.2 1.2 0 0 1 2 1l-2 2.5z" fill="#e00"/>',
 big:'<circle cx="7.5" cy="9" r="2.4" fill="#fff" stroke="#000" stroke-width=".7"/><circle cx="14.5" cy="9" r="2.4" fill="#fff" stroke="#000" stroke-width=".7"/><circle cx="7.5" cy="9" r="1"/><circle cx="14.5" cy="9" r="1"/>',
@@ -42,7 +43,7 @@ shades:'<path d="M4 7.5h14v1.2l-1 2.3h-4l-1-2h-2l-1 2H5l-1-2.3z"/>',glasses:'<ci
 brow:'<circle cx="7.5" cy="9" r="1.4"/><circle cx="14.5" cy="9" r="1.4"/><path d="M12.5 5.8q2-1.3 4 0" stroke="#000" fill="none"/>',spiral:'<path d="M7.5 9m-2 0a2 2 0 1 0 2-2a1.2 1.2 0 1 0 1 1.5M14.5 9m-2 0a2 2 0 1 0 2-2a1.2 1.2 0 1 0 1 1.5" stroke="#000" fill="none" stroke-width=".7"/>',
 patch:'<circle cx="14.5" cy="9" r="1.4"/><path d="M3 6l16 1" stroke="#000" stroke-width=".7"/><ellipse cx="7.5" cy="9" rx="2.3" ry="2"/>',skull:'<circle cx="7.5" cy="9" r="2"/><circle cx="14.5" cy="9" r="2"/>',
 money:'<text x="5.5" y="11" font-size="5" font-weight="bold" fill="#080">$</text><text x="12.5" y="11" font-size="5" font-weight="bold" fill="#080">$</text>'};
-const mouth={smile:'<path d="M6.5 13.5q4.5 4 9 0" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>',frown:'<path d="M7 16.5q4-3.5 8 0" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>',
+const mouth={puke:'<ellipse cx="11" cy="14.6" rx="3.5" ry="2.6" fill="#29421a"/><g class="rc-vomit"><path d="M8.7 14.8q2.2 1 4.7 0c-.2 2 1.9 3.4 2.2 5 .4 1.6-1.5 2.2-3 1.3-1.2 1.1-3.6.3-3.2-1.1-2.5-.5-.3-3.3-.7-5.2z" fill="#81d62b" stroke="#376c1d" stroke-width=".55"/><circle cx="17.5" cy="18.3" r=".8" fill="#81d62b"/><circle cx="6.7" cy="18.8" r=".65" fill="#5eb826"/></g>',smile:'<path d="M6.5 13.5q4.5 4 9 0" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>',frown:'<path d="M7 16.5q4-3.5 8 0" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>',
 grin:'<path d="M5.3 12.6h11.4q-.6 5.8-5.7 5.8t-5.7-5.8z" fill="#8a0010" stroke="#000" stroke-width="1"/><path d="M6 13h10v1.3H6z" fill="#fff"/><path d="M8.5 17.2q2.5-1.6 5 0" fill="#ff5a7a"/>',slant:'<path d="M7 15.5l8-1.5" stroke="#000" stroke-width="1.2"/>',
 smallo:'<circle cx="11" cy="15" r="1.3" fill="#900"/>',tongue:'<path d="M6 13.6q5 2 10 0" stroke="#000" fill="none" stroke-width="1.3" stroke-linecap="round"/><g class="tg"><path d="M8.6 14.3h4.8v3.6a2.4 2.4 0 0 1-4.8 0z" fill="#ff4f7a" stroke="#000" stroke-width=".8"/><path d="M11 14.6v3" stroke="#c0294d" stroke-width=".6"/></g>',
 kiss:'<ellipse cx="11" cy="14.8" rx="1.9" ry="1.5" fill="#e0103a" stroke="#000" stroke-width=".7"/><path d="M9.4 14.8h3.2" stroke="#800" stroke-width=".5"/>',o:'<ellipse cx="11" cy="15" rx="2" ry="2.5" fill="#900" stroke="#000" stroke-width=".7"/>',
@@ -67,14 +68,14 @@ clover:'<g fill="#2a2"><circle cx="8" cy="8" r="3"/><circle cx="14" cy="8" r="3"
 flag:'<path d="M5 2v19" stroke="#555" stroke-width="1.3"/><path d="M6 3h12l-3 4 3 4H6z" fill="#e33"/>',coffee:'<path d="M4 9h11v7a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z" fill="#963"/><path d="M15 11h2a2 2 0 0 1 0 4h-2" stroke="#963" fill="none" stroke-width="1.2"/><path d="M7 7q1-2 0-4M11 7q1-2 0-4" stroke="#aaa" fill="none" stroke-width=".8"/>',
 star:'<path d="M11 1l2.9 6.5 7 .6-5.3 4.6 1.6 7L11 16l-6.2 3.7 1.6-7L1.1 8.1l7-.6z" fill="#fd0" stroke="#c90" stroke-width=".6"/>',
 yinyang:'<circle cx="11" cy="11" r="9" fill="#fff" stroke="#000"/><path d="M11 2a4.5 4.5 0 0 1 0 9a4.5 4.5 0 0 0 0 9a9 9 0 0 1 0-18z"/><circle cx="11" cy="6.5" r="1.2" fill="#fff"/><circle cx="11" cy="15.5" r="1.2"/>'};
-const svg=([c,t,e,m,x,a])=>{const face=e?`<circle cx="11" cy="11" r="9.5" fill="url(#rcg)" stroke="#000" stroke-width="1.1"/>`:'';
- return `<svg class="rcs ${a}" viewBox="0 0 22 22" width="22" height="22" role="img" aria-label="${t}">${face}${x&&!e?'':''}${['green','red','pumpkin'].includes(x)?ex[x]:''}<g class="ey">${eye[e]||''}</g>${mouth[m]||''}${['green','red','pumpkin'].includes(x)?'':(ex[x]||'')}</svg>`};
+const svg=([c,t,e,m,x,a])=>{const face=e?`<circle cx="11" cy="11" r="9.5" fill="url(#${x==='green'?'rcg-green':'rcg'})" stroke="${x==='green'?'#376629':'#a75910'}" stroke-width=".9"/><path d="M4.3 7.3q2.1-4.7 7.6-4.4" stroke="#fff" stroke-opacity=".65" stroke-width=".8" fill="none" stroke-linecap="round"/>`:'';
+ return `<svg class="rcs ${a}" viewBox="0 0 22 22" width="22" height="22" role="img" aria-label="${t}">${face}${x&&!e?'':''}${['red','pumpkin'].includes(x)?ex[x]:''}<g class="ey">${eye[e]||''}</g>${mouth[m]||''}${['green','red','pumpkin'].includes(x)?'':(ex[x]||'')}</svg>`};
 const escH=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const map=L.map(r=>({code:r[0],esc:escH(r[0]),title:r[1],html:`<span class="rcw" title="${escH(r[0])}  ${escH(r[1])}">${svg(r)}</span>`}));
 const re=new RegExp(map.map(m=>m.esc.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+'|&(?:[a-z]+|#[0-9]+);','gi');
 const byEsc={};map.slice().reverse().forEach(m=>byEsc[m.esc.toLowerCase()]=m.html);map.forEach(m=>{if(!(m.esc in byEsc))byEsc[m.esc]=m.html});
 // input: already-HTML-escaped text; only replace outside of entities (entities are matched whole by alternation order since codes contain escaped forms)
-window.RCSmileys={list:L.slice().sort((a,b)=>0),replace:t=>t.replace(re,m=>/^&(?:[a-z]+|#[0-9]+);$/i.test(m)?m:(byEsc[m]||byEsc[m.toLowerCase()]||m)),html:c=>map.find(m=>m.code==c).html,codes:map,ordered:ORDER.slice(0,ORDER.length-8).map(c=>map.find(m=>m.code==c))};
+window.RCSmileys={list:L.slice().sort((a,b)=>0),replace:t=>t.replace(re,m=>/^&(?:[a-z]+|#[0-9]+);$/i.test(m)?m:(byEsc[m]||byEsc[m.toLowerCase()]||m)),html:c=>map.find(m=>m.code==c).html,codes:map,ordered:ORDER.map(c=>map.find(m=>m.code==c))};
 const st=document.createElement('style');st.textContent=`.rcw{display:inline-block;vertical-align:middle;line-height:0}.rcs{overflow:visible}
 @keyframes rcbob{50%{transform:translateY(-2px)}}@keyframes rcpulse{50%{transform:scale(1.15)}}@keyframes rcshake{25%{transform:translateX(-1px)}75%{transform:translateX(1px)}}
 @keyframes rcspin{to{transform:rotate(360deg)}}@keyframes rcwag{50%{transform:rotate(12deg)}}@keyframes rcblink{0%,85%,100%{transform:scaleY(1)}90%{transform:scaleY(.1)}}
@@ -85,6 +86,9 @@ const st=document.createElement('style');st.textContent=`.rcw{display:inline-blo
 .rcs .wc{opacity:0}.rcs.winkA .wo{animation:rcwo 1.6s infinite}.rcs.winkA .wc{animation:rcwc 1.6s infinite}.rcs.winkA{animation:rctilt 1.6s infinite}
 @keyframes rctg{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.35) rotate(6deg)}}.rcs .tg{animation:rctg .7s infinite;transform-origin:11px 14.3px}
 @keyframes rcbl{50%{opacity:1}}.rcs .bl{animation:rcbl 1s infinite}
+@keyframes rcRetch{0%,28%,78%,100%{transform:scale(.92);opacity:0}36%,67%{transform:scale(1);opacity:1}}
+.rcs .rc-vomit{animation:rcRetch 1.8s ease-in-out infinite;transform-origin:11px 14.8px}
+@media(prefers-reduced-motion:reduce){.rcs,.rcs *{animation:none!important}}
 .rcs .tear{animation:rcbob .6s infinite}.rcs{transform-origin:11px 11px}`;document.head.appendChild(st);
-document.body.insertAdjacentHTML('beforeend','<svg width="0" height="0" style="position:absolute"><defs><radialGradient id="rcg" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff7a0"/><stop offset=".5" stop-color="#ffd800"/><stop offset="1" stop-color="#f0a000"/></radialGradient></defs></svg>');
+document.body.insertAdjacentHTML('beforeend','<svg width="0" height="0" style="position:absolute"><defs><radialGradient id="rcg" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fffac0"/><stop offset=".48" stop-color="#ffdf43"/><stop offset=".81" stop-color="#ffb913"/><stop offset="1" stop-color="#db8209"/></radialGradient><radialGradient id="rcg-green" cx=".34" cy=".3" r=".8"><stop offset="0" stop-color="#f1ffbe"/><stop offset=".5" stop-color="#b6df61"/><stop offset="1" stop-color="#579735"/></radialGradient></defs></svg>');
 })();

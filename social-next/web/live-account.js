@@ -260,7 +260,7 @@
         form.dataset.postId ||= crypto.randomUUID();
         await api('/posts','POST',{id:form.dataset.postId,wall:form.dataset.wall || me,
           body:form.elements.thought?.value || form.querySelector('textarea')?.value || '',
-          link:form.querySelector('#post-link')?.value || '',
+          link:form.elements.attachmentUrl?.value || form.querySelector('#post-link')?.value || '',
           image:await photoData(form.querySelector('input[type=file]')?.files[0]),...readPostDetails(form)});
       }
       form.reset();delete form.dataset.postId;$('#dialog').close();await refreshView();await refreshNotifications();

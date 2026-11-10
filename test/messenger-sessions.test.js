@@ -25,10 +25,16 @@ test('social-only calls work, declines clear routes, and disconnect ends calls',
   routes.start(a, 1, 2, new Set([b])); routes.disconnect(a);
   assert.deepEqual(b.events.pop(), ['m:hang', { from: 'A' }]); assert.equal(routes.calls.size, 0);
 });
-test('an abandoned ringing call can be retried after timeout', () => {
+test('unanswered calls expire at 30 seconds and stale signals cannot reach a retry', () => {
   let now = 0; const routes = new CallRoutes(() => now), a = socket('A'), b = socket('B');
-  routes.start(a, 1, 2, new Set([b])); now = 91000;
-  assert.equal(routes.start(a, 1, 2, new Set([b])).target, b);
-  assert.ok(b.events.some(e => e[0] === 'm:hang'));
+  routes.start(a, 1, 2, new Set([b]), 'first'); now = 29999;
+  assert.ok(routes.start(a, 1, 2, new Set([b]), 'second').error);
+  now = 30000;
+  assert.equal(routes.relay(b, 2, 1, 'm:callans', true, 'first'), null);
+  assert.deepEqual(b.events.pop(), ['m:hang', { from:'A',callId:'first',reason:'no-answer' }]);
+  assert.equal(routes.start(a, 1, 2, new Set([b]), 'second').target, b);
+  assert.equal(routes.relay(b, 2, 1, 'm:callans', true, 'first'), null);
+  assert.equal(routes.relay(b, 2, 1, 'm:callans', true, 'second'), a);
+  routes.disconnect(a);
 });
 

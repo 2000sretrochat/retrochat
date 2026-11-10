@@ -534,6 +534,16 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
 #wall-post-composer > .wall-send:hover { background: #e7f0f9; }
 #wall-post-composer > .photo-button { grid-column: 2 / -1; justify-self: start; }
 #wall-post-composer > .post-details { grid-column: 2 / -1; }
+.post-attachments { grid-column: 2 / -1; width: 100%; font-size: 13px; }
+.post-attachments > summary { cursor: pointer; color: #004990; font-weight: 650; }
+.post-attachments > label { display: grid; gap: 4px; margin-top: 8px; }
+.post-attachments input { width: 100%; min-width: 0; font: inherit; }
+.post-attachments input[type=url] { padding: 8px; border: 1px solid #bfd3e9; border-radius: 5px; }
+#social-sidebar .wall-note-icon { width: 17px; height: 17px; vertical-align: -3px; margin-right: 4px; }
+.messenger-promo p { margin: 8px 0 12px; font-size: 13px; line-height: 1.45; }
+.messenger-promo .eyebrow { color: inherit; opacity: .85; }
+.messenger-promo > a.primary { display: inline-block; background: #fff !important; color: #004990 !important; border-color: #fff !important; }
+.right > .messenger-promo { margin-top: 20px; }
 .post .post-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
 .post .post-actions > button { font-size: 13px; min-height: 34px; padding-inline: 8px; }
 .post-video-preview, .post-video-player { display: block; width: 100%; max-width: 560px; aspect-ratio: 16/9; border: 1px solid #000; }

@@ -52,7 +52,7 @@ a{color:var(--blue);cursor:pointer}
 .im .fmt .smb{cursor:pointer;line-height:0}
 .sw{display:inline-block;width:12px;height:12px;border:1px solid #555;cursor:pointer}.sw.on{outline:2px solid var(--acc)}
 .im form{display:flex;gap:5px;padding:4px 6px 6px}.im textarea{flex:1;height:46px;resize:none}.im form button{width:64px}
-.smp{display:none;position:absolute;bottom:24px;left:4px;width:330px;max-height:210px;overflow:auto;background:#fff;border:1px solid var(--deep);box-shadow:2px 2px 6px rgba(0,0,0,.3);padding:4px;z-index:40}.smp.open{display:block}.smp span{cursor:pointer;display:inline-block;padding:2px}
+.smp{display:none;position:absolute;bottom:24px;left:4px;width:330px;max-width:calc(100vw - 26px);max-height:210px;overflow:auto;background:#fff;border:1px solid var(--deep);box-shadow:2px 2px 6px rgba(0,0,0,.3);padding:4px;z-index:40}.smp.open{display:block}.smp span{cursor:pointer;display:inline-block;padding:2px}
 .call{display:none;padding:4px 6px;background:#00205B;color:#fff;gap:6px;align-items:center;flex-wrap:wrap}.call.on{display:flex}
 .call video{width:180px;height:135px;background:#000;border:1px solid #00A3E0}.call video.me{width:72px;height:54px}.call .cs{flex:1;min-width:120px}
 @keyframes buzz{10%,50%,90%{transform:translate(-7px,2px)}30%,70%{transform:translate(7px,-2px)}}.buzzing{animation:buzz .5s 2}
@@ -136,7 +136,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 .rrow .uc{display:flex;align-items:center;gap:6px;color:var(--muted);width:60px;font-size:13px}
 #brw .ft{display:flex;gap:10px;padding:14px 16px}
 @media (max-width:760px){#brw{left:0!important;top:0!important;width:100%;max-width:none}.im{width:100%!important}}
-</style><link rel="stylesheet" href="/social/embed.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/messenger-inbox.js"></script></head><body>
+</style><link rel="stylesheet" href="/social/embed.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/messenger-inbox.js"></script><script src="/messenger-calls.js"></script></head><body>
 <div id="mwin" class="win">
  <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
  <div id="menu">
@@ -186,7 +186,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><div class="adph adph-b">Advertisement - Google Ads</div></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/device.js"></script><script src="/yd.js"></script><script src="/browse.js"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script>
+<script src="/device.js"></script><script src="/yd.js"></script><script src="/browse.js"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=2"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script>
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',''];
@@ -202,8 +202,9 @@ const api=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/jso
 let S=null,ME=null,contacts={},groups=['Friends'],blockedL=[],sel=null,closedG=new Set(JSON.parse(localStorage.ycClosed||'[]'));
 let sound=localStorage.ycSound!=='off';window.addEventListener('ycsound',()=>{sound=localStorage.ycSound!=='off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')});
 // ---------- sounds (generated with WebAudio; original) ----------
-let AC=null;function tone(seq){if(!sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();let t=AC.currentTime;
+let AC=null;function tone(seq){if(!sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")void AC.resume().catch(()=>{});let t=AC.currentTime;
  for(const [f,d,type] of seq){const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.8}}catch{}}
+addEventListener("pointerdown",()=>tone([]),{once:true});
 const SND={on:()=>tone([[660,.12],[880,.12],[1175,.22]]),off:()=>tone([[880,.12],[660,.12],[440,.25]]),im:()=>tone([[988,.08],[1319,.14]]),buzz:()=>tone([[196,.07,'triangle'],[294,.07,'triangle'],[392,.09,'sine'],[523,.15,'triangle']]),ring:()=>tone([[784,.18],[988,.18],[784,.18],[988,.3]])};
 $('mSound').onclick=()=>{sound=!sound;localStorage.ycSound=sound?'on':'off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')};$('mSound').textContent='Sounds: '+(sound?'On':'Off');
 function toast(html,av,name){const d=document.createElement('div');d.className='toast';d.innerHTML=(av!==undefined&&name?avHtml(av,'sm',name):'')+'<div>'+html+'</div>';$('toasts').appendChild(d);setTimeout(()=>d.remove(),5000);d.onclick=()=>d.remove()}
@@ -289,7 +290,7 @@ S.on('m:offline-read',ids=>{
  S.on('m:typing',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;w.querySelector('.typ').textContent=from+' is typing...';clearTimeout(w._tt);w._tt=setTimeout(()=>clearTyp(w),4000)});
  S.on('m:buzz',({from})=>{const w=openIm(from);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(from)}: BUZZ!!!</div>`);scroll(w);SND.buzz();if(localStorage.ycShake!='off')for(const el of [w,$('mwin')]){el.classList.remove('buzzing');void el.offsetWidth;el.classList.add('buzzing')}});
  S.on('m:invite',({from,room,rating})=>{SND.im();invPopup(from,room,rating,()=>emit('m:invite-decline',{from}))});S.on('m:invite-declined',({name})=>toast(escT(name)+' declined your invitation.'));
- S.on('m:call',onCall);S.on('m:callans',onCallAns);S.on('m:sig',onSig);S.on('m:hang',({from})=>{const w=ims[from.toLowerCase()];if(w){endCall(w,false);sys(w,from+' ended the call.')}});
+ S.on('m:call',onCall);S.on('m:callans',onCallAns);S.on('m:sig',onSig);S.on('m:hang',onHang);S.on('disconnect',disconnectCalls);
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=APP_NAME.join('')+' Messenger'});
 const dec=s=>{const t=document.createElement('textarea');t.innerHTML=s||'';return t.value};
@@ -386,9 +387,9 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  <button class=tb data-a=buzz title="BUZZ! (Ctrl+G)"><span>&#128243;</span>Buzz</button><button class=tb data-a=aud title="Send an Audible"><span>&#128264;</span>Audibles</button><button class=tb data-a=imv title="IMVironment: theme this conversation for both of you"><span>&#127774;</span>IMVironment</button><button class=tb data-a=rep title="Report this user"><span>&#9873;</span>Report</button></div>
  <div class=call><video class=them autoplay playsinline></video><video class=me autoplay playsinline muted></video><div class=cs></div><button class=hang style="background:#d9534f;color:#fff;border-color:#a33">Hang Up</button></div>
  <div class=peer></div><div class=log></div><div class=typ></div>
- <div class=fmt><span class=smb title=Smileys>${RCSmileys.html(':)')}</span><button type=button class=gifb title='Send a GIF' style='font:bold 10px Tahoma;padding:1px 4px'>GIF</button><button data-s=b><b>B</b></button><button data-s=i><i>I</i></button><button data-s=u><u>U</u></button>${COLORS.map(c=>`<span class=sw data-c="${c}" style="background:${c}"></span>`).join('')}
+ <div class=fmt><span class=smb title=Smileys>${RCSmileys.html(':)')}</span><button data-s=b><b>B</b></button><button data-s=i><i>I</i></button><button data-s=u><u>U</u></button>${COLORS.map(c=>`<span class=sw data-c="${c}" style="background:${c}"></span>`).join('')}
  <select class=font>${['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'].map(f=>`<option>${f}</option>`).join('')}</select><div class=smp></div></div>
- <div class=inbox><button class=ib data-a=aa title="Text style">${YI.svg('font',22)}</button><button class=ib data-a=sm title="Smileys">${YI.svg('smile',22)}</button><button class=ib disabled title="Images coming soon">${YI.svg('image',22)}</button><button class=ib disabled title="Files coming soon">${YI.svg('clip',22)}</button><textarea maxlength=1000 placeholder="Type a message... (Enter to send)"></textarea></div><form></form><div class="adph adph-c">Advertisement - Google Ads</div>`;
+ <div class=inbox><button class=ib data-a=aa title="Text style">${YI.svg('font',22)}</button><button class=ib data-a=sm title="Smileys">${YI.svg('smile',22)}</button><button class=ib disabled title="Images coming soon">${YI.svg('image',22)}</button><button class=ib disabled title="Files coming soon">${YI.svg('clip',22)}</button><button type=button class="ib gifb" title="Send a GIF">GIF</button><textarea maxlength=1000 placeholder="Type a message... (Enter to send)"></textarea></div><form></form><div class="adph adph-c">Advertisement - Google Ads</div>`;
  YI.fill(w);w.querySelector('.inbox').appendChild(w.querySelector('.smp'));
  document.body.appendChild(w);ims[k]=w;if(YD)ydPop(w,'yim_'+k.replace(/\W/g,'_'),440,560,name+' - Private Message',()=>{if(ims[k]!==w)return;try{endCall(w,true)}catch(e){}delete ims[k]});peerInfo(w,name);drag(w);w.onpointerdown=()=>w.style.zIndex=++zTop;
  const st=w._st={b:false,i:false,u:false,color:'#000000',f:'Arial'},ta=w.querySelector('textarea');
@@ -398,8 +399,8 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  w.querySelector('.font').onchange=e=>{st.f=e.target.value;ta.style.fontFamily=st.f};
  const smp=w.querySelector('.smp');smp.innerHTML=RCSmileys.ordered.map(m=>`<span data-k="${m.esc}">${m.html}</span>`).join('');
  w.querySelector('.smb').onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};smp.querySelectorAll('span[data-k]').forEach(e=>e.onclick=()=>{ta.value+=' '+dec(e.dataset.k)+' ';smp.classList.remove('open');ta.focus()});
- const send=async()=>{const t=ta.value.trim();if(!t)return;ta.value='';const r=await emit('m:im',{to:name,text:t,clientId:crypto.randomUUID(),...st});if(r.error)return sys(w,r.error);{const e=w.querySelector('.yseen');e&&e.remove()}line(w,ME.name,r)};
- w.querySelector('.gifb').onclick=e=>{e.stopPropagation();YGif.picker(e.currentTarget,tok=>{ta.value=tok;send()})};
+ const send=async gif=>{const t=(gif||ta.value).trim();if(!t)return;if(!gif)ta.value='';const r=await emit('m:im',{to:name,text:t,clientId:crypto.randomUUID(),...st});if(r.error)return sys(w,r.error);{const e=w.querySelector('.yseen');e&&e.remove()}line(w,ME.name,r)};
+ w.querySelector('.gifb').onclick=e=>{e.stopPropagation();YGif.picker(e.currentTarget,tok=>send(tok))};
  w.querySelector('form').onsubmit=e=>{e.preventDefault();send()};let lt=0;
  const pop=(btn,items,fn)=>{document.querySelectorAll('.ypop').forEach(x=>x.remove());const p=document.createElement('div');p.className='ypop';p.style.cssText='position:fixed;z-index:9999;background:var(--card,#fff);border:1px solid #7f9db9;box-shadow:2px 2px 6px #0004;padding:2px 0;font:12px Tahoma';const r=btn.getBoundingClientRect();p.style.left=r.left+'px';p.style.top=(r.bottom+2)+'px';
   p.innerHTML=items.map(([k,l])=>`<div data-k="${k}" style="padding:4px 14px;cursor:pointer">${l}</div>`).join('');document.body.appendChild(p);p.querySelectorAll('div').forEach(d=>{d.onmouseenter=()=>d.style.background='#dbe8fb';d.onmouseleave=()=>d.style.background='';d.onclick=()=>{p.remove();fn(d.dataset.k)}});setTimeout(()=>document.addEventListener('click',()=>p.remove(),{once:true}),0)};
@@ -419,38 +420,9 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
 async function buzz(n){const w=openIm(n);const r=await emit('m:buzz',{to:n});if(r.error)return sys(w,r.error);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(ME.name)}: BUZZ!!!</div>`);scroll(w)}
 function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.target.closest('.x'))return;const ox=e.clientX-w.offsetLeft,oy=e.clientY-w.offsetTop;
  const mv=e=>{w.style.left=Math.max(0,e.clientX-ox)+'px';w.style.top=Math.max(0,e.clientY-oy)+'px'},up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up)};addEventListener('pointermove',mv);addEventListener('pointerup',up)}}
-// ---------- 1:1 voice / webcam calls (WebRTC P2P, Socket.IO signaling, Google STUN) ----------
-let ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]};fetch('/api/ice').then(r=>r.json()).then(j=>{if(j&&j.iceServers)ICE=j}).catch(()=>{});
-function mediaErr(e,kind){const n=e.name||'Error',dev=kind=='video'?'camera':'microphone';
- if(n=='NotAllowedError'||n=='SecurityError')return `Permission to use your ${dev} was denied (${n}). Click the lock / site-settings icon left of the address bar, allow ${kind=='video'?'Camera and Microphone':'Microphone'}, then reload. Also check your OS privacy settings.`;
- if(n=='NotReadableError'||n=='AbortError')return `Your ${dev} is in use by another app (${n}). Close other apps or tabs using it and try again.`;
- if(n=='NotFoundError')return `No ${dev} was found (${n}).`;return `Could not start your ${dev} (${n}: ${e.message||''}).`}
-async function getMedia(kind){if(!navigator.mediaDevices||!window.isSecureContext)throw {name:'InsecureContext',message:'needs https'};
- const audio={echoCancellation:true,noiseSuppression:true};if(kind!='video')return navigator.mediaDevices.getUserMedia({audio});
- const a=await navigator.mediaDevices.getUserMedia({audio});let v;try{v=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:15}}})}
- catch(e){if(e.name=='OverconstrainedError')v=await navigator.mediaDevices.getUserMedia({video:true});else{a.getTracks().forEach(t=>t.stop());throw e}}
- return new MediaStream([...a.getTracks(),...v.getTracks()])}
-function callUI(w,on,txt){const c=w.querySelector('.call');c.classList.toggle('on',on);c.querySelector('.cs').innerHTML=txt||'';const vid=w._call&&w._call.kind=='video';c.querySelectorAll('video').forEach(v=>v.style.display=vid?'':'none')}
-async function startCall(w,n,kind){if(w._call)return sys(w,'You are already in a call.');const c=contacts[n.toLowerCase()];if(!c||!c.online)return sys(w,n+' is offline.');
- w._call={kind,peer:n,role:'caller',q:Promise.resolve()};callUI(w,true,'Starting your '+(kind=='video'?'webcam':'microphone')+'...');
- try{w._call.stream=await getMedia(kind)}catch(e){const m=mediaErr(e,kind);w._call=null;callUI(w,false);return sys(w,m)}
- w.querySelector('.me').srcObject=w._call.stream;const r=await emit('m:call',{to:n,kind});if(r.error){endCall(w,false);return sys(w,r.error)}callUI(w,true,'Calling <b>'+escT(n)+'</b>... &#128222;');sys(w,'Calling '+n+' ('+(kind=='video'?'webcam':'voice')+')...')}
-function onCall({from,kind}){const w=openIm(from);if(w._call){S.emit('m:callans',{to:from,accept:false});return}SND.ring();w._call={kind,peer:from,role:'callee',q:Promise.resolve(),pending:true};
- callUI(w,true,`<b>${escT(from)}</b> is calling you (${kind=='video'?'webcam':'voice'}). <button class=pri data-ans=1>Answer</button> <button data-ans=0>Decline</button>`);
- w.querySelectorAll('[data-ans]').forEach(b=>b.onclick=async()=>{if(b.dataset.ans=='0'){S.emit('m:callans',{to:from,accept:false});w._call=null;callUI(w,false);return sys(w,'You declined the call.')}
-  callUI(w,true,'Starting your '+(kind=='video'?'webcam':'microphone')+'...');try{w._call.stream=await getMedia(kind)}catch(e){const m=mediaErr(e,kind);S.emit('m:callans',{to:from,accept:false});w._call=null;callUI(w,false);return sys(w,m)}
-  w.querySelector('.me').srcObject=w._call.stream;w._call.pending=false;S.emit('m:callans',{to:from,accept:true});callUI(w,true,'Connecting to <b>'+escT(from)+'</b>...')});
- toast('<b>'+escT(from)+'</b> is calling you')}
-function mkPc(w){const c=w._call,pc=c.pc=new RTCPeerConnection(ICE);c.stream.getTracks().forEach(t=>pc.addTrack(t,c.stream));
- pc.onicecandidate=e=>e.candidate&&S.emit('m:sig',{to:c.peer,data:{ice:e.candidate}});
- pc.ontrack=e=>{const v=w.querySelector('.them');v.srcObject=e.streams[0]||new MediaStream([e.track]);v.muted=false;v.play().catch(()=>{});if(c.kind!='video'){let a=w.querySelector('audio');if(!a){a=document.createElement('audio');a.autoplay=true;w.appendChild(a)}a.srcObject=v.srcObject}};
- pc.onconnectionstatechange=()=>{const s=pc.connectionState;if(s=='connected')callUI(w,true,'&#128994; In a '+(c.kind=='video'?'webcam':'voice')+' call with <b>'+escT(c.peer)+'</b>');if(s=='failed'){sys(w,'The call could not connect (network/firewall).');endCall(w,true)}};return pc}
-async function onCallAns({from,accept}){const w=ims[from.toLowerCase()];if(!w||!w._call||w._call.role!='caller')return;if(!accept){sys(w,from+' declined the call.');return endCall(w,false)}
- const pc=mkPc(w);const o=await pc.createOffer();await pc.setLocalDescription(o);S.emit('m:sig',{to:from,data:{sdp:pc.localDescription}});callUI(w,true,'Connecting to <b>'+escT(from)+'</b>...')}
-function onSig({from,data}){const w=ims[from.toLowerCase()];if(!w||!w._call||!data)return;const c=w._call;c.q=c.q.then(async()=>{
- if(data.sdp){if(data.sdp.type=='offer'){if(c.pending)return;const pc=c.pc||mkPc(w);await pc.setRemoteDescription(data.sdp);const a=await pc.createAnswer();await pc.setLocalDescription(a);S.emit('m:sig',{to:from,data:{sdp:pc.localDescription}})}
-  else if(c.pc)await c.pc.setRemoteDescription(data.sdp)}else if(data.ice&&c.pc)await c.pc.addIceCandidate(data.ice).catch(()=>{})}).catch(e=>console.warn('sig',e))}
-function endCall(w,notify){const c=w._call;if(!c)return;if(notify)S&&S.emit('m:hang',{to:c.peer});c.pc&&c.pc.close();c.stream&&c.stream.getTracks().forEach(t=>t.stop());w.querySelectorAll('video').forEach(v=>v.srcObject=null);w.querySelector('audio')?.remove();w._call=null;callUI(w,false);notify&&sys(w,'Call ended.')}
-addEventListener('beforeunload',()=>Object.values(ims).forEach(w=>endCall(w,true)));
+const {startCall,onCall,onCallAns,onSig,onHang,disconnect:disconnectCalls,endCall}=createMessengerCalls({
+ socket:()=>S,contact:name=>contacts[name.toLowerCase()],openIm,findIm:name=>ims[name.toLowerCase()],notice:sys,toast,
+ sound:type=>tone(type==='ring'?[[440,.18,'sine'],[480,.18,'sine'],[440,.18,'sine'],[480,.18,'sine']]:[[480,.12,'sine'],[320,.22,'sine']])
+});
 </script><script src="/mcog.js"></script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div><script src="/social/embed.js"></script></body></html>
 

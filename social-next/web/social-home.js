@@ -1246,7 +1246,6 @@ function mountOwnerWallComposer() {
   thought.name = 'thought';
   thought.rows = 3;
   thought.maxLength = 3000;
-  thought.required = true;
   thought.placeholder = 'Share something on your profile…';
   thought.setAttribute('aria-label', 'Write a post');
   form.elements.thought.replaceWith(thought);
@@ -1254,7 +1253,9 @@ function mountOwnerWallComposer() {
   send.className = 'wall-send';
   send.setAttribute('aria-label', 'Post');
   send.title = 'Post';
-  form.querySelector('button[type=button]').classList.add('photo-button');
+  form.querySelector('.post-attachments').open = false;
+  form.querySelector('.post-attachments input[type=file]').value = '';
+  form.elements.attachmentUrl.value = '';
   send.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M4 3.5 22 12 4 20.5z"/></svg>';
   form.querySelector('.avatar').outerHTML = profileAvatar('Zainy');
   wall.replaceWith(form);

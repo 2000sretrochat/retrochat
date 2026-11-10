@@ -281,13 +281,15 @@ function sockets(io, hooks) {
     // 1:1 calls (voice / webcam) – signaling relay
     for (const ev of ['m:call', 'm:callans', 'm:sig', 'm:hang']) s.on(ev, safe(async d => { if (!ready || !d) return; const t = await peer(d.to); if (!t || !online.has(t.id)) return { error: 'They are not available.' };
       if (ev === 'm:sig' && JSON.stringify(d.data || '').length > 60000) return;
+      if (d.callId !== undefined && (typeof d.callId !== 'string' || !/^[a-f0-9-]{36}$/i.test(d.callId))) return { error:'Invalid call ID.' };
       let destination;
       if (ev === 'm:call') {
-        const route = callRoutes.start(s, uid, t.id, online.get(t.id) || []);
+        const route = callRoutes.start(s, uid, t.id, online.get(t.id) || [], d.callId);
         if (route.error) return { error: route.error }; destination = route.target;
-      } else destination = callRoutes.relay(s, uid, t.id, ev, !!d.accept);
+      } else destination = callRoutes.relay(s, uid, t.id, ev, !!d.accept, d.callId);
       if (!destination) return { error: 'This call is no longer active in this window.' };
-      destination.emit(ev, { from: me, kind: d.kind === 'video' ? 'video' : 'audio', accept: !!d.accept, data: d.data }); }));
+      destination.emit(ev, { from: me, kind: d.kind === 'video' ? 'video' : 'audio', accept: !!d.accept, data: d.data,
+        callId:d.callId, ...(ev==='m:hang'&&d.reason==='no-answer'?{reason:d.reason}:{}) }); }));
     s.on('disconnect', async () => { callRoutes.disconnect(s); const set = online.get(uid); if (!set) return; set.delete(s); if (!set.size) { online.delete(uid); const st = state.get(uid); state.delete(uid);
       try { await broadcast(uid, me); } catch {} if (st && st.idle) st.idle = false; } });
   });

@@ -48,7 +48,7 @@ button{font:12px Tahoma;background:linear-gradient(#fff,#e3ecf7);border:1px soli
 #sty{display:none;align-items:center;gap:6px;padding:3px 8px;flex-wrap:wrap;font-size:12px}#sty.open{display:flex}#sty button{padding:1px 8px}#sty .on{background:var(--mid);border-color:var(--deep)}
 .sw{display:inline-block;width:14px;height:14px;border:1px solid #555;vertical-align:middle;cursor:pointer;margin-left:2px}.sw.on{outline:2px solid var(--acc)}
 #form{display:flex;gap:6px;padding:0 8px 8px}#msg{flex:1;height:44px;resize:none}#send{width:70px}
-#smp{display:none;position:absolute;bottom:28px;left:6px;width:340px;max-height:230px;overflow:auto;background:#fff;border:1px solid var(--deep);box-shadow:2px 2px 6px rgba(0,0,0,.3);padding:4px;z-index:40}#smp.open{display:block}#smp span[data-k]{display:inline-block;padding:2px;cursor:pointer}#smp span[data-k]:hover{background:var(--acc)}
+#smp{display:none;position:absolute;bottom:28px;left:6px;width:340px;max-width:calc(100vw - 26px);max-height:230px;overflow:auto;background:#fff;border:1px solid var(--deep);box-shadow:2px 2px 6px rgba(0,0,0,.3);padding:4px;z-index:40}#smp.open{display:block}#smp span[data-k]{display:inline-block;padding:2px;cursor:pointer}#smp span[data-k]:hover{background:var(--acc)}
 #ad-slot{min-height:90px;max-width:728px;margin:6px auto 10px;border:1px dashed #d5e2f0}
 .camwin,.pmwin{position:fixed;background:#f3f6fa;border:1px solid var(--deep);border-radius:5px 5px 2px 2px;box-shadow:3px 3px 10px rgba(0,0,0,.35);z-index:50;overflow:hidden}
 .camwin{width:244px}.pmwin{width:300px}
@@ -176,6 +176,7 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
 <header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <label class="social-chat-search"><span aria-hidden="true">⌕</span><input type="search" id="social-chat-search" placeholder="Search chat rooms and topics" aria-label="Search chat rooms and topics"></label>
+  <a href="https://github.com/2000sretrochat/retrochat/releases/latest/download/RazzleMessenger-Setup.exe">Download Messenger</a>
   <a href="/?chat=1" data-chat-signin>Sign in</a>
 </header>
 <div class="social-chat-layout" id="social-chat-layout">
@@ -247,7 +248,7 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
 <div id=modown class=modg><button id=mAdm>Make Admin</button><button id=mBan>Ban</button><label style="margin-left:8px">Mics <select id=mMics><option value=1>Single mic</option><option value=2>Multi: 2</option><option value=3>Multi: 3</option><option value=4>Multi: 4</option><option value=5>Multi: 5</option></select></label><label style="margin-left:8px"><input type=checkbox id=mHq style="width:auto;display:inline"> Hands up</label><label style="margin-left:8px">Mic timer <select id=mAn title="Posts 'NAME has been on the mic N minutes' in the room"><option value=0>Off</option><option value=1>1 min</option><option value=2>2 min</option><option value=3>3 min</option><option value=5>5 min</option></select></label><label style="margin-left:8px">Turn limit <select id=mTm><option value=0>Off</option><option value=30>30 sec</option><option value=60>1 min</option><option value=90>1 min 30</option><option value=c>Custom...</option></select></label></div>
 <div style="font-weight:700">Muted / bounced</div><div id=modl></div><div id=modadm style="font-size:12px;color:var(--muted)"></div></div></div>
 <div id="foot"><span class="appname-plain"></span> &middot; <a href="/privacy.html">Privacy</a></div>
-<script src="/device.js"></script><script src="/yd.js"></script><script src="/settings.js"></script><script src="/browse.js"></script><script src="/av.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script>
+<script src="/device.js"></script><script src="/yd.js"></script><script src="/settings.js"></script><script src="/browse.js"></script><script src="/av.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=2"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',' Chat'];
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
