@@ -96,11 +96,21 @@ test('desktop signed-out rules must not hide rooms #main (chat log + People)', (
   assert.match(rooms, /html\.yd #chat #main\{display:flex/);
 });
 
-test('desktop hides all ad placeholders (.adph / #adRoom / #ad-slot)', () => {
+test('beta ad placements are inert in the room and both Messenger views', () => {
   assert.match(yd, /html\.yd #adRoom/);
   assert.match(yd, /html\.yd \.adph/);
   assert.match(rooms, /html\.yd #ad-slot,html\.yd #adRoom,html\.yd \.adph/);
-  // Web placeholders remain in HTML for non-desktop
-  assert.match(rooms, /id=adRoom>Advertisement/);
-  assert.match(index, /adph/);
+  const embedded = fs.readFileSync(path.join(root, 'public/social/messenger.html'), 'utf8');
+  for (const html of [index, embedded, rooms]) {
+    assert.match(html, /<template data-ad-placement="private-message">/);
+    const activeMarkup = html.replace(/<template data-ad-placement="[^"]+">[\s\S]*?<\/template>/g, '');
+    assert.doesNotMatch(activeMarkup, /<div (?:class="adph\b|id="ad-slot")/);
+    assert.doesNotMatch(activeMarkup, /Advertisement - Google Ads/);
+  }
+  assert.match(rooms, /<template data-ad-placement="chat-room">/);
+  assert.match(rooms, /<template data-ad-placement="room-directory">/);
+  for (const html of [index, embedded]) {
+    assert.match(html, /<template data-ad-placement="room-browser">/);
+    assert.doesNotMatch(html, /data-m=invite/);
+  }
 });

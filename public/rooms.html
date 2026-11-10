@@ -243,10 +243,10 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
 <div id="sty"><button id="bB"><b>B</b></button><button id="bI"><i>I</i></button><button id="bU"><u>U</u></button> Color: <span id="sws"></span>
  Font: <select id="font"><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Comic Sans MS</option><option>Times New Roman</option><option>Courier New</option></select></div>
 <div id="form" class=inbox><button class="ib fontb" id=bAa title="Font: bold, italic, color and typeface"><i data-i=font data-s=20></i><span>Font</span></button><button class=ib id=bSm title="Smileys"><i data-i=smile data-s=22></i></button><textarea id="msg" maxlength="300" autocomplete="off" placeholder="Type a message..."></textarea></div>
-<div class="adph adph-c" id=adRoom>Advertisement - Google Ads</div>
+<template data-ad-placement="chat-room"><div class="adph adph-c" id=adRoom></div></template>
 </div>
-<!-- Ad slot: paste the AdSense <ins class="adsbygoogle"> unit inside this div -->
-<div id="ad-slot" style="display:none"></div><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div>
+<!-- Ad placements stay inert during beta. -->
+<template data-ad-placement="room-directory"><div id="ad-slot"></div></template><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div>
 <div id="modw" class="pmwin" style="display:none;flex-direction:column;width:330px;left:calc(50% - 165px);top:120px"><div class=tbar><i data-i=shield data-s=16></i> Room Admin Console<span class=sp></span><span class=x id=modX><i data-i=close data-s=14></i></span></div>
 <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
 <label>User: <select id=modu style="width:100%"></select></label>
@@ -666,7 +666,7 @@ function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.t
 // private IM
 const pms={};
 function openPm(n){if(pms[n]){pms[n].querySelector('input').focus();return pms[n]}const w=document.createElement('div');w.className='pmwin';const k=Object.keys(pms).length;w.style.left=(320+k*30)+'px';w.style.top=(140+k*30)+'px';
- w.innerHTML=`<div class=tbar>&#128172; ${escT(n)} -- Private Message<span class=sp></span><span class=x>X</span></div><div class=pl></div><form><button type=button class=gifb title='Send a GIF' style='font:bold 10px Tahoma;padding:1px 4px'>GIF</button><input type=text maxlength=300><button>Send</button></form><div class="adph adph-c">Advertisement - Google Ads</div>`;
+ w.innerHTML=`<div class=tbar>&#128172; ${escT(n)} -- Private Message<span class=sp></span><span class=x>X</span></div><div class=pl></div><form><button type=button class=gifb title='Send a GIF' style='font:bold 10px Tahoma;padding:1px 4px'>GIF</button><input type=text maxlength=300><button>Send</button></form><template data-ad-placement="private-message"><div class="adph adph-c"></div></template>`;
  document.body.appendChild(w);pms[n]=w;drag(w);w.querySelector('.x').onclick=()=>{w.remove();delete pms[n]};
  w.querySelector('form').onsubmit=e=>{e.preventDefault();const i=w.querySelector('input'),t=i.value.trim();if(!t)return;S.emit('pm',{to:n,text:t},r=>{if(r.error)pmLine(n,'<i style=color:#c00>'+escT(r.error)+'</i>');else pmLine(n,`<b style="color:var(--brand)">${escT(me)}:</b> ${YGif.render(r.text)||smile(r.text)}`)});i.value=''};
  w.querySelector('.gifb').onclick=e=>{e.stopPropagation();YGif.picker(e.currentTarget,tok=>{w.querySelector('input').value=tok;w.querySelector('form').requestSubmit()})};
