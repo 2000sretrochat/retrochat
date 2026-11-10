@@ -117,3 +117,19 @@ test('the console page and window need no room: no room/socket state is read to 
   assert.match(html, /api\('room',\{room,\.\.\.b\}\)/);
   assert.match(html, /api\('roommod',\{room,action:b\.dataset\.a,who/);
 });
+
+test('signing in through the form (desktop app always does: session cookie) also turns on master tools', async () => {
+  for (const f of ['public/index.html', 'public/social/messenger.html']) {
+    const s = read(f);
+    assert.match(s, /\$\('iPw'\)\.value='';start\(\);masterCheck\(\)\}/, f + ': doIn runs the master check after start()');
+    const m = s.match(/function masterCheck\(\)\{[^\r\n]*\}/); assert.ok(m, f);
+    for (const [me, want] of [[{ name: 'razzle', m: true }, 1], [{ name: 'MoonPie' }, 0], [{ name: null }, 0]]) {
+      let inits = 0; const ctx = { MW: null, masterInit() { inits++; ctx.MW = 1; }, fetch: async (u, o) => { assert.equal(u, '/api/me'); assert.equal(o.cache, 'no-store'); return { json: async () => me }; } };
+      vm.createContext(ctx); vm.runInContext(m[0] + '\nthis.masterCheck=masterCheck;', ctx);
+      ctx.masterCheck(); ctx.masterCheck(); await new Promise(r => setTimeout(r, 10));
+      assert.equal(inits, want, f + ' ' + JSON.stringify(me) + ': masterInit once for masters only, never twice');
+    }
+  }
+  // the desktop app signs in with remember:false, so every launch starts signed out and goes through doIn
+  assert.match(read('desktop/main.js'), /siteRequest\('POST', '\/api\/login', \{ name, password, remember: false \}\)/);
+});
