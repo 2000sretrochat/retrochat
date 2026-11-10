@@ -339,7 +339,7 @@ async function renameURoom(old, nn) {
   try { await db.q('update user_rooms set name=$2 where name=$1', [old, name]);
     for (const t of ['room_meta', 'room_mod', 'room_ann', 'room_history', 'favorites']) await db.q(`update ${t} set room=$2 where room=$1`, [old, name]).catch(err => console.error('rename', t, err.message));
   } catch (err) { UROOMS.set(old, r0); return { error: err.code === '23505' ? 'A room with that name already exists.' : 'Could not rename the room right now.' }; }
-  UROOMS.set(name, r0); for (const M of [ROOMS, TOPICS, history, RATE, MOD, MICS, HQ, MTIMER, QUEUE, MANN, ANN]) if (old in M) { M[name] = M[old]; delete M[old]; }
+  UROOMS.set(name, r0); for (const M of [ROOMS, TOPICS, history, RATE, MOD, MICS, HQ, MTIMER, QUEUE, MANN, ANN, MUSICON]) if (old in M) { M[name] = M[old]; delete M[old]; }
   for (const x of socks(old)) { x.leave(old); x.join(name); x.data.room = name; } REC.rename(old, name);
   io.to(name).emit('room-renamed', { from: old, to: name }); push(name, { sys: true, text: 'Room renamed to ' + esc(name) }); upd(name); io.emit('rooms-changed'); return { ok: true, name }; }
 function setMics(room, n) { n = +n; if (!ROOMS[room]) return 'No such room.'; if (![1, 2, 3, 4, 5].includes(n)) return 'Mic limit must be 1 to 5.';
@@ -367,7 +367,9 @@ const AH = { roomExists: r => !!ROOMS[r], roomRating: r => rateOf(r), rawRoomOf:
   toRoomUser: (n, ev, d) => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); x && x.emit(ev, d); }, roomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && !x.data.inc && !x.data.master && ROOMS[x.data.room] ? x.data.room : null; } };
 function lists(room) { if (!room) return; setImmediate(() => { for (const x of socks(room)) if (x.data.acct) AH.roomChanged?.(x.data.name); }); const R = {}; for (const x of socks(room)) { const k = x.data.master ? 1 : 0; R[k] = R[k] || [roster(room, !!k), members(room, !!k)]; x.emit('roster', R[k][0]); x.emit('members', R[k][1]); } }
 // Music rooms: whoever has the mic can say what they're playing ("Artist - Song"); cleared when they let go of the mic.
-const isMusicRoom = r => r === musicRoom || ROOMS[r] === 'Music', NPLAST = {};
+// Music sharing (Play from + Band/Artist/Song) is a per-room owner setting; music rooms default ON, every other room OFF.
+const MUSICON = {}; const musicDefault = r => r === musicRoom || ROOMS[r] === 'Music';
+const isMusicRoom = r => !!r && (r in MUSICON ? MUSICON[r] : musicDefault(r)), NPLAST = {};
 function npList(room) { const l = []; for (const x of socks(room)) { if (x.data.np && !x.data.talk) x.data.np = null; if (x.data.np) l.push({ name: x.data.name, artist: x.data.np.artist, song: x.data.np.song }); } return l; }
 function npSync(room) { if (!room || !isMusicRoom(room)) return; const list = npList(room), k = JSON.stringify(list); if (NPLAST[room] === k) return; NPLAST[room] = k; io.to(room).emit('np', { room, list }); }
 function upd(room) { if (room) { if(room===musicRoom)void musicLobby.tick(); lists(room); io.to(room).emit('micq', micq(room)); npSync(room); } }
@@ -501,7 +503,7 @@ io.on('connection', s => {
     if (!u || !s.data.acct || !(u.ownerLc === s.data.acct.name.toLowerCase() || s.data.master)) return cb({ error: 'Only the room owner can edit this room.' });
     cb({ name: r, topic: TOPICS[r] || '', cat: ROOMS[r], icon: u.icon || '', rating: rateOf(r), mics: micsOf(r), cats: Object.keys(DIR), icons: ICONS }); });
   s.on('np:set', (d, cb) => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room;
-    if (!room || !isMusicRoom(room)) return cb({ error: 'Song titles can be shared in music rooms only.' });
+    if (!room || !isMusicRoom(room)) return cb({ error: 'Music sharing is off in this room.' });
     if (!s.data.talk) return cb({ error: 'Take the mic first, then set what you are playing.' });
     const now = Date.now(); s.data.npT = (s.data.npT || []).filter(t => now - t < 60e3);
     if (s.data.npT.length >= 6 || now - (s.data.npT[s.data.npT.length - 1] || 0) < 3000) return cb({ error: 'Slow down - try again in a few seconds.' });
@@ -561,7 +563,13 @@ io.on('connection', s => {
     let n=0;try{n=db.status().ready?await musicLobby.count():0;}catch{}
     if(!n)return cb({reason:'empty'});
     cb({reason:micsUsed(musicRoom)>0||(hqOn(musicRoom)&&qOf(musicRoom).length>0)?'mic':'starting'});});
-  s.on('avmode', on => { if (!s.data.name) return; s.data.music = !!on; upd(s.data.room); });
+  s.on('avmode', on => { if (!s.data.name) return; s.data.music = !!on && isMusicRoom(s.data.room); upd(s.data.room); });
+  s.on('room:music', (on, cb) => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room;
+    if (!room || !UROOMS.has(room) || !isOwner()) return cb({ error: 'Only the room owner can change music sharing.' });
+    if (typeof on !== 'boolean') return cb({ error: 'Choose on or off.' });
+    MUSICON[room] = on; MASTER.saveMusic && MASTER.saveMusic(room, on);
+    if (!on) { for (const x of socks(room)) { x.data.np = null; x.data.music = false; } NPLAST[room] = '[]'; io.to(room).emit('np', { room, list: [] }); }
+    io.to(room).emit('room:music', { room, on }); push(room, { sys: true, text: esc(s.data.name) + (on ? ' turned on music sharing in this room.' : ' turned off music sharing in this room.') }); upd(room); cb({ ok: true, on }); });
   s.on('voice', on => { if (!s.data.name) return; s.data.voice = !!on; if (!on) s.data.talk = false; upd(s.data.room); });
   s.on('talk', (on, cb) => { const ack = typeof cb === 'function' ? cb : () => {}; if (!s.data.name || !s.data.voice) return ack({ error: 'Voice is off.' }); const room = s.data.room;
     if (on && dotLeft(room, s.data.name.toLowerCase()) !== null) { s.emit('dotted', {}); return ack({ error: "You've been dotted." }); }
@@ -671,7 +679,7 @@ io.on('connection', s => {
 });
 acc.sockets(io, AH);
 const RESET = require('./reset')(app, express);
-const MASTER = require('./master')({ BOTMOD, resetLink: RESET.makeLink, applyBotProfiles, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, setMicOpts, RATINGS, KICK_MS });
+const MASTER = require('./master')({ BOTMOD, resetLink: RESET.makeLink, applyBotProfiles, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, MUSICON, setMicOpts, RATINGS, KICK_MS });
 // ADMIN_KEY: verify/grant exact authorized masters (t228u/t229u). No password changes.
 app.get('/api/admin/masters', async (req, res) => {
   if (!keyOk(req.get('x-admin-key'))) return res.status(401).json({ error: 'Unauthorized' });

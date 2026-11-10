@@ -59,7 +59,7 @@ module.exports = function (C) {
     for (const n of NAMES) { const u = (await db.q('select id,name from users where name_lc=$1', [n]))[0]; if (u) await seedMaster(u.id, u.name); }
     try { await ensureAuthorizedMasters(); } catch (e) { console.error('[master] ensureAuthorizedMasters', e.message); }
     (await db.q('select ip from ip_bans')).forEach(r => IPBAN.add(r.ip));
-    for (const r of await db.q('select room,rating,mics,hq,mtimer,mann from room_meta')) { if (!ROOMS[r.room]) continue; if (r.rating) RATE[r.room] = r.rating; if (r.mics) MICS[r.room] = r.mics; if (r.hq) C.HQ[r.room] = true; if (r.mtimer) C.MTIMER[r.room] = r.mtimer; if (r.mann && C.MANN) C.MANN[r.room] = r.mann; }
+    for (const r of await db.q('select room,rating,mics,hq,mtimer,mann,music from room_meta')) { if (!ROOMS[r.room]) continue; if (r.music !== null && r.music !== undefined && C.MUSICON) C.MUSICON[r.room] = !!r.music; if (r.rating) RATE[r.room] = r.rating; if (r.mics) MICS[r.room] = r.mics; if (r.hq) C.HQ[r.room] = true; if (r.mtimer) C.MTIMER[r.room] = r.mtimer; if (r.mann && C.MANN) C.MANN[r.room] = r.mann; }
     for (const r of await db.q('select room,name_lc,kind,until from room_mod')) { if (!ROOMS[r.room]) continue; const m = mod(r.room);
       if (r.kind === 'admin') m.admins.add(r.name_lc); else if (r.kind === 'mt') m.mt.add(r.name_lc); else if (r.kind === 'mm') m.mm.add(r.name_lc);
       else if (r.kind === 'kick' && +r.until > Date.now()) m.kicked.set(r.name_lc, +r.until); else if (r.kind === 'dot' && +r.until > Date.now()) m.dot.set(r.name_lc, +r.until); }
@@ -102,6 +102,7 @@ module.exports = function (C) {
     if (typeof C.applyBotProfiles === 'function') await C.applyBotProfiles();
   }
   const saveRating = (room, rating) => { q(rating ? 'insert into room_meta(room,rating) values($1,$2) on conflict(room) do update set rating=$2' : 'delete from room_meta where room=$1', rating ? [room, rating] : [room]).catch(() => {}); };
+  const saveMusic = (room, on) => q('insert into room_meta(room,music) values($1,$2) on conflict(room) do update set music=$2', [room, !!on]).catch(() => {});
   const saveMeta = (room, o) => { q('insert into room_meta(room,hq,mtimer,mann) values($1,$2,$3,$4) on conflict(room) do update set hq=$2,mtimer=$3,mann=$4', [room, !!o.hq, o.mtimer | 0, o.mann | 0]).catch(() => {}); };
   const saveMics = (room, n) => { if (n) q('insert into room_meta(room,mics) values($1,$2) on conflict(room) do update set mics=$2', [room, n]).catch(() => {}); };
   async function saveMod(room) { if (!ready()) return; try {
@@ -247,5 +248,5 @@ module.exports = function (C) {
     await audit(me.name, 'bot-avatar', row.name, m[1] + ' ' + buf.length + 'B'); res.json({ ok: true, bytes: buf.length });
   }));
 
-  return { seedBotProfiles, reserved, ipBanned: ip => IPBAN.has(ip), seedMaster, ensureAuthorizedMasters, AUTHORIZED_MASTERS, load, saveRating, saveMics, saveMeta, saveMod, report, EXAMPLE_BLOCKED };
+  return { seedBotProfiles, reserved, ipBanned: ip => IPBAN.has(ip), seedMaster, ensureAuthorizedMasters, AUTHORIZED_MASTERS, load, saveRating, saveMics, saveMeta, saveMusic, saveMod, report, EXAMPLE_BLOCKED };
 };
