@@ -19,8 +19,8 @@ test('exactly two trivia hosts, natural names, no [bot] suffix, stable unique id
   assert.equal(BOTMOD.byAlias('marcus').id, 'gamenight');
 });
 
-test('ALL bots (casual + international + hosts) have descriptive, non-boilerplate profiles', () => {
-  const S = BOTMOD.PROFILE_SEEDS; assert.equal(S.length, BOTMOD.BOTS.length); assert.ok(S.length >= 60);
+test('Speaking bots have descriptive, non-boilerplate profiles', () => {
+  const S = BOTMOD.PROFILE_SEEDS.filter(s => !s.silent); assert.ok(S.length >= 60);
   for (const s of S) {
     assert.ok(s.display_name && s.display_name.length >= 2, s.id);
     assert.ok(s.bio.length >= 25, 'bio too short ' + s.id);
@@ -93,7 +93,7 @@ test('LIVE server: trivia in chat, persistent scores, all bot profiles, master e
     assert.equal(mar.name, 'MarcusT'); assert.equal(mar.bio, 'MASTER EDITED BIO', 'master edit preserved by migration'); assert.equal(mar.updated_by, 'zainy');
     assert.equal(rows.some(r => /\[bot\]/.test(r.name)), false);
     // public profiles for every bot via both routes
-    for (const b of BOTMOD.BOTS) { const p = await (await fetch(U + '/api/bot-profile/' + b.id)).json(); assert.equal(p.name, b.name); assert.ok(p.bio, b.id); assert.equal(p.avatar, 'bot:' + b.id); assert.equal('label' in p, false);
+    for (const b of BOTMOD.BOTS) { const p = await (await fetch(U + '/api/bot-profile/' + b.id)).json(); assert.equal(p.name, b.name); assert.equal(!!p.bio, !b.silent, b.id); assert.equal(p.avatar, b.silent ? '' : 'bot:' + b.id); assert.equal('label' in p, false);
       const p2 = await (await fetch(U + '/api/profile/' + encodeURIComponent(b.name))).json(); assert.equal(p2.id, b.id); }
     assert.equal((await fetch(U + '/api/profile/' + encodeURIComponent('TriviaTime [bot]'))).status, 200);
     const av = await fetch(U + '/bot-av/sakura_chan_98'); assert.equal(av.status, 200); assert.match(av.headers.get('content-type'), /svg/);

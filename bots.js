@@ -53,13 +53,29 @@ const HOSTS = [
   { id: 'mixtapebot', name: 'mel_mixtapes', room: 'Music Lobby', music: true, legacy: ['MixtapeBot [bot]'], aliases: ['mel_mixtapes', 'mel', 'mixtape', 'mixtapebot', 'music'] },
 ];
 for (const h of HOSTS) BOTS.push(Object.assign({ lang: 'en', interactive: true, av: '' }, h));
+// Keep these ids and their order to preserve the preview profiles and portraits.
+const PREVIEW_BOTS = [
+  {id:'preview-nightowl',name:'NightOwl',room:'Late Night'},
+  {id:'preview-retrofan',name:'RetroFan',room:'Lobby'},
+  {id:'preview-mialuvs',name:'MiaLuvs',room:'Chit Chat'},
+];
+BOTS.push(...PREVIEW_BOTS.map(b=>({...b,lang:'en'})));
+for(const [room,names] of [
+  ['Lobby',['cablekid77','quiet_circuit']],
+  ['Chit Chat',['afterhours_lee','bluejacket42']],
+  ['Late Night',['static_river','nightbus_81']],
+  ['Music Lobby',['sideb_radio','tape_deck73']],
+]) BOTS.push(...B(room,'en',names).map(b=>({...b,silent:true})));
 const slug = n => String(n).toLowerCase().replace(/\s*\[bot\]\s*$/, '').replace(/[^a-z0-9_]/g, '');
-BOTS.forEach((b, i) => { if (!b.id) b.id = slug(b.name); b.color = b.color || COLS[i % COLS.length]; b.font = b.font || FNTS[(i * 3) % FNTS.length]; b.av = 'bot:' + b.id; });
+BOTS.forEach((b, i) => { if (!b.id) b.id = slug(b.name); b.color = b.color || COLS[i % COLS.length]; b.font = b.font || FNTS[(i * 3) % FNTS.length]; b.av = b.silent ? '' : 'bot:' + b.id; });
 for (const b of BOTS) (byRoom[b.room] = byRoom[b.room] || []).push(b);
 for (const b of BOTS) if (b.interactive) b.greet = 'hey! mention me if you need anything';
 
 // ---- Profile seeds for EVERY bot: hand-written persona [display name, location, interests, bio] ----
 const PERSONA = {
+  'preview-nightowl': ['NightOwl', 'Portland, Oregon', 'Music, Travel', 'The rest of the house is asleep and I just made coffee.'],
+  'preview-retrofan': ['RetroFan', 'Columbus, Ohio', 'Politics, Cars', 'I miss the sound of signing on.'],
+  'preview-mialuvs': ['MiaLuvs', 'Austin, Texas', 'Photography, Food, Travel', 'Always have time for a good photo spot.'],
   sk8rboi_1987: ['Kyle', 'San Diego, CA', 'skateboarding, Tony Hawk, pop punk', 'Night shift skater. If the park lights are off I am in here talking about kickflips and Blink-182.'],
   xxmoonchildxx: ['Luna', 'Portland, OR', 'astrology, poetry, tarot', 'Moon kid. Writes bad poetry at 2am and reads everyone\'s horoscope whether they ask or not.'],
   dreamgurl_04: ['Brittany', 'Tampa, FL', 'boy bands, glitter gel pens, The Sims', 'Lobby regular since forever. Ask me about the best away messages.'],
@@ -130,8 +146,8 @@ const LEGACY_DEFAULT_BIO = {
   mixtapebot: 'Playlist tips and song picks. Say @MixtapeBot recommend.',
 };
 const LEGACY_DEFAULT_ROOM = { gamenight: 'Lobby' };
-const PROFILE_SEEDS = BOTS.map(b => { const p = PERSONA[b.id]; if (!p) throw new Error('bots.js: missing persona for ' + b.id);
-  return { id: b.id, name: b.name, display_name: p[0], location: p[1], interests: p[2], bio: p[3], avatar_key: '', room: b.room, interactive: !!b.interactive, lang: b.lang, legacy: b.legacy || [] }; });
+const PROFILE_SEEDS = BOTS.map(b => { const p = b.silent ? [b.name, '', '', ''] : PERSONA[b.id]; if (!p) throw new Error('bots.js: missing persona for ' + b.id);
+  return { id: b.id, name: b.name, display_name: p[0], location: p[1], interests: p[2], bio: p[3], avatar_key: '', room: b.room, silent: !!b.silent, interactive: !!b.interactive, lang: b.lang, legacy: b.legacy || [] }; });
 const byId = id => BOTS.find(b => b.id === String(id || '').toLowerCase());
 const byAlias = h => { h = String(h || '').toLowerCase(); return BOTS.find(b => b.interactive && (b.aliases || []).includes(h)) || BOTS.find(b => b.name.toLowerCase() === h); };
 module.exports = { BOTS, byRoom, P, line, reply, greet, PROFILE_SEEDS, HOSTS, byId, byAlias, LEGACY_DEFAULT_DISPLAY, LEGACY_DEFAULT_BIO, LEGACY_DEFAULT_ROOM };

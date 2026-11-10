@@ -225,7 +225,10 @@ function sockets(io, hooks) {
     s.on('m:respond', safe(async ({ name, accept: yes }) => {
       if (!ready) return; const t = await idOf(name); if (!t) return { error: 'Request not found.' };
       const r = await db.q('select 1 from requests where from_id=$1 and to_id=$2', [t.id, uid]); if (!r.length) return { error: 'Request not found.' };
-      if (yes) return await accept(t); await db.q('delete from requests where from_id=$1 and to_id=$2', [t.id, uid]); return { ok: true };
+      if (yes) return await accept(t);
+      await db.q('delete from requests where from_id=$1 and to_id=$2', [t.id, uid]);
+      contactsChangedFn(uid); // Only refresh the recipient's own Messenger windows.
+      return { ok: true };
     }));
     s.on('m:remove', safe(async ({ name }) => { if (!ready) return; const t = await idOf(name); if (!t) return; await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)', [uid, t.id]);
       toUser(uid, 'm:gone', { name: t.name }); toUser(t.id, 'm:gone', { name: me }); }));

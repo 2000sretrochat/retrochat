@@ -13,7 +13,7 @@ test('Social settings accept supported fields and reject unsafe images and links
 
 test('Social API enforces content ownership, admin permissions, and same-origin writes',async t=>{
   const postId='d503a3f4-4b9e-4f31-951e-05881c2a4720';
-  const app=express(),router=express.Router(),queries=[];
+  const app=express(),router=express.Router(),queries=[],contactUpdates=[];
   const db={q:async(sql,args)=>{
     queries.push({sql,args});
     if(sql.startsWith('select id,name,avatar,status,status_msg'))return [{id:22,name:'BotPal',avatar:'a1',bot:true}];
@@ -26,7 +26,7 @@ test('Social API enforces content ownership, admin permissions, and same-origin 
     return [];
   }};
   router.use((req,_res,next)=>{req.socialAccount={id:4,alias:'Alice',master:req.headers['x-test-admin']==='yes'};next();});
-  registerApi(router,express,db,{});
+  registerApi(router,express,db,{contactsChanged:(...ids)=>contactUpdates.push(ids)});
   app.use('/social-next',router);
   const server=app.listen(0,'127.0.0.1');t.after(()=>server.close());await once(server,'listening');
   const base='http://127.0.0.1:'+server.address().port+'/social-next/api';
@@ -42,6 +42,8 @@ test('Social API enforces content ownership, admin permissions, and same-origin 
   assert.ok(queries.some(({sql,args})=>sql.startsWith('insert into social_restrictions') && args[1]==='social' && args[3]===4));
   const post=await request('/posts','POST',{body:'Link',link:'javascript:alert(1)'});
   assert.equal(post.status,400);
+  assert.equal((await request('/friends/BotPal','POST',{action:'decline'})).status,200);
+  assert.deepEqual(contactUpdates.splice(0),[[4]]);
   assert.equal((await request('/friends/BotPal','POST',{action:'request'})).status,200);
   assert.ok(queries.some(({sql,args})=>sql.startsWith('insert into contacts(owner,contact) values($1,$2),($2,$1)') && args[0]===4 && args[1]===22));
 });
@@ -59,4 +61,21 @@ test('Social bot introductions use stable IDs and never overwrite member aliases
   assert.match(posts[0].args[0],/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/);
   assert.ok(!queries.some(q=>q.sql.includes('update users')));
   assert.ok(queries.filter(q=>q.sql.includes('insert into users')).every(q=>q.sql.includes('on conflict(name_lc) do nothing')));
+});
+
+test('chat bots and Social profiles share stable aliases, and quiet visitors have blank profiles',async()=>{
+  const {BOTS,PROFILE_SEEDS}=require('../bots');
+  assert.equal(new Set(BOTS.map(bot=>bot.name.toLowerCase())).size,BOTS.length);
+  assert.deepEqual(BOTS.map(bot=>bot.id),PROFILE_SEEDS.map(seed=>seed.id));
+  assert.deepEqual(PROFILE_SEEDS.slice(61,64).map(seed=>seed.id),['preview-nightowl','preview-retrofan','preview-mialuvs']);
+  const visitor=BOTS.find(bot=>bot.silent),queries=[];
+  const {seedSocialBots}=require('../social-next/bots');
+  await seedSocialBots({q:async(sql,args=[])=>{
+    queries.push({sql,args});
+    return sql.startsWith('select user_id from social_bot_members') && args[0]===visitor.id ? [{user_id:22}] : [];
+  }});
+  const row=queries.find(q=>q.args[7]===visitor.id);
+  assert.equal(visitor.av,'');
+  assert.deepEqual(row.args.slice(4,7),['','','']);
+  assert.ok(!queries.some(q=>q.sql.includes('insert into social_posts') || q.sql.includes('insert into social_settings')));
 });

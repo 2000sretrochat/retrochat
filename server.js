@@ -52,7 +52,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 app.disable('x-powered-by');
 const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com; media-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'";
 app.use((req,res,next)=>{res.set({'Permissions-Policy':'camera=(self), microphone=(self), display-capture=(self)','Content-Security-Policy':CSP,'X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'strict-origin-when-cross-origin','Cross-Origin-Opener-Policy':'same-origin'}); if (req.secure) res.set('Strict-Transport-Security','max-age=15552000'); next()});
-acc.http(app, express, { reservedName: n => MASTER.reserved(n), ipBanned: ip => MASTER.ipBanned(ip), seedMaster: (id, n) => MASTER.seedMaster(id, n), guestInUse: n => users.has(String(n).toLowerCase()) && !!io.sockets.sockets.get(users.get(String(n).toLowerCase()))?.data.guest });
+acc.http(app, express, { reservedName: n => MASTER.reserved(n) || isBot(n), ipBanned: ip => MASTER.ipBanned(ip), seedMaster: (id, n) => MASTER.seedMaster(id, n), guestInUse: n => users.has(String(n).toLowerCase()) && !!io.sockets.sockets.get(users.get(String(n).toLowerCase()))?.data.guest });
 try { require('./friend-site')(app, express, acc); } catch (e) { console.error('[friend-site]', e.message); }
 app.get('/privacy', (req, res) => res.sendFile(__dirname + '/public/privacy.html'));
 app.get('/terms', (req, res) => res.sendFile(__dirname + '/public/terms.html'));
@@ -118,7 +118,9 @@ app.post('/api/report', express.json(), async (req, res) => { const a = await us
 const STAT = { day: '', peak: 0 }; const onlineNow = () => new Set([...io.sockets.sockets.values()].filter(x => x.data.name || x.data.acct).map(x => (x.data.acct?.name || x.data.name).toLowerCase())).size;
 setInterval(() => { const d = new Date().toISOString().slice(0, 10), n = onlineNow(); if (STAT.day !== d) { STAT.day = d; STAT.peak = 0; } if (n > STAT.peak) { STAT.peak = n; Promise.resolve().then(() => db.q('insert into stats_day(d,peak) values($1,$2) on conflict(d) do update set peak=greatest(stats_day.peak,$2)', [d, n])).catch(() => {}); } }, 15e3).unref();
 const BOTMOD = require('./bots'), BOTS = BOTMOD.BOTS; let botsOn = true; const botOff = new Set(); // rooms with bots switched off
-const botsIn = room => botsOn && !botOff.has(room) ? (BOTMOD.byRoom[room] || []) : [];
+let quietVisitor = null;
+const botsIn = room => botsOn && !botOff.has(room)
+  ? (BOTMOD.byRoom[room] || []).filter(b => !b.silent || b === quietVisitor) : [];
 const BOT_LEGACY = new Set(BOTS.flatMap(b => (b.legacy || []).map(x => x.toLowerCase())));
 const isBot = n => { const lc = String(n || '').toLowerCase(); return BOTS.some(b => b.name.toLowerCase() === lc) || BOT_LEGACY.has(lc); };
 const botRooms = () => Object.keys(BOTMOD.byRoom);
@@ -160,14 +162,32 @@ function interactiveBotReply(b, room, who, clean) {
  return null;
 }
 const botSay = (room, b, text) => push(room, { name: b.name, av: b.av || '', role: '', text: esc(text), color: b.color || '#000080', b: false, i: false, u: false, f: b.font || 'Arial', t: Date.now() });
+const quietVisitors = BOTS.filter(b => b.silent);
+let nextQuietVisitor = Math.floor(Math.random() * quietVisitors.length);
+async function visitQuietly() {
+  setTimeout(visitQuietly, (45 + Math.random() * 45) * 60e3).unref?.();
+  const b = quietVisitors[nextQuietVisitor];
+  nextQuietVisitor = (nextQuietVisitor + 1) % quietVisitors.length;
+  if (!botsOn || botOff.has(b.room) || !ROOMS[b.room] || !db.status().ready) return;
+  try {
+    const [registered] = await db.q(`select 1 from social_bot_members b join users u on u.id=b.user_id
+      where b.bot_id=$1 and u.name_lc=$2 and not u.banned and not coalesce(u.deactivated,false)`, [b.id,b.name.toLowerCase()]);
+    if (!registered) return;
+  } catch { return; }
+  const room = b.room;
+  quietVisitor = b;
+  upd(room);
+  setTimeout(() => { quietVisitor = null; upd(room); }, 120e3).unref?.();
+}
+setTimeout(visitQuietly, (5 + Math.random() * 15) * 60e3).unref?.();
 const lastBot = {};
 function botTick(room) { const busy = socks(room).length > 0; setTimeout(() => botTick(room), (busy ? 40 + Math.random() * 110 : 240 + Math.random() * 360) * 1000).unref?.();
-  const bs = botsIn(room).filter(b => !(TRIVIA_GAME.active(room) && b.trivia)); if (!bs.length) return; const b = bs[Math.floor(Math.random() * bs.length)];
+  const bs = botsIn(room).filter(b => !b.silent && !(TRIVIA_GAME.active(room) && b.trivia)); if (!bs.length) return; const b = bs[Math.floor(Math.random() * bs.length)];
   const line = BOTMOD.line(b, room, lastBot[room]); lastBot[room] = line; botSay(room, b, line);
   // sometimes a second bot answers a moment later, so it reads like a conversation
   if (bs.length > 1 && Math.random() < 0.35) { const o = bs.filter(x => x !== b)[Math.floor(Math.random() * (bs.length - 1))]; setTimeout(() => botsIn(room).includes(o) && botSay(room, o, BOTMOD.reply(o, b.name)), 6000 + Math.random() * 14000).unref?.(); } }
 // a bot may greet a person who says hi or mentions it; trivia answers are recognized from normal chat
-async function botHear(room, who, text) { const bs = botsIn(room); if (!bs.length) return; const t = String(text).toLowerCase();
+async function botHear(room, who, text) { const bs = botsIn(room).filter(b => !b.silent); if (!bs.length) return; const t = String(text).toLowerCase();
   const handle = t.match(/@([a-z0-9_]+)/)?.[1]; const target = handle ? BOTMOD.byAlias(handle) : null; const host = target && bs.includes(target) ? target : null;
   const clean = t.replace(/@[a-z0-9_]+[,:]?\s*/g, '').trim();
   if (TRIVIA_GAME.active(room) || (host && host.trivia)) { if (await TRIVIA_GAME.hear(room, who, text, host && host.trivia ? host : null)) return; }
@@ -229,7 +249,7 @@ app.get('/api/social-profile/:name', async (req, res) => {
 async function botProfile(b) { let r = null; if (db.status().ready) { try { r = (await db.q('select name,display_name,bio,location,interests,room from bot_profiles where bot_id=$1', [b.id]))[0]; } catch { } }
   r = r || { name: b.name, display_name: b.display_name, bio: b.bio, location: b.location, interests: b.interests, room: b.room };
   const seed = BOTMOD.PROFILE_SEEDS.find(x => x.id === b.id) || {};
-  return { id: b.id, name: b.name, displayName: r.display_name || seed.display_name || b.name, bio: r.bio ?? seed.bio ?? '', location: r.location ?? seed.location ?? '', interests: r.interests ?? seed.interests ?? '', avatar: 'bot:' + b.id, room: b.room, bot: true, online: botsIn(b.room).includes(b) }; }
+  return { id: b.id, name: b.name, displayName: r.display_name || seed.display_name || b.name, bio: r.bio ?? seed.bio ?? '', location: r.location ?? seed.location ?? '', interests: r.interests ?? seed.interests ?? '', avatar: b.av, room: b.silent && !botsIn(b.room).includes(b) ? null : b.room, bot: true, online: botsIn(b.room).includes(b) }; }
 app.get('/api/bot-profile/:id', async (req, res) => { res.set('Cache-Control', 'no-store'); const b = BOTMOD.byId(req.params.id); if (!b) return res.status(404).json({ error: 'No such user.' }); res.json(await botProfile(b)); });
 // Bot avatars: master-uploaded image (DB) > master-chosen asset key > generated initials placeholder.
 const BOT_AV_DIR = require('path').join(__dirname, 'public', 'bot-avatars');
@@ -277,7 +297,7 @@ function socks(room) { return [...io.sockets.adapter.rooms.get(room) || []].map(
 // incognito masters are visible only to other masters (vm = viewer is master)
 function seen(room, vm) { return socks(room).filter(x => vm || !x.data.inc); }
 function members(room, vm) { return [...seen(room, vm).map(x => x.data.name), ...botsIn(room).map(b => b.name)].sort((a,b)=>a.localeCompare(b)); }
-function roster(room, vm) { return seen(room, vm).map(x => ({ ...(vm && x.data.inc ? { inc: true } : {}), name: x.data.name, av: x.data.av || '', id: x.id, guest: !!x.data.guest, cam: !!x.data.cam, talk: !!x.data.talk, ...(x.data.music ? { music: true } : {}), ...(x.data.idle ? { idle: true } : {}), tl: x.data.talk && x.data.talkUntil ? Math.max(0, Math.ceil((x.data.talkUntil - Date.now()) / 1000)) : 0, role: x.data.master ? '' : roleOf(x, room), dot: dotLeft(room, x.data.name.toLowerCase()) !== null, dl: Math.ceil((dotLeft(room, x.data.name.toLowerCase()) || 0) / 1000), mt: mod(room).mt.has(x.data.name.toLowerCase()), mm: mod(room).mm.has(x.data.name.toLowerCase()), voice: !!x.data.voice, viewers: x.data.cam ? [...(x.data.viewers||[])].map(v => io.sockets.sockets.get(v)?.data.name).filter(Boolean) : [] })).concat(botsIn(room).map((b, i) => ({ name: b.name, av: b.av, id: 'bot-' + i, guest: true, bot: true, cam: false, talk: false, tl: 0, role: '', dot: false, dl: 0, mt: false, mm: false, voice: false, viewers: [] }))).sort((a,b)=>a.name.localeCompare(b.name)); }
+function roster(room, vm) { return seen(room, vm).map(x => ({ ...(vm && x.data.inc ? { inc: true } : {}), name: x.data.name, av: x.data.av || '', id: x.id, guest: !!x.data.guest, cam: !!x.data.cam, talk: !!x.data.talk, ...(x.data.music ? { music: true } : {}), ...(x.data.idle ? { idle: true } : {}), tl: x.data.talk && x.data.talkUntil ? Math.max(0, Math.ceil((x.data.talkUntil - Date.now()) / 1000)) : 0, role: x.data.master ? '' : roleOf(x, room), dot: dotLeft(room, x.data.name.toLowerCase()) !== null, dl: Math.ceil((dotLeft(room, x.data.name.toLowerCase()) || 0) / 1000), mt: mod(room).mt.has(x.data.name.toLowerCase()), mm: mod(room).mm.has(x.data.name.toLowerCase()), voice: !!x.data.voice, viewers: x.data.cam ? [...(x.data.viewers||[])].map(v => io.sockets.sockets.get(v)?.data.name).filter(Boolean) : [] })).concat(botsIn(room).map(b => ({ name: b.name, av: b.av, id: 'bot-' + b.id, guest: true, bot: true, cam: false, talk: false, tl: 0, role: '', dot: false, dl: 0, mt: false, mm: false, voice: false, viewers: [] }))).sort((a,b)=>a.name.localeCompare(b.name)); }
 const MICS = {}; const MIC_DEFAULT_OFFICIAL = 3;
 const micsOf = r => MICS[r] || (UROOMS.has(r) ? 1 : MIC_DEFAULT_OFFICIAL);
 const micsUsed = r => socks(r).filter(x => x.data.talk).length;

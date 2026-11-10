@@ -9,6 +9,7 @@ function setup() {
     }
     if (sql.startsWith('select name,status')) return users.filter(u => u.id === args[0]);
     if (sql.startsWith('select id,name from users')) return users.filter(u => u.name.toLowerCase() === args[0]);
+    if (sql.startsWith('select 1 from requests')) return [{ exists: 1 }];
     if (sql.startsWith('select 1 from contacts')) return [{ exists: 1 }];
     return [];
   } };
@@ -78,4 +79,13 @@ test('repeating the same Messenger send ID delivers one message', async () => {
   assert.equal(bob.events.filter(event=>event[0]==='m:im').length,1);
   await send(alice,'m:im',{...message,clientId:'e49d4c07-3a65-4205-a020-2fae045487ab'});
   assert.equal(bob.events.filter(event=>event[0]==='m:im').length,2);
+});
+
+test('declining a contact request updates the recipient only', async () => {
+  const {socket,send}=setup(), sender=await socket(1), recipient=await socket(2), dock=await socket(2,'social');
+  for(const client of [sender,recipient,dock]) await send(client,'m:init');
+  const before=sender.events.length;
+  assert.equal((await send(recipient,'m:respond',{name:'Alice',accept:false})).ok,true);
+  assert.equal(sender.events.length,before);
+  for(const client of [recipient,dock]) assert.ok(client.events.some(event=>event[0]==='m:contacts-changed'));
 });
