@@ -1,7 +1,49 @@
 /* Narrow and touch layouts shared by Social, Messenger and Razzle Chat. */
 #mobile-people { display: none; }
 
+/* Sign-in is a light surface, including when the browser or app is in dark mode. */
+#signin, #login {
+  color-scheme: light;
+  color: #12213f;
+  background: #f4f8fc !important;
+}
+.room-signin #signin { background: #fff !important; }
+#signin :is(label, .messenger-signin-copy, #chat-signin-intro),
+#login :is(label, #room-entry-title, #guest-name-rules, #guest-room-selection) {
+  color: #12213f !important;
+}
+:is(#signin, #login) :is(input[type="text"], input[type="password"], input[type="email"], select) {
+  color-scheme: light;
+  background: #fff !important;
+  border-color: #637f9f !important;
+  color: #12213f !important;
+  caret-color: #12213f;
+  -webkit-text-fill-color: #12213f !important;
+}
+:is(#signin, #login) input::placeholder {
+  color: #4a627d;
+  opacity: 1;
+  -webkit-text-fill-color: #4a627d;
+}
+:is(#signin, #login) input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 40px #fff inset !important;
+  -webkit-text-fill-color: #12213f !important;
+}
+:is(#signin, #login) :is(input, select):focus-visible {
+  outline: 2px solid #0033a0 !important;
+  outline-offset: 2px;
+}
+#signin a, #login a { color: #0033a0 !important; }
+
 @media (max-width: 1024px) {
+  #social-chat-header > .auth-browse-link {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #00205b;
+    color: #fff !important;
+    text-align: center;
+  }
+  .site-sidebar .menu > a[href*="rooms.html"] { color: #fff !important; }
   body:has(#live-social-messenger) > header {
     display: flex;
     flex-wrap: wrap;
