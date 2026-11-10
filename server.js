@@ -104,6 +104,7 @@ app.post('/api/fav', express.json(), async (req, res) => { const a = await userF
 const loadURooms = () => Promise.resolve().then(() => db.q('select * from user_rooms')).then(rs => { for (const r of rs) { if (ROOMS[r.name] && !UROOMS.has(r.name)) continue; UROOMS.set(r.name, { owner: r.owner, ownerLc: r.owner.toLowerCase(), emptySince: Date.now(), icon: r.icon || '' }); ROOMS[r.name] = DIR[r.cat] ? r.cat : 'Cultures & Community'; TOPICS[r.name] = r.topic || 'Welcome to ' + r.name; history[r.name] = history[r.name] || []; if (r.rating) RATE[r.name] = r.rating; if (r.mics) MICS[r.name] = r.mics; } if (rs.length) console.log('restored', rs.length, 'user rooms'); }).catch(e => console.error('user rooms', e.message));
 // ICE servers (STUN + optional TURN), credentials come from env, never hardcoded in the client
 let iceCache = null;
+const cloudflareTurn = require('./turn-credentials')();
 // room preview (Browse Rooms hover / long-press): who's inside, minus incognito masters and blocked users
 app.get('/api/peek', async (req, res) => { const room = String(req.query.room || ''); if (!ROOMS[room]) return res.json({ names: [] }); const a = await userFromReq(req).catch(() => null);
   if (adultR(room) && !(await isAdultReq(req))) return res.json({ names: [] });
@@ -113,10 +114,13 @@ app.get('/api/peek', async (req, res) => { const room = String(req.query.room ||
 app.get('/api/gif', async (req, res) => { const k = process.env.GIPHY_KEY; if (!k) return res.json({ needKey: true }); try { const q = String(req.query.q || '').slice(0, 60); const u = 'https://api.giphy.com/v1/gifs/' + (q ? 'search' : 'trending') + '?api_key=' + encodeURIComponent(k) + '&limit=24&rating=pg-13' + (q ? '&q=' + encodeURIComponent(q) : ''); const r = await fetch(u); const j = await r.json(); res.json({ items: (j.data || []).map(d => d.id).filter(id => /^[A-Za-z0-9]{4,40}$/.test(id)) }); } catch (e) { res.json({ items: [] }); } });
 app.get('/api/ice', async (req, res) => { const stun = { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }; const out = [stun];
   try { const E = process.env;
-    if (E.TURN_URLS && E.TURN_USERNAME && E.TURN_CREDENTIAL) out.push({ urls: E.TURN_URLS.split(',').map(x => x.trim()), username: E.TURN_USERNAME, credential: E.TURN_CREDENTIAL });
+    if (E.CF_TURN_KEY_ID && E.CF_TURN_API_TOKEN) {
+      const user=await userFromReq(req);
+      if(user)out.push(...await cloudflareTurn(user.id,E.CF_TURN_KEY_ID,E.CF_TURN_API_TOKEN));
+    }
+    else if (E.TURN_URLS && E.TURN_USERNAME && E.TURN_CREDENTIAL) out.push({ urls: E.TURN_URLS.split(',').map(x => x.trim()), username: E.TURN_USERNAME, credential: E.TURN_CREDENTIAL });
     else if (iceCache && iceCache.exp > Date.now()) out.push(...iceCache.list);
     else if (E.METERED_API_KEY && E.METERED_APP) { const r = await fetch('https://' + E.METERED_APP + '.metered.live/api/v1/turn/credentials?apiKey=' + encodeURIComponent(E.METERED_API_KEY)); const l = (await r.json()).filter(x => !/^stun:/.test([].concat(x.urls)[0])); iceCache = { list: l, exp: Date.now() + 3600e3 }; out.push(...l); }
-    else if (E.CF_TURN_KEY_ID && E.CF_TURN_API_TOKEN) { const r = await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/' + E.CF_TURN_KEY_ID + '/credentials/generate', { method: 'POST', headers: { Authorization: 'Bearer ' + E.CF_TURN_API_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify({ ttl: 86400 }) }); const j = await r.json(); const l = [].concat(j.iceServers || []); iceCache = { list: l, exp: Date.now() + 12 * 3600e3 }; out.push(...l); }
   } catch (e) { console.error('ice', e.message); }
   res.set('Cache-Control', 'no-store').json({ iceServers: out }); });
 const ANN = {}; (function loadAnn(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadAnn(n + 1), 2000).unref?.(); Promise.resolve().then(() => db.q('select room,text from room_ann')).then(r => r.forEach(x => ANN[x.room] = x.text)).catch(() => {}); })(0);

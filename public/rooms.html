@@ -599,7 +599,7 @@ let typers={};S.on('typing',({name})=>{if(ignored.has(name))return;typers[name]=
 function showTyping(){$('typing').textContent=''}
 setInterval(showTyping,1000);S.on('msg',m=>{if(m.name)delete typers[m.name]});
 let dropT=0,wasDown=false;S.on('disconnect',why=>{if(!me)return;wasDown=true;latch=false;talking=false;$('talk').classList.remove('on');clearTimeout(dropT);dropT=setTimeout(()=>{if(!S.connected)$('cstat').style.display=''},3000)});
-S.on('connect',()=>{clearTimeout(dropT);$('cstat').style.display='none';if(!wasDown||!me||!room)return;wasDown=false;Object.keys(pcs).forEach(k=>{try{pcs[k].close()}catch{}delete pcs[k]});document.querySelectorAll('audio[id^=au]').forEach(a=>a.remove());
+S.on('connect',()=>{clearTimeout(dropT);$('cstat').style.display='none';if(!wasDown||!me||!room)return;wasDown=false;queuedRoomIce.clear();Object.keys(pcs).forEach(k=>{try{pcs[k].close()}catch{}delete pcs[k]});document.querySelectorAll('audio[id^=au]').forEach(a=>a.remove());
  let tries=0;const rj=()=>{if(!S.connected)return;$('cstat').style.display='';S.emit('login',{name:me,room},r=>{if(!r||r.error){tries++;if(tries<12)setTimeout(rj,Math.min(30000,1500*2**Math.min(tries,5)));else console.warn('rejoin failed',r&&r.error);return}tries=0;me=r.name;$('cstat').style.display='none'})};rj()});
 // draggable windows
 function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.target.closest('.x,.b'))return;const ox=e.clientX-w.offsetLeft,oy=e.clientY-w.offsetTop;
@@ -631,7 +631,17 @@ function renderRoster(){const q=($('pq')?.value||'').toLowerCase();$('pcnt').tex
  $('mem').querySelectorAll('.ci').forEach(e=>e.onclick=()=>e.dataset.v==S.id?0:view(e.dataset.v,e.dataset.n));
  const t=ros.filter(m=>m.talk&&!ignored.has(m.name)).map(m=>escT(m.name));$('vstat').innerHTML=t.length?t.join(', ')+(t.length>1?' are':' is')+' talking':'';}
 // ===== Voice & webcam (WebRTC mesh, Socket.IO signaling) =====
-let ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]};fetch('/api/ice').then(r=>r.json()).then(j=>{if(j&&j.iceServers)ICE=j}).catch(()=>{});
+let ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]};
+let iceLoaded=0,iceRequest=null;
+function refreshRoomIce(){
+ if(iceRequest)return iceRequest;if(Date.now()-iceLoaded<30*60e3)return Promise.resolve();
+ iceRequest=fetch('/api/ice',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(config=>{
+  if(Array.isArray(config.iceServers)){ICE=config;iceLoaded=Date.now();}
+ }).catch(()=>{}).finally(()=>{iceRequest=null;});
+ return iceRequest;
+}
+void refreshRoomIce();
+const queuedRoomIce=new Map();
 let me=null, ros=[], mic=null, camS=null, pcs={}, talking=false, wins={};
 function pcFor(k,id,init){ // k: 'a' audio | 'v' video I broadcast | 'w' video I watch
  if(pcs[k+id])return pcs[k+id];const pc=new RTCPeerConnection(ICE);pcs[k+id]=pc;
@@ -640,21 +650,39 @@ function pcFor(k,id,init){ // k: 'a' audio | 'v' video I broadcast | 'w' video I
  pc.onnegotiationneeded=async()=>{if(!init)return;await pc.setLocalDescription(YAV.munge(await pc.createOffer()));YAV.tune(pc);S.emit('signal',{to:id,data:{k:rk,sdp:pc.localDescription}})};
  pc.ontrack=e=>{if(k=='a'){let a=document.getElementById('au'+id);if(!a){a=document.createElement('audio');a.id='au'+id;a.autoplay=true;document.body.appendChild(a)}a.srcObject=e.streams[0]||new MediaStream([e.track]);applyAudio(a,id);meter(a.srcObject,'m2',id);a.play().catch(()=>{})}
   if(k=='w'&&wins[id]){const v=wins[id].querySelector('video');v.srcObject=e.streams[0]||new MediaStream([e.track]);v.play().catch(()=>{})}};
- pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState))closePc(k,id)};
+ pc.onconnectionstatechange=()=>{if(pcs[k+id]===pc&&['failed','closed'].includes(pc.connectionState))closePc(k,id)};
  return pc}
-function closePc(k,id){const pc=pcs[k+id];if(!pc)return;delete pcs[k+id];try{pc.close()}catch(e){}if(k=='a')document.getElementById('au'+id)?.remove()}
+function closePc(k,id){queuedRoomIce.delete(k+id);const pc=pcs[k+id];if(!pc)return;delete pcs[k+id];try{pc.close()}catch(e){}if(k=='a')document.getElementById('au'+id)?.remove()}
 let sq=Promise.resolve();S.on('signal',m=>{sq=sq.then(()=>onSig(m)).catch(e=>console.log('sig',e.message))});
-async function onSig({from,data}){const {k}=data;let pc=pcs[k+from];
- if(data.sdp){if(data.sdp.type=='offer'){closePc(k,from);pc=pcFor(k,from,false);if(k=='a'&&mic&&!pc.getSenders().some(s=>s.track))mic.getTracks().forEach(t=>pc.addTrack(t,mic));
-   await pc.setRemoteDescription(data.sdp);await pc.setLocalDescription(YAV.munge(await pc.createAnswer()));YAV.tune(pc);S.emit('signal',{to:from,data:{k:{a:'a',v:'w',w:'v'}[k],sdp:pc.localDescription}})}
-  else if(pc)await pc.setRemoteDescription(data.sdp)}
- else if(data.c&&pc)try{await pc.addIceCandidate(data.c)}catch(e){}}
+async function onSig({from,data}){
+ const k=data?.k;if(!['a','v','w'].includes(k))return;
+ const key=k+from;let pc=pcs[key];
+ if(data.c){
+  if(pc?.remoteDescription){await pc.addIceCandidate(data.c).catch(()=>{});return;}
+  if(!queuedRoomIce.has(key)&&queuedRoomIce.size>=128)queuedRoomIce.delete(queuedRoomIce.keys().next().value);
+  const pending=queuedRoomIce.get(key)||[];
+  if(pending.length<64)pending.push(data.c);queuedRoomIce.set(key,pending);return;
+ }
+ if(!['offer','answer'].includes(data.sdp?.type))return;
+ const pending=queuedRoomIce.get(key)||[];
+ if(data.sdp.type==='offer'){
+  await refreshRoomIce();closePc(k,from);pc=pcFor(k,from,false);
+  if(k==='a'&&mic)mic.getTracks().forEach(track=>pc.addTrack(track,mic));
+ }
+ if(!pc)return;
+ await pc.setRemoteDescription(data.sdp);queuedRoomIce.delete(key);
+ for(const candidate of pending)await pc.addIceCandidate(candidate).catch(()=>{});
+ if(data.sdp.type==='offer'){
+  await pc.setLocalDescription(YAV.munge(await pc.createAnswer()));YAV.tune(pc);
+  S.emit('signal',{to:from,data:{k:{a:'a',v:'w',w:'v'}[k],sdp:pc.localDescription}});
+ }
+}
 function syncAudio(){ // connect audio to every room member where at least one side has a mic; mic holder (lower id if both) offers
  const ids=new Set(ros.filter(r=>r.id!=S.id).map(r=>r.id));
  Object.keys(pcs).filter(x=>x[0]=='a'&&!ids.has(x.slice(1))).forEach(x=>closePc('a',x.slice(1)));
  for(const r of ros){if(r.id==S.id)continue;const mine=!!mic,their=r.voice;if(!mine&&!their){closePc('a',r.id);continue}
   const iInit=mine&&(!their||S.id<r.id);if(iInit&&!pcs['a'+r.id]){const pc=pcFor('a',r.id,true);mic.getTracks().forEach(t=>pc.addTrack(t,mic))}}}
-async function getMic(){if(mic)return true;try{mic=await YAV.buildMic()}catch(e){if(/NotFound|Overconstrained/.test(e.name)){micNo=true;tb.classList.add('dis');tLbl()}else alert('Microphone not available: '+e.message);return false}
+async function getMic(){if(mic)return true;try{mic=await YAV.buildMic();await refreshRoomIce()}catch(e){if(/NotFound|Overconstrained/.test(e.name)){micNo=true;tb.classList.add('dis');tLbl()}else alert('Microphone not available: '+e.message);return false}
  mic.getAudioTracks().forEach(t=>t.enabled=false);meter(mic,'m1');
  Object.keys(pcs).filter(x=>x[0]=='a').forEach(x=>closePc('a',x.slice(1))); // rebuild with mic
  S.emit('voice',true);S.emit('avmode',YAV.cfg().mode=='music'||YAV.cfg().sys!='off');return true}
@@ -684,7 +712,7 @@ function camErr(e){console.warn('[webcam]',e.name,e.message);const n=e.name||'Er
  alert(m)}
 function stopCam(){camS&&camS.getTracks().forEach(t=>t.stop());camS=null;Object.keys(pcs).filter(x=>x[0]=='v').forEach(x=>closePc('v',x.slice(1)));
  $('cam').classList.remove('on');$('cam').innerHTML=YI.svg('video')+'<span>Webcam</span>';$('viewers').textContent='';S.emit('cam',false);closeWin(S.id,true)}
-S.on('view-req',({id})=>{if(!camS)return;closePc('v',id);const pc=pcFor('v',id,true);camS.getTracks().forEach(t=>pc.addTrack(t,camS));retuneCam()});
+S.on('view-req',async({id})=>{await refreshRoomIce();if(!camS)return;closePc('v',id);const pc=pcFor('v',id,true);camS.getTracks().forEach(t=>pc.addTrack(t,camS));retuneCam()});
 function retuneCam(){const v=Object.keys(pcs).filter(x=>x[0]=='v');window.YAV_viewers=v.length;v.forEach(x=>YAV.tune(pcs[x]))}
 S.on('unview',({id})=>closePc('v',id));
 S.on('cam-off',({id})=>closeWin(id,true));

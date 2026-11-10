@@ -1,7 +1,7 @@
 /* Shared voice and webcam call flow for standalone and embedded Messenger. */
 window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notice, toast, sound }) {
   const defaultIce = {iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
-  const iceConfig = fetch('/api/ice',{signal:AbortSignal.timeout(5000)})
+  const loadIce = () => fetch('/api/ice',{signal:AbortSignal.timeout(5000)})
     .then(response=>response.ok?response.json():defaultIce)
     .then(config=>Array.isArray(config.iceServers)?config:defaultIce)
     .catch(()=>defaultIce);
@@ -121,7 +121,7 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
   }
   async function peerConnection(window,call) {
     const stream=await call.media;
-    const config=await iceConfig;
+    const config=await (call.iceConfig ||= loadIce());
     if(!stream||!active(window,call))return null;
     if(call.pc)return call.pc;
     const pc=call.pc=new RTCPeerConnection(config);
