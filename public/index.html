@@ -162,6 +162,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 }
 .room-signin #mwin > .tbar, .room-signin #menu, .room-signin .messenger-signin-copy { display: none !important; }
 .room-signin #signin { padding: clamp(16px, 5vw, 28px) !important; }
+.room-signin #iInvRow { display: none !important; }
 .room-signin #signin .logo { font-size: clamp(26px, 7vw, 36px) !important; }
 .room-signin #signin input:not([type=checkbox]) { box-sizing: border-box; min-height: 40px; }
 .room-signin #signin .pri { min-height: 40px; background: #004990 !important; color: #fff !important; }
@@ -205,6 +206,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
    <label for="iName">Screen name</label><input type="text" id="iName" maxlength="20" autocomplete="username">
    <label for="iPw">Password <a href="/reset.html" style="font-weight:normal;font-size:11px;float:right">Forgot password?</a></label><input type="password" id="iPw" maxlength="100" autocomplete="current-password">
    <div class="row"><label style="font-weight:normal"><input type="checkbox" id="iRem"> Remember me</label></div>
+   <div class="row" id="iInvRow"><label style="font-weight:normal"><input type="checkbox" id="iInv"> Sign in as invisible</label></div>
    <button class="pri" id="bIn" style="width:100%">Sign In</button><div class="err" id="eIn"></div>
    <div>Don't have a screen name? <a id="toUp">Get one free</a></div>
   </div>
@@ -302,7 +304,7 @@ function masterInit(){MW=1;const dd=document.querySelector('#menu>div .dd');if(d
 fetch('/api/me').then(r=>r.json()).then(m=>{if(m.name){start();if(m.m)masterInit()}});
 $('toUp').onclick=()=>{$('fIn').style.display='none';$('fUp').style.display='flex';$('uName').focus();if(isRoomSignIn)$('chat-signin-intro').textContent='Create your account to join the conversation.'};$('toIn').onclick=()=>{$('fUp').style.display='none';$('fIn').style.display='contents';if(isRoomSignIn)$('chat-signin-intro').textContent='Sign in to join the conversation.'};
 if (isRoomSignIn && roomSignInParams.get('signup') === '1') $('toUp').click();
-async function doIn(){$('eIn').textContent='';const r=window.RazzleSignin&&RazzleSignin.active?await RazzleSignin.signIn():await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;$('iPw').value='';start()}
+async function doIn(){$('eIn').textContent='';const r=window.RazzleSignin&&RazzleSignin.active?await RazzleSignin.signIn():await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;if(!isRoomSignIn)await api('/api/signin-presence',{invisible:$('iInv').checked}).catch(()=>{});$('iPw').value='';start()}
 $('bIn').onclick=doIn;['iName','iPw'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doIn()}}));
 let avT;$('uName').addEventListener('input',()=>{clearTimeout(avT);const n=$('uName').value.trim();if(!n)return $('uAv').textContent='';avT=setTimeout(async()=>{const r=await fetch('/api/available?name='+encodeURIComponent(n)).then(r=>r.json()).catch(()=>({}));
  $('uAv').innerHTML=r.valid===false?'<span class=err>3-20 characters, start with a letter; letters, numbers, _ or .</span>':r.available?'<span class=ok>&#10004; '+escT(n)+' is available</span>':r.error?'':'<span class=err>&#10008; '+escT(n)+' is taken</span>'},350)});

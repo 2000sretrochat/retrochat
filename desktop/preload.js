@@ -7,7 +7,7 @@ const api = {
   // Saved screen names on this computer. Passwords stay in the main process (encrypted); the page only sees names.
   signin: {
     list: () => ipcRenderer.invoke('yc-signin-list'),
-    signIn: o => ipcRenderer.invoke('yc-signin', { name: String(o?.name || ''), password: o?.password == null ? null : String(o.password), save: !!o?.save }),
+    signIn: o => ipcRenderer.invoke('yc-signin', { name: String(o?.name || ''), password: o?.password == null ? null : String(o.password), save: !!o?.save, invisible: typeof o?.invisible === 'boolean' ? o.invisible : undefined }),
     note: n => ipcRenderer.invoke('yc-signin-note', String(n || '')),
     remove: n => ipcRenderer.invoke('yc-signin-remove', String(n || ''))
   },

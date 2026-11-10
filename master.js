@@ -124,7 +124,7 @@ module.exports = function (C) {
   app.get('/api/master/recorder.js', guard((req, res) => { res.set('Cache-Control', 'no-store'); res.sendFile(path.join(__dirname, 'master-recorder.js')); }));
   app.get('/master', guard((req, res) => res.sendFile(path.join(__dirname, 'master.html'))));
   app.get('/api/master/data', guard(async (req, res) => {
-    const d = await geo.adminData(acc.isOnline); const ms = new Set((await q('select name from users where is_master')).map(r => r.name));
+    const d = await geo.adminData(acc.isConnected); const ms = new Set((await q('select name from users where is_master')).map(r => r.name));
     d.accounts.forEach(a => { a.master = ms.has(a.name); a.room = sockOf(a.name)?.data.room || null; }); d.guests.forEach(g => g.room = sockOf(g.name)?.data.room || null);
     d.banned = (await q('select name from users where banned')).map(r => r.name); d.deactivated = (await q('select name from users where deactivated')).map(r => r.name); d.ipbans = await q('select ip,reason,at from ip_bans order by at desc'); res.json(d); }));
   app.get('/api/master/rooms', guard((req, res) => res.json(Object.keys(ROOMS).map(r => ({ name: r, cat: ROOMS[r], topic: TOPICS[r], rating: RATE[r] || 'PG-13', mics: micsOf(r), hq: !!C.HQ[r], timer: C.MTIMER[r] || 0, official: OFFICIAL.has(r), owner: UROOMS.get(r)?.owner || null,
@@ -203,7 +203,7 @@ module.exports = function (C) {
   // silent watch list: nothing is ever sent to the watched user
   app.get('/api/master/watch', guard(async (req, res, me) => {
     const rows = await q('select u.id,u.name,u.status_msg,u.last_ip,u.last_loc from watch w join users u on u.id=w.target where w.owner=$1 order by u.name_lc', [me.id]);
-    res.json(rows.map(r => { const p = acc.presence ? acc.presence(r.id) : { online: acc.isOnline(r.name) }; const s = sockOf(r.name);
+    res.json(rows.map(r => { const p = acc.presenceRaw ? acc.presenceRaw(r.id) : { online: acc.isConnected(r.name) }; const s = sockOf(r.name);
       return { name: r.name, online: p.online || !!s, status: p.status, msg: p.msg || r.status_msg || '', room: s && !s.data.guest ? s.data.room : null, ip: (s && geo.clientIp(s.handshake.headers, s.handshake.address)) || r.last_ip || '', loc: r.last_loc || '' }; })); }));
   app.post('/api/master/watch', express.json(), guard(async (req, res, me) => { const { name, remove } = req.body || {};
     const u = (await q('select id from users where name_lc=$1', [String(name || '').toLowerCase()]))[0]; if (!u) return res.status(404).json({ error: 'No such screen name.' });

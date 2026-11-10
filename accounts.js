@@ -95,6 +95,15 @@ function http(app, express, hooks = {}) { H = hooks;
     res.set('Cache-Control', 'no-store');
     next();
   }, express.urlencoded({ extended: false, limit: '2kb', parameterLimit: 3 }), (req, res) => signIn(req, res, true));
+  // "Sign in as invisible" on the sign-in screen: called right after a successful sign-in, before Messenger connects.
+  // invisible=true -> invisible; invisible=false only clears a leftover invisible status (busy/away are kept).
+  app.post('/api/signin-presence', async (req, res) => {
+    const u = await userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in first.' });
+    if (typeof req.body?.invisible !== 'boolean') return res.status(400).json({ error: 'Invalid presence.' });
+    const [r] = await db.q(req.body.invisible ? "update users set status='invisible' where id=$1 returning status" : "update users set status=case when status='invisible' then 'available' else status end where id=$1 returning status", [u.id]);
+    const status = r?.status || 'available'; await setStatusFn(u.id, status).catch(() => {});
+    res.json({ ok: true, status });
+  });
   app.post('/api/logout', async (req, res) => {
     const t = parseCookies(req.headers.cookie)[COOKIE]; if (t && db.status().ready) await db.q('delete from sessions where token=$1', [sha(t)]).catch(() => {});
     res.clearCookie(COOKIE, { path: '/' }); res.json({ ok: true });
@@ -144,7 +153,12 @@ function sockets(io, hooks) {
   const FONTS = ['Arial', 'Verdana', 'Tahoma', 'Comic Sans MS', 'Times New Roman', 'Courier New'], COLORS = ['#000000', '#ff0000', '#0000ff', '#008000', '#800080', '#ff6600', '#008080', '#990033', '#8b5cf6'];
   const fmt = m => ({ b: !!m.b, i: !!m.i, u: !!m.u, color: COLORS.includes(m.color) ? m.color : '#000000', f: FONTS.includes(m.f) ? m.f : 'Arial' });
   hooks.onlineName = n => { for (const [uid, st] of state) if (st.name.toLowerCase() === String(n).toLowerCase() && online.has(uid)) return uid; return null; };
-  presFn = hooks.presence = uid => online.has(uid) ? { online: true, status: state.get(uid)?.status || 'online', msg: state.get(uid)?.msg || '' } : { online: false, status: 'offline', msg: '' };
+  // Raw presence (masters / admin only) vs. what everyone else sees: an invisible user looks offline.
+  const hiddenUid = uid => state.get(uid)?.status === 'invisible';
+  presRawFn = uid => online.has(uid) ? { online: true, status: state.get(uid)?.status || 'online', msg: state.get(uid)?.msg || '' } : { online: false, status: 'offline', msg: '' };
+  presFn = hooks.presence = uid => online.has(uid) && !hiddenUid(uid) ? presRawFn(uid) : { online: false, status: 'offline', msg: '' };
+  // Sign-in presence chosen on the sign-in screen ("Sign in as invisible"), applied before the socket connects.
+  setStatusFn = async (uid, status) => { const st = state.get(uid); if (!st || st.status === status) return; st.status = status; for (const x of online.get(uid) || []) x.emit('m:self', { status, msg: st.msg }); if (online.has(uid)) await broadcast(uid, st.name); };
   // ---- room invites: friends only; target must be online + Available; block/ignore/18+/ban enforced; rate limited; expire after 2 minutes ----
   // Rejecting an invite never tells the inviter.
   let inviteStore = null; const invites = () => inviteStore ||= require('./room-invites').createRoomInvites();
@@ -185,8 +199,8 @@ function sockets(io, hooks) {
     const r = invites().answer(to.uid, String(id || ''), !!accept);
     if (id) { toUser(to.uid, 'm:invite-gone', { id }); hooks.toRoomUser && hooks.toRoomUser(to.name, 'invite-gone', { id }); }
     return r; };
-  hooks.toUser = toUser; toUserFn = toUser; isOnlineFn = n => !!hooks.onlineName(n);
-  let offlineStore = null; const offlineBox = () => offlineStore ||= require('./offline-messages').createOfflineMessages({ db, isOnline: n => !!hooks.onlineName(n), toUser });
+  hooks.toUser = toUser; toUserFn = toUser; isConnectedFn = n => !!hooks.onlineName(n); isOnlineFn = n => { const id = hooks.onlineName(n); return !!id && !hiddenUid(id); };
+  let offlineStore = null; const offlineBox = () => offlineStore ||= require('./offline-messages').createOfflineMessages({ db, isOnline: n => isOnlineFn(n), toUser });
 
   io.on('connection', async s => {
     const acct = s.data.acct; if (!acct) return;
@@ -296,11 +310,11 @@ function sockets(io, hooks) {
       const text = String(m.text || '').trim().slice(0, 1000); if (!text) return; { const fl = require('./flood').check(me, text, s.data && s.data.master); if (fl) return { error: fl }; } const t = await peer(m.to); if (!t) return { error: 'You can only message your contacts.' };
       const body = { id, text: esc(text), ...fmt(m), ...(AUDS.includes(m.aud) ? { aud: m.aud } : {}) }, now = Date.now();
       try { const ar = await db.q('select id from users where id = any($1) and archive', [[uid, t.id]]); for (const r of ar) await db.q('insert into im_archive(owner,peer,dir,body) values($1,$2,$3,$4)', [r.id, r.id === uid ? t.name : me, r.id === uid ? 'out' : 'in', body]); } catch { }
-      const offline=!online.has(t.id);
+      const offline=!online.has(t.id), hidden=!offline&&hiddenUid(t.id); // invisible: delivered live, but the sender is told 'offline' like any offline contact
       if(offline)await db.q('insert into offline(to_id,from_id,body) values($1,$2,$3)',[t.id,uid,body]);
       else toUser(t.id,'m:im',{from:me,t:now,...body});
       for(const x of online.get(uid)||[])if(x!==s)x.emit('m:im-echo',{to:t.name,t:now,...body,offline});
-      return {ok:true,offline,t:now,...body};
+      return {ok:true,offline:offline||hidden,t:now,...body};
     }
     s.on('m:seen', safe(async ({ to }) => { if (!ready) return; const t = await peer(to); if (!t) return;
       const r = await db.q('select count(*)::int n from users where id = any($1) and receipts', [[uid, t.id]]); if (r[0].n === 2) toUser(t.id, 'm:seen', { from: me, t: Date.now() }); }));
@@ -319,12 +333,12 @@ function sockets(io, hooks) {
       toUser(uid, 'm:imv', { with: t.name, env, by: me }); toUser(t.id, 'm:imv', { with: me, env, by: me }); return { ok: true }; }));
     s.on('m:imv-get', safe(async ({ with: w }) => { const t = await idOf(w); if (!t) return { env: 'none' }; const r = await db.q('select env from imv where k=$1', [pairKey(uid, t.id)]); return { env: r[0]?.env || 'none' }; }));
     s.on('m:buzz', safe(async ({ to }) => { if (!ready) return; if (Date.now() - lastBuzz < 10000) return { error: 'Please wait before buzzing again.' }; const t = await peer(to); if (!t) return { error: 'Not a contact.' };
-      lastBuzz = Date.now(); if (!online.has(t.id)) return { error: esc(t.name) + ' is offline.' }; toUser(t.id, 'm:buzz', { from: me }); return { ok: true }; }));
+      lastBuzz = Date.now(); if (!online.has(t.id) || hiddenUid(t.id)) return { error: esc(t.name) + ' is offline.' }; toUser(t.id, 'm:buzz', { from: me }); return { ok: true }; }));
     s.on('m:invite', safe(async ({ to, room }) => { if (!ready) return; return hooks.invite({ uid, name: me, master: !!s.data.master, room }, to); }));
     s.on('m:invite-decline', safe(async ({ id } = {}) => hooks.inviteAnswer({ uid, name: me }, id, false))); // no notice goes back to the inviter
     s.on('m:invite-accept', safe(async ({ id } = {}) => hooks.inviteAnswer({ uid, name: me }, id, true)));
     // 1:1 calls (voice / webcam) – signaling relay
-    for (const ev of ['m:call', 'm:callans', 'm:sig', 'm:hang']) s.on(ev, safe(async d => { if (!ready || !d) return; const t = await peer(d.to); if (!t || !online.has(t.id)) return { error: 'They are not available.' };
+    for (const ev of ['m:call', 'm:callans', 'm:sig', 'm:hang']) s.on(ev, safe(async d => { if (!ready || !d) return; const t = await peer(d.to); if (!t || !online.has(t.id) || (ev === 'm:call' && hiddenUid(t.id))) return { error: 'They are not available.' };
       if (ev === 'm:sig' && JSON.stringify(d.data || '').length > 60000) return;
       if (d.callId !== undefined && (typeof d.callId !== 'string' || !/^[a-f0-9-]{36}$/i.test(d.callId))) return { error:'Invalid call ID.' };
       let destination;
@@ -339,7 +353,7 @@ function sockets(io, hooks) {
       try { await broadcast(uid, me); } catch {} if (st && st.idle) st.idle = false; } });
   });
 }
-let isOnlineFn = () => false, setAvFn = async () => {};
+let isOnlineFn = () => false, isConnectedFn = () => false, setAvFn = async () => {}, presRawFn = null, setStatusFn = async () => {};
 let blockFn, presFn = null, toUserFn = () => {}, contactsChangedFn = () => {};
-module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), toUser: (u, e, d) => toUserFn(u, e, d), contactsChanged: (...ids) => contactsChangedFn(...ids), blockAccount: (...args) => blockFn(...args), devConflict: null, setAvatar: (uid, av) => setAvFn(uid, av) };
+module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, presenceRaw: uid => presRawFn ? presRawFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), isConnected: n => isConnectedFn(n), setSignInStatus: (uid, st) => setStatusFn(uid, st), toUser: (u, e, d) => toUserFn(u, e, d), contactsChanged: (...ids) => contactsChangedFn(...ids), blockAccount: (...args) => blockFn(...args), devConflict: null, setAvatar: (uid, av) => setAvFn(uid, av) };
 
