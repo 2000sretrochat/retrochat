@@ -8,7 +8,9 @@ const yd = fs.readFileSync(path.join(root, 'public/yd.js'), 'utf8');
 const index = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 const rooms = fs.readFileSync(path.join(root, 'public/rooms.html'), 'utf8');
 const main = fs.readFileSync(path.join(root, 'desktop/main.js'), 'utf8');
-const fix17 = fs.readFileSync(path.join(root, '_preview/17-native-chat-single-frame-fixture.html'), 'utf8');
+// Static mock of the approved single-frame desktop room layout (preview 17). It used to live in an
+// untracked _preview/ folder, so the test failed on any fresh checkout; it is now a tracked fixture.
+const fix17 = fs.readFileSync(path.join(__dirname, 'fixtures/desktop-preview-17-single-frame.html'), 'utf8');
 
 test('desktop hides messenger fake chrome and duplicate blue room tbar', () => {
   assert.match(yd, /html\.yd #mwin>\.tbar\{display:none/);

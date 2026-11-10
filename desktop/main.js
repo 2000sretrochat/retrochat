@@ -102,6 +102,27 @@ app.whenReady().then(() => {
   tray.on('click', show);
 });
 // web Notifications from the page are native already; also flash the taskbar and offer a tray balloon when hidden
+// Master room recordings: the page streams the recording here and it is written to
+// Documents/Razzle Recordings/. Only our own site may call this, names are sanitized, files are
+// append-only .webm inside that one folder, and each file is capped.
+const REC_DIR = () => path.join(app.getPath('documents'), 'Razzle Recordings'), REC_MAX = 8 * 1024 ** 3, recFiles = new Map(); let recSeq = 0;
+const recOk = e => { try { return new URL(e.senderFrame ? e.senderFrame.url : e.sender.getURL()).origin === ORIGIN; } catch { return false; } };
+ipcMain.handle('yc-rec-open', (e, name) => {
+  if (!recOk(e) || recFiles.size >= 4) throw new Error('not allowed');
+  const base = String(name || '').replace(/[^A-Za-z0-9 _.-]+/g, '').replace(/^\.+/, '').slice(0, 100).replace(/\.webm$/i, '') || 'Razzle-recording';
+  fs.mkdirSync(REC_DIR(), { recursive: true });
+  let file = path.join(REC_DIR(), base + '.webm'); for (let i = 2; fs.existsSync(file); i++) file = path.join(REC_DIR(), base + '-' + i + '.webm');
+  const id = 'r' + (++recSeq); recFiles.set(id, { file, fd: fs.openSync(file, 'wx'), size: 0, owner: e.sender.id });
+  e.sender.once('destroyed', () => { const f = recFiles.get(id); if (f) { recFiles.delete(id); try { fs.closeSync(f.fd); } catch { } } }); // window closed mid-recording: keep what was written
+  return id;
+});
+ipcMain.handle('yc-rec-write', (e, id, buf) => {
+  const f = recFiles.get(id); if (!f || f.owner !== e.sender.id || !recOk(e)) throw new Error('not allowed');
+  const b = Buffer.from(buf); if (f.size + b.length > REC_MAX) throw new Error('recording too large'); fs.writeSync(f.fd, b); f.size += b.length; return f.size;
+});
+ipcMain.handle('yc-rec-close', (e, id) => {
+  const f = recFiles.get(id); if (!f || f.owner !== e.sender.id) return ''; recFiles.delete(id); try { fs.closeSync(f.fd); } catch { } return f.file;
+});
 const MICVOL = require('./micvol');
 ipcMain.handle('yc-micvol', (_, d) => (d ? MICVOL.step(d) : MICVOL.get()));
 ipcMain.on('yc-notify', (_, t, b) => {

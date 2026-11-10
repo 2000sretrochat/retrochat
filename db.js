@@ -90,7 +90,10 @@ create table if not exists bot_avatars(bot_id text primary key, mime text not nu
 create table if not exists trivia_scores(name_lc text primary key, name text not null, points int not null default 0, updated timestamptz not null default now());
 -- offline messages: keep read ones until dismissed (additive)
 alter table offline add column if not exists read_at timestamptz;
-create index if not exists offline_to_unread on offline(to_id, id) where read_at is null;`;
+create index if not exists offline_to_unread on offline(to_id, id) where read_at is null;
+-- master-only recording sessions: metadata only (the media file stays on the master's own device)
+create table if not exists recording_sessions(id text primary key, room text not null, master text not null, mode text not null, started_at timestamptz not null default now(), stopped_at timestamptz, end_reason text, bytes bigint);
+create index if not exists recording_sessions_started on recording_sessions(started_at desc);`;
 async function init() {
   if (!process.env.DATABASE_URL) { error = 'DATABASE_URL is not set'; console.warn('[db] ' + error + ' - accounts disabled (maintenance mode)'); return; }
   const local = /localhost|127\.0\.0\.1|\/tmp/.test(process.env.DATABASE_URL);
