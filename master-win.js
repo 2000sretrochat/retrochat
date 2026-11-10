@@ -1,6 +1,6 @@
 // In-app Master Console window (served only to masters via /api/master/ui.js)
 window.openMasterConsole = function () {
-  let w = document.getElementById('ymcw'); if (w) { w.style.display = ''; w.classList.remove('min'); w.style.zIndex = ++window._ymz; return; }
+  let w = document.getElementById('ymcw'); if (w) { w.style.display = ''; w.classList.remove('min'); if (innerWidth < 980 || innerHeight < 680) w.classList.add('max'); w.style.zIndex = ++window._ymz; return; }
   window._ymz = window._ymz || 9000;
   if (!document.getElementById('ymcs')) { const st = document.createElement('style'); st.id = 'ymcs'; st.textContent = `
 #ymcw{position:fixed;left:60px;top:50px;width:900px;height:600px;min-width:360px;min-height:200px;background:#fff;border:1px solid #6d86a8;border-radius:8px;box-shadow:0 10px 32px rgba(0,0,0,.35);display:flex;flex-direction:column;resize:both;overflow:hidden;z-index:9000;font:13px system-ui,Arial}
@@ -11,6 +11,8 @@ window.openMasterConsole = function () {
   w = document.createElement('div'); w.id = 'ymcw'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Master Console');
   w.innerHTML = '<div class=ymtb><span>&#9881; Master Console</span><button class=mn title=Minimize>_</button><button class=mx title=Maximize>&#9633;</button><button class=x title=Close>&#10005;</button></div><iframe src="/master?embed=1" title="Master Console"></iframe>';
   document.body.appendChild(w); w.style.zIndex = ++window._ymz;
+  // small windows (e.g. the Messenger window in the desktop app): open filling the window instead of overflowing it
+  if (innerWidth < 980 || innerHeight < 680) w.classList.add('max');
   const tb = w.querySelector('.ymtb'), fr = w.querySelector('iframe');
   w.querySelector('.x').onclick = () => w.remove();
   w.querySelector('.mn').onclick = () => { w.classList.remove('max'); w.classList.toggle('min'); };

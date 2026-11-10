@@ -56,3 +56,10 @@ html:not(.dark) .im .log .transcript-message .bb{color:#111}
 .im .log .transcript-message time,.im .log .transcript-message .delivery-state{color:var(--muted,#51627b);font-size:.85em}
 .im .log .transcript-message .delivery-state{display:block;margin-top:2px}
 .im.hide-im-times .transcript-message time{display:none}
+/* Master Console button (masters only), immediately right of the bell */
+#menu .messenger-master{display:inline-flex!important;align-items:center;gap:4px;height:36px;min-height:36px!important;padding:0 8px!important;margin:0 0 0 2px!important;border:1px solid transparent!important;border-radius:4px!important;background:transparent!important;color:#00205B!important;font-family:inherit!important;font-size:12px!important;font-weight:600!important;line-height:1!important;box-shadow:none!important;white-space:nowrap;vertical-align:middle;cursor:pointer}
+#menu .messenger-master:hover{background:#DBEBFF!important;border-color:#9DB3CC!important}
+#menu .messenger-master:focus-visible{outline:2px solid #356AA6;outline-offset:2px}
+#menu .messenger-master svg{flex:none;width:18px;height:18px}
+@media (max-width:379px){#menu .messenger-master{width:36px;padding:0!important;justify-content:center}#menu .messenger-master .mm-l{display:none}}
+@media (pointer:coarse){#menu .messenger-master{height:44px;min-width:44px}}
