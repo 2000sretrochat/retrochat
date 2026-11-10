@@ -46,8 +46,10 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
     stopRinging(call);
     clearTimeout(call.recovery);
     if(notify)void send(call,'m:hang',{reason});
+    call.unwatchMic?.();
     call.pc?.close();
     call.stream?.getTracks().forEach(track=>track.stop());
+    (call.stream?._parts||[]).forEach(part=>part.getTracks&&part.getTracks().forEach(track=>track.stop()));
     window.querySelectorAll('.call video').forEach(video=>video.srcObject=null);
     call.audio?.remove();
     show(window,'');
@@ -81,14 +83,46 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
     ring(window,call);
     toast('Incoming '+(kind==='video'?'webcam':'voice')+' call');
   }
+  async function ensureYav() {
+    if(window.YAV)return window.YAV;
+    if(typeof document==='undefined'||!document.head)return null;
+    await new Promise(ok=>{
+      const script=document.createElement('script');script.src='/av.js?v=3';
+      script.onload=script.onerror=ok;document.head.appendChild(script);
+    });
+    return window.YAV||null;
+  }
+  async function captureCallMedia(call) {
+    const video=call.kind==='video'?{width:{ideal:640},height:{ideal:360}}:false;
+    const yav=await ensureYav();
+    if(yav&&yav.captureVoice)return yav.captureVoice({video});
+    return navigator.mediaDevices.getUserMedia({
+      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false},
+      video
+    });
+  }
+  function watchMic(window,call) {
+    if(!window.YAV||!window.YAV.onRebuild)return;
+    call.unwatchMic=window.YAV.onRebuild(async stream=>{
+      if(!active(window,call)||!stream)return;
+      const audio=stream.getAudioTracks()[0];
+      const video=(call.stream&&call.stream.getVideoTracks())||[];
+      if(audio&&call.pc){
+        const sender=call.pc.getSenders().find(item=>item.track&&item.track.kind==='audio');
+        if(sender)await sender.replaceTrack(audio).catch(()=>{});
+      }
+      const next=new MediaStream([audio,...video].filter(Boolean));
+      next._parts=stream._parts||[stream];
+      call.stream=next;
+      if(call.kind==='video')window.querySelector('.call video.me').srcObject=next;
+    });
+  }
   async function acquire(window,call) {
     try {
-      const stream=await navigator.mediaDevices.getUserMedia({
-        audio:{echoCancellation:true,noiseSuppression:true},
-        video:call.kind==='video'?{width:{ideal:640},height:{ideal:360}}:false
-      });
+      const stream=await captureCallMedia(call);
       if(!active(window,call)){stream.getTracks().forEach(track=>track.stop());return null;}
       call.stream=stream;
+      watchMic(window,call);
       if(call.kind==='video')window.querySelector('.call video.me').srcObject=stream;
       return stream;
     } catch(error) {

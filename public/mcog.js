@@ -30,15 +30,24 @@ function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.crea
   else if(a=='shk')L.ycShake=L.ycShake=='off'?'on':'off';else if(a=='rb')L.ycRoomBuzz=L.ycRoomBuzz=='off'?'on':'off';
   else if(a=='sr'){$('mShowRoom').click();setTimeout(draw,400)}
   else if(a=='all'){show(false);window.YSet&&YSet.open();return}else if(a=='av'){show(false);avPanel();return}draw();place()}}
-async function avPanel(){if(!window.YAV)await new Promise(ok=>{const s=document.createElement('script');s.src='/av.js';s.onload=s.onerror=ok;document.head.appendChild(s)});if(!window.YAV)return alert('Audio settings are not available right now.');
+async function avPanel(){if(!window.YAV)await new Promise(ok=>{const s=document.createElement('script');s.src='/av.js?v=3';s.onload=s.onerror=ok;document.head.appendChild(s)});if(!window.YAV)return alert('Audio settings are not available right now.');
  document.querySelectorAll('.yprof').forEach(x=>x.remove());const c=YAV.cfg(),ds=await YAV.devices(),E=s=>String(s).replace(/[&<>"]/g,x=>'&#'+x.charCodeAt(0)+';');
  const sel=(id,o,v)=>`<select id=${id} style="width:100%;margin:2px 0 8px">${o.map(([k,l])=>`<option value="${E(k)}" ${k==v?'selected':''}>${E(l)}</option>`).join('')}</select>`;
  const w=document.createElement('div');w.className='yprof';w.innerHTML=`<div class=tbar>Audio &amp; Video Settings<span class=sp></span><span class=x title=Close>X</span></div><div class=pb style="padding:12px">
  <b>Microphone</b>${sel('mavDev',[['','Default microphone'],...ds.map((x,i)=>[x.deviceId,x.label||'Microphone '+(i+1)])],c.dev)}
  <b>Mic mode</b>${sel('mavMode',[['voice','Voice (noise reduction)'],['music','Music (full quality)']],c.mode)}
  <b>Camera quality</b>${sel('mavCam',[['hd','HD'],['normal','Standard'],['low','Low (saves data)']],c.camQ)}
- <label><input type=checkbox id=mavAgc ${c.agc?'checked':''}> Let my computer adjust my mic level automatically</label>
+ <label style="font-weight:600"><input type=checkbox id=mavAgc ${c.agc?'checked':''} style="width:auto;display:inline;margin-right:6px"> Let my computer adjust my mic level automatically</label>
+ <p style="margin:10px 0 2px">Mic volume <span id=mavBoostLbl>${c.boost}%</span></p>
+ <input type=range id=mavBoost min=0 max=200 step=5 value="${c.boost}" style="width:100%">
+ <small style="display:block;margin:2px 0 6px;color:var(--muted,#5b6b85)">0&ndash;200%. 100% is normal. Above 100% raises your mic; a soft limiter prevents harsh clipping.</small>
+ <div class="meter" title="Your mic level (lights up when you talk)" style="width:100%;height:12px;border:1px solid var(--line,#d5e2f0);background:repeating-linear-gradient(90deg,#d5dfec 0 7px,transparent 7px 10px);position:relative;overflow:hidden;border-radius:6px"><i id=mavMeter style="position:absolute;left:0;top:0;bottom:0;width:0;background:repeating-linear-gradient(90deg,#2db52d 0 7px,transparent 7px 10px)"></i></div>
  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button id=mavX>Cancel</button><button id=mavOk style="background:#0033A0;color:#fff;border-color:#0033A0">Save</button></div></div>`;
- document.body.appendChild(w);const q=s=>w.querySelector(s),cl=()=>w.remove();q('.x').onclick=q('#mavX').onclick=cl;
- q('#mavOk').onclick=()=>{YAV.set('dev',q('#mavDev').value);YAV.set('mode',q('#mavMode').value);YAV.set('camQ',q('#mavCam').value);YAV.set('agc',q('#mavAgc').checked);cl()}}
+ document.body.appendChild(w);const q=s=>w.querySelector(s),cl=()=>{stopMeter&&stopMeter();w.remove()};
+ const syncBoost=()=>{const v=YAV.setBoost(+q('#mavBoost').value);q('#mavBoostLbl').textContent=v+'%'};
+ q('#mavBoost').oninput=syncBoost;const stopMeter=YAV.attachMeter(q('#mavMeter'));
+ q('.x').onclick=q('#mavX').onclick=cl;
+ q('#mavOk').onclick=async()=>{const old=YAV.cfg();YAV.set('dev',q('#mavDev').value);YAV.set('mode',q('#mavMode').value);YAV.set('camQ',q('#mavCam').value);YAV.set('agc',q('#mavAgc').checked);YAV.setBoost(+q('#mavBoost').value);cl();
+  if(old.agc!=YAV.cfg().agc||old.dev!=YAV.cfg().dev||old.mode!=YAV.cfg().mode){try{YAV.recapture&&await YAV.recapture()}catch(e){}}}
+}
 document.readyState=='loading'?addEventListener('DOMContentLoaded',init):init()})();
