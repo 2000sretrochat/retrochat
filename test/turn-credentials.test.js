@@ -6,7 +6,7 @@ test('TURN credentials are scoped to a member, cached, and browser-safe',async()
   let requests=0,clock=1000;
   const load=createTurnCredentials({now:()=>clock,request:async(url,options)=>{
     requests++;
-    assert.match(url,/\/key-id\/credentials\/generate$/);
+    assert.match(url,/\/key-id\/credentials\/generate-ice-servers$/);
     assert.equal(JSON.parse(options.body).ttl,14400);
     return {ok:true,json:async()=>({iceServers:[
       {urls:['stun:stun.cloudflare.com:3478']},

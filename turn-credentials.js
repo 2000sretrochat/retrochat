@@ -5,7 +5,7 @@ module.exports=function createTurnCredentials({request=fetch,now=Date.now}={}){
     const cached=cache.get(userId);
     if(cached && cached.until>now())return cached.pending;
     const pending=(async()=>{
-      const response=await request('https://rtc.live.cloudflare.com/v1/turn/keys/'+encodeURIComponent(keyId)+'/credentials/generate',{
+      const response=await request('https://rtc.live.cloudflare.com/v1/turn/keys/'+encodeURIComponent(keyId)+'/credentials/generate-ice-servers',{
         method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
         body:JSON.stringify({ttl:14400}),signal:AbortSignal.timeout(4500)
       });
