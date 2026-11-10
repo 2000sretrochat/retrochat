@@ -1,0 +1,153 @@
+<!doctype html>
+<html class="yd" lang="en">
+<head>
+<meta charset="utf-8">
+<title>Preview · rich Late Night room · single native frame</title>
+<style>
+:root{--sys:Tahoma,Verdana,Arial,sans-serif;--ink:#12213F;--muted:#5b6b85;--line:#d5e2f0;--blue:#004990;--navy:#003876;--card:#fff;--tb:#f3f6fa}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#c9dae9;font:12px var(--sys);color:var(--ink)}
+.wrap{width:1180px;max-width:100%;margin:14px auto 24px;padding:0 10px}
+.banner{background:#fff8ec;border:1px solid #f3d7a5;border-radius:10px;padding:10px 12px;margin-bottom:10px;color:#7a1f1f;font:13px/1.45 var(--sys)}
+.banner strong{color:#7a1f1f}.banner .ok{color:#1a6b2c;font-weight:700}
+.banner code{background:#fff;padding:1px 4px;border-radius:4px;font-size:11px}
+#frame{width:1180px;height:780px;margin:0 auto;background:#fff;border:1px solid #7a93ad;box-shadow:0 12px 28px #1f3a5730;display:flex;flex-direction:column;overflow:hidden}
+/* Simulated native Windows 10 title — ONLY place for min/max/× */
+.ostitle{height:32px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 0 0 10px;border-bottom:1px solid #d5dde8;font:600 12px "Segoe UI",Tahoma,sans-serif;color:#1a1a1a;flex:none}
+.ostitle img{width:16px;height:16px}.ostitle .sp{flex:1}
+.ostitle .ctl{display:flex;height:32px}
+.ostitle .ctl i{width:46px;height:32px;display:grid;place-items:center;font-style:normal;font-size:11px;color:#333}
+.ostitle .ctl i.x{color:#424950}
+/* Real blue room header — title left, right blank on desktop (Pop out / Leave hidden) */
+.tbar{background:linear-gradient(135deg,#00A3E0,#0033A0 60%,#2468D7);color:#fff;font:600 15px var(--sys);padding:9px 12px;display:flex;align-items:center;gap:8px;flex:none;text-shadow:none}
+.tbar .lgs img{width:18px;height:18px;display:block;filter:brightness(10)}
+.tbar .sp{flex:1}
+.tbar .ghost{opacity:.35;font-size:11px;font-weight:500} /* annotation only in preview caption, not in bar */
+#menu{display:flex;align-items:center;background:var(--tb);border-bottom:1px solid var(--line);padding:2px 6px;min-height:28px;flex:none;font:13px var(--sys)}
+#menu>div{padding:4px 10px;color:var(--navy);cursor:default}
+#rhead{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);background:#fff;flex:none}
+#rtile{width:48px;height:48px;border-radius:12px;background:#0033A0;color:#fff;display:grid;place-items:center;font-size:26px;flex:none}
+.rnw{display:flex;align-items:center;gap:10px}
+.rn{font:700 20px var(--sys);color:var(--navy)}
+.badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#e8f2ff;color:#0033A0;font:650 11px var(--sys);vertical-align:middle}
+.folb{border:1.5px solid #0033A0;color:#0033A0;background:#fff;border-radius:999px;padding:2px 11px;font:600 12px var(--sys)}
+.folb.on{background:#0033A0;color:#fff}
+.rt{font:12px var(--sys);color:var(--muted);margin-top:2px}
+#rhead .sp{flex:1}
+.hb{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid #b5d1eb;border-radius:8px;background:#fff;font:650 12px var(--sys);color:var(--navy)}
+.hb.inv{background:#004990;border-color:#004990;color:#fff;font-weight:700}
+.hb.mst{background:linear-gradient(#ffe7a3,#f5c542);color:#5a3d00;border-color:#d9a520;font-weight:700}
+#main{flex:1;display:flex;min-height:0}
+#lpane{flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+#log{flex:1;overflow:auto;padding:12px 16px;background:#fff;font:14px var(--sys)}
+#log .row{display:flex;gap:8px;align-items:flex-start;padding:3px 0}
+#log .av{width:24px;height:24px;border-radius:50%;flex:none;margin-top:1px}
+#log .av.p{background:#7b5cff}#log .av.b{background:#3a7bd5}#log .av.g{background:#2aa87a}#log .av.z{background:#004990}
+#log .ts{color:var(--muted);font-size:13px;margin-right:6px}
+#log .n{font-weight:700;margin-right:4px}
+#log .n.c1{color:#c0392b}#log .n.c2{color:#1a5fb4}#log .n.c3{color:#0b7a4b}
+#mpane{width:240px;background:#f7fafc;display:flex;flex-direction:column;flex:none}
+#phead{padding:10px 12px;font:700 13px var(--sys);color:var(--navy);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
+#phead .sp{flex:1}
+#mem{flex:1;overflow:auto;padding:6px 8px}
+.mem{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;font:13px var(--sys);color:var(--navy)}
+.mem .sdot{width:8px;height:8px;border-radius:50%;background:#2db52d;flex:none}
+.mem .nm{font-weight:650}
+#mbtns{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line)}
+#mbtns button{flex:1;min-height:32px;border:1px solid #c9daf0;border-radius:8px;background:#fff;font:650 12px var(--sys);color:var(--navy)}
+#vrow{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--line);background:#f7fafc;flex:none;flex-wrap:wrap}
+#talk{background:#004990;color:#fff;border:0;border-radius:8px;padding:8px 14px;font:700 13px var(--sys)}
+.meter{display:inline-flex;gap:2px;align-items:flex-end;height:20px}
+.meter i{width:4px;background:#b8c7d9;border-radius:1px;display:block}
+#vright{margin-left:auto;display:flex;align-items:center;gap:6px}
+#form{display:flex;align-items:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--tb);flex:none}
+.ib{width:42px;height:42px;border:1px solid #c9daf0;border-radius:10px;background:#fff;display:grid;place-items:center;font:650 11px var(--sys);color:var(--navy)}
+#msg{flex:1;min-height:48px;border:1.5px solid #9fb3d1;border-radius:12px;padding:12px 14px;font:15px var(--sys);resize:none}
+.send{width:44px;height:44px;border:0;border-radius:50%;background:#ff9900;color:#fff;font-size:18px;display:grid;place-items:center;flex:none}
+.adph{height:44px;margin:0 12px 10px;border:1px dashed #ccd;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#678;font:11px var(--sys);background:repeating-linear-gradient(45deg,#f7f9fc,#f7f9fc 8px,#eef2f8 8px,#eef2f8 16px);flex:none}
+.callout{margin-top:10px;padding:10px 12px;background:#eef7ff;border:1px solid #b5d1eb;border-radius:10px;font:12px/1.45 var(--sys);color:var(--navy)}
+.note{color:#8a5a12;background:#fff8ec;border:1px solid #f3d7a5;border-radius:8px;padding:8px 10px;margin-top:8px;font:12px/1.4 var(--sys)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">
+    <strong>Preview</strong> — static fixture at <strong>1180×780</strong> (not the live Electron .exe · fictional example users only).
+    <span class="ok">ONE native Windows frame</span> (OS min/max/× top-right only).
+    Blue room-name strip removed on desktop (duplicates native OS title).
+    Flow: native title → <strong>Room / Edit / View / Actions / Help</strong> → moon + Late Night full rich area.
+    Leave stays under <strong>Room</strong> menu. Browser still shows the blue bar with Pop out / Leave.
+    Full rich room kept (menus, moon title, Following, Master for masters only, Invite/Webcam/Voice, chat history, People + PM/Ignore, voice bar, Font/Emoji, orange Send).
+  </div>
+  <div id="frame">
+    <div class="ostitle"><img src="razzle-chat.svg" alt=""><span>Razzle Chat — Late Night</span><span class="sp"></span><span class="ctl"><i>—</i><i>□</i><i class="x">×</i></span></div>
+
+    <!-- desktop: #chat>.tbar hidden — native OS title carries Late Night -->
+    <div id="menu"><div>Room</div><div>Edit</div><div>View</div><div>Actions</div><div>Help</div></div>
+
+    <div id="rhead">
+      <div id="rtile">☾</div>
+      <div>
+        <div class="rnw"><div class="rn">Late Night <span class="badge">PG-13</span></div><button class="folb on" type="button">★ Following</button></div>
+        <div class="rt">For the night owls - who else is still up?</div>
+      </div>
+      <span class="sp"></span>
+      <button class="hb mst" type="button" title="Master Console (masters only — shown here because this preview is from a master session)">🛡 Master</button>
+      <button class="hb inv" type="button">+ Invite</button>
+      <button class="hb" type="button">Webcam</button>
+      <button class="hb" type="button">Voice</button>
+    </div>
+
+    <div id="main">
+      <div id="lpane">
+        <div id="log">
+          <div class="row"><span class="av p"></span><div><span class="ts">[2:27 AM]</span><span class="n c1">xXmoonchildXx</span> anyone else still awake?</div></div>
+          <div class="row"><span class="av b"></span><div><span class="ts">[2:28 AM]</span><span class="n c2">sk8rboi_1987</span> yo, finishing a late shift — what's good</div></div>
+          <div class="row"><span class="av g"></span><div><span class="ts">[2:28 AM]</span><span class="n c3">nightowl_jen</span> same here. tea + playlist mode ☕</div></div>
+          <div class="row"><span class="av p"></span><div><span class="ts">[2:29 AM]</span><span class="n c1">xXmoonchildXx</span> drop a song rec if you got one</div></div>
+          <div class="row"><span class="av z"></span><div><span class="ts">[2:30 AM]</span><span class="n c2">ExampleUser</span> (fictional preview message — not live data)</div></div>
+        </div>
+        <div id="form">
+          <button class="ib" type="button" title="Font">Aa<br><span style="font-size:9px">Font</span></button>
+          <button class="ib" type="button" title="Emoji">☺</button>
+          <textarea id="msg" placeholder="Type a message to Late Night..."></textarea>
+          <button class="send" type="button" title="Send">➤</button>
+        </div>
+        <div class="adph">Advertisement - Google Ads</div>
+      </div>
+      <div id="mpane">
+        <div id="phead">People in Room (4)<span class="sp"></span>⌕</div>
+        <div id="mem">
+          <div class="mem"><span class="sdot"></span><span class="nm">nightowl_jen</span></div>
+          <div class="mem"><span class="sdot"></span><span class="nm">sk8rboi_1987</span></div>
+          <div class="mem"><span class="sdot"></span><span class="nm">xXmoonchildXx</span></div>
+          <div class="mem"><span class="sdot"></span><span class="nm">ExampleUser</span></div>
+        </div>
+        <div id="mbtns"><button type="button"><u>P</u>M</button><button type="button"><u>I</u>gnore User</button></div>
+      </div>
+    </div>
+
+    <div id="vrow">
+      <label><input type="checkbox"> Hands Free</label>
+      <button class="hb" type="button">⚙ Settings</button>
+      <button id="talk" type="button">🎙 Talk</button>
+      <span class="meter"><i style="height:6px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:9px"></i><i style="height:14px"></i></span>
+      <span style="color:var(--muted);font:600 12px var(--sys)">Mics 0/3</span>
+      <div id="vright">
+        <span style="color:var(--muted)">🔈</span>
+        <input type="range" min="0" max="100" value="80" style="width:80px;accent-color:#0033A0">
+        <span style="color:var(--muted);font:600 11px var(--sys)">80%</span>
+        <span style="color:var(--muted);font:600 11px var(--sys)">a — A · 14px</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    Desktop CSS: hide Social page chrome; hide messenger fake <code>#mwin&gt;.tbar</code>; hide duplicate blue <code>#chat&gt;.tbar</code>.
+    Native OS title → menus → moon/Late Night rich body. Leave = Room menu → Leave Room / Sign Out.
+    Browser keeps the blue bar with Pop out + Leave. Master gold button is runtime-only for master accounts.
+  </div>
+  <div class="note">Fictional example names only (xXmoonchildXx, sk8rboi_1987, nightowl_jen, ExampleUser). Not live account data. No emails/passwords/tokens.</div>
+</div>
+</body>
+</html>

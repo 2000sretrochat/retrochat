@@ -22,7 +22,7 @@ const blockedBy = async (owner, who) => { try { return (await db.q('select 1 fro
 const mutualC = async (a, b) => { try { return (await db.q('select 1 from contacts where owner=$1 and contact=$2', [a, b])).length > 0; } catch { return false; } };
 const masterNames = () => new Set([...io.sockets.sockets.values()].filter(x => x.data.master && x.data.acct).map(x => x.data.acct.name.toLowerCase()));
 async function masterLc() { try { return new Set((await db.q('select name_lc from users where is_master')).map(r => r.name_lc)); } catch { return masterNames(); } }
-const { DIR, PATH, ADULT_ROOMS, CAT_ORDER } = require('./rooms-dir');
+const { DIR, PATH, ADULT_ROOMS } = require('./rooms-dir');
 const ROOMS = {}; for (const [c, rs] of Object.entries(DIR)) for (const r of rs) ROOMS[r] = c;
 const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?', 'The Lounge':'Good company. No particular agenda.' };
 for (const r of Object.keys(ROOMS)) if (!TOPICS[r]) TOPICS[r] = ADULT_ROOMS.has(r) ? r + ' - adults only (18+)' : 'Welcome to ' + r + ' - chat about ' + r.toLowerCase();
@@ -38,7 +38,7 @@ const delURoom = n => { Promise.resolve().then(() => db.q('delete from user_room
 const RATINGS = ['PG-13', 'R'], RATE = {}; const adultR = r => RATE[r] === 'R'; // official rooms default PG-13
 const rateOf = r => RATE[r] || 'PG-13';
 for (const r of ADULT_ROOMS) RATE[r] = 'R';
-const OFFICIAL = new Set(Object.keys(ROOMS)), MAXU = 5, EMPTY_MS = 10 * 60e3;
+const OFFICIAL = new Set(Object.keys(ROOMS)), MAXU = 5;
 const BAD = /(fuck|shit|bitch|cunt|nigg|fag|dick|cock|pussy|whore|slut|rape|nazi|porn|sex|penis|vagina|asshole|retard)/i;
 const roomKey = n => String(n).toLowerCase().replace(/\s+/g, ' ').trim();
 function roomNameError(n) {
@@ -110,6 +110,11 @@ const turnUsage = require('./turn-usage')({ onPause: () => cloudflareTurn.clear(
 app.get('/api/turn-usage', async (req, res) => { res.set('Cache-Control', 'no-store'); const u = await userFromReq(req).catch(() => null); if (!u) return res.status(401).json({ error: 'Sign in first.' });
   let m = false; try { m = !!(await db.q('select is_master from users where id=$1', [u.id]))[0]?.is_master; } catch { } if (!m) return res.status(403).json({ error: 'Masters only.' });
   res.json(await turnUsage.status()); });
+// ---- master-only room recordings: media is recorded and saved on the master's own device; the server keeps only metadata + the room's "recording" flag ----
+const REC = require('./recordings').createRecordings({ db });
+const RECW = require('./recordings').wireRecordings(REC, { app, express, emitRoom: (room, ev, d) => io.to(room).emit(ev, d), userFromReq,
+  isMaster: async u => { try { return !!(await db.q('select is_master from users where id=$1', [u.id]))[0]?.is_master; } catch { return false; } },
+  roomSocketFor: u => { for (const x of io.sockets.sockets.values()) if (x.data.master && x.data.acct && x.data.acct.id === u.id && x.data.name && x.data.room) return x; return null; } });
 // room preview (Browse Rooms hover / long-press): who's inside, minus incognito masters and blocked users
 app.get('/api/peek', async (req, res) => { const room = String(req.query.room || ''); if (!ROOMS[room]) return res.json({ names: [] }); const a = await userFromReq(req).catch(() => null);
   if (adultR(room) && !(await isAdultReq(req))) return res.json({ names: [] });
@@ -401,6 +406,7 @@ io.on('connection', s => {
   { let win = Date.now(), cnt = 0, strikes = 0; s.use((pkt, next) => { const now = Date.now(); if (now - win > 10e3) { win = now; cnt = 0; } const lim = s.data.master ? 800 : 300;
     if (++cnt > lim) { if (++strikes > 50) { s.disconnect(true); return; } const cb = pkt[pkt.length - 1]; if (typeof cb === 'function') cb({ error: 'Slow down - too many actions.' }); return; } next(); }); }
   let stamps = [];
+  RECW.socket(s);
   s.on('login', async ({ name, room }, cb) => {
     name = s.data.acct ? s.data.acct.name : String(name || '').trim();
     if (!s.data.acct) {
@@ -441,7 +447,7 @@ io.on('connection', s => {
   function join(room) {
     if (s.data.room) { s.leave(s.data.room); if (noticeOk()) push(s.data.room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has left the room.` }); lists(s.data.room); }
     const old = s.data.room; mediaReset(); if (old) upd(old);
-    s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); s.emit('history', { room, topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, icon: UROOMS.get(room)?.icon || '', rating: rateOf(room), mics: micsOf(room), ann: ANN[room] || '' });
+    s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); s.emit('history', { room, topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, icon: UROOMS.get(room)?.icon || '', rating: rateOf(room), mics: micsOf(room), ann: ANN[room] || '', rec: REC.isOn(room) });
     if (!graceSkip(room) && noticeOk()) push(room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has entered the room.` }); upd(room); s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce });
   }
   s.on('create-room', ({ name, topic, rating, mics, cat, icon }, cb) => {
@@ -461,7 +467,7 @@ io.on('connection', s => {
       for (const t of ['room_meta', 'room_mod', 'room_ann', 'room_history', 'favorites']) await db.q(`update ${t} set room=$2 where room=$1`, [old, name]).catch(err => console.error('rename', t, err.message));
     } catch (err) { UROOMS.set(old, r0); return cb({ error: err.code === '23505' ? 'A room with that name already exists.' : 'Could not rename the room right now.' }); }
     UROOMS.set(name, r0); for (const M of [ROOMS, TOPICS, history, RATE, MOD, MICS, HQ, MTIMER, QUEUE, MANN, ANN]) if (old in M) { M[name] = M[old]; delete M[old]; }
-    for (const x of socks(old)) { x.leave(old); x.join(name); x.data.room = name; }
+    for (const x of socks(old)) { x.leave(old); x.join(name); x.data.room = name; } REC.rename(old, name);
     io.to(name).emit('room-renamed', { from: old, to: name }); push(name, { sys: true, text: 'Room renamed to ' + esc(name) }); upd(name); io.emit('rooms-changed'); cb({ ok: true, name }); });
   s.on('set-topic', (t, cb) => { if (!isOwner()) return cb && cb({ error: 'Only the room owner can change the topic.' }); TOPICS[s.data.room] = cleanTopic(t) || TOPICS[s.data.room];
     saveURoom(s.data.room); io.to(s.data.room).emit('topic', TOPICS[s.data.room]); push(s.data.room, { sys: true, text: esc(s.data.name) + ' changed the topic to: ' + esc(TOPICS[s.data.room]) }); cb && cb({ ok: true }); });
@@ -497,8 +503,8 @@ io.on('connection', s => {
     push(s.data.room, { name: esc(s.data.name), av: s.data.av || '', role: s.data.master ? '' : roleOf(s, s.data.room), ...(s.data.guest && !s.data.master ? { g: true } : {}), text: esc(text), color: COLORS.includes(m.color) ? m.color : '#000000', b: !!m.b, i: !!m.i, u: !!m.u, f: FONTS.includes(m.f) ? m.f : 'Arial', t: now });
     if (!s.data.inc) botHear(s.data.room, s.data.name, text).catch(e => console.error("[botHear]", e.message));
   });
-  function mediaReset() {
-    const room = s.data.room; if (!room) return;
+  function mediaReset(why = 'left room') {
+    const room = s.data.room; if (!room) return; RECW.onLeave(s, why); // a master's recording ends when they leave the room or disconnect
     if (!s.data.inc) io.to(room).emit('media-gone', { id: s.id });
     for (const x of socks(room)) x.data.viewers?.delete(s.id);
     s.data.cam = false; s.data.talk = false; s.data.voice = false; s.data.viewers = new Set();
@@ -543,17 +549,14 @@ io.on('connection', s => {
   s.on('cam:unblock', name => { s.data.camBlock?.delete(String(name || '').toLowerCase()); });
   s.on('unview', id => { const t = same(id); if (t && t.data.viewers?.delete(s.id)) { t.emit('unview', { id: s.id }); upd(s.data.room); } });
   s.on('signal', ({ to, data }) => { if (s.data.inc) return; const t = same(to); if (t && data && JSON.stringify(data).length < 60000) t.emit('signal', { from: s.id, name: s.data.name, data }); });
-  let lastBuzz = 0, lastTyping = 0;
-  s.on('buzz', () => { if (!s.data.name) return; if (s.data.inc) return s.emit('msg', { sys: true, text: 'You are incognito.' }); if (!s.data.master && !roleOf(s, s.data.room)) return s.emit('msg', { sys: true, text: 'Only room owners and admins can buzz the room.' }); const now = Date.now(), rk = s.data.room; if (now - (ROOMBUZZ.get(rk) || 0) < 60000) return s.emit('msg', { sys: true, text: 'This room was buzzed recently. Try again in ' + Math.ceil((60000 - (now - ROOMBUZZ.get(rk))) / 1000) + 's.' }); ROOMBUZZ.set(rk, now); lastBuzz = now;
+  let lastTyping = 0;
+  s.on('buzz', () => { if (!s.data.name) return; if (s.data.inc) return s.emit('msg', { sys: true, text: 'You are incognito.' }); if (!s.data.master && !roleOf(s, s.data.room)) return s.emit('msg', { sys: true, text: 'Only room owners and admins can buzz the room.' }); const now = Date.now(), rk = s.data.room; if (now - (ROOMBUZZ.get(rk) || 0) < 60000) return s.emit('msg', { sys: true, text: 'This room was buzzed recently. Try again in ' + Math.ceil((60000 - (now - ROOMBUZZ.get(rk))) / 1000) + 's.' }); ROOMBUZZ.set(rk, now);
     push(s.data.room, { buzz: true, rb: true, name: s.data.master ? 'A moderator' : esc(s.data.name), t: now }); });
   s.on('typing', () => { if (!s.data.name || s.data.inc) return; const now = Date.now(); if (now - lastTyping < 2000) return; lastTyping = now; /* room typing indicator removed in v13 (IMs only) */ });
   s.on('ann:set', async ({ text } = {}, cb) => { const room = s.data.room; if (!room || typeof cb !== 'function') return; if (!s.data.master && !roleOf(s, room)) return cb({ error: 'Only the room owner or admins can set the announcement.' });
     const t = String(text || '').trim().slice(0, 300); if (t) ANN[room] = esc(t); else delete ANN[room];
     try { await (t ? db.q('insert into room_ann(room,text,by) values($1,$2,$3) on conflict(room) do update set text=$2,by=$3,t=now()', [room, ANN[room], s.data.name]) : db.q('delete from room_ann where room=$1', [room])); } catch { }
     io.to(room).emit('ann', { room, text: ANN[room] || '' }); cb({ ok: true }); });
-  s.on('room:invite', async ({ to } = {}, cb) => { if (typeof cb !== 'function') return; if (!s.data.name || !s.data.room) return cb({ error: 'Join a room first.' });
-    if (!s.data.acct) return cb({ error: 'Sign in to invite people to rooms.' }); if (isBot(to)) return cb({ error: String(to) + " isn't available for invites." });
-    try { cb(await AH.invite({ uid: s.data.acct.id, name: s.data.acct.name, master: !!s.data.master, room: s.data.room }, to)); } catch (e) { cb({ error: 'Could not send invite.' }); } });
   s.on('room:invite-many', async ({ to } = {}, cb) => { if (typeof cb !== 'function') return; if (!s.data.name || !s.data.room) return cb({ error: 'Join a room first.' });
     if (!s.data.acct) return cb({ error: 'Sign in to invite people to rooms.' });
     try { cb(await AH.inviteMany({ uid: s.data.acct.id, name: s.data.acct.name, master: !!s.data.master, room: s.data.room }, (Array.isArray(to) ? to : []).filter(n => !isBot(n)))); } catch (e) { cb({ error: 'Could not send invites.' }); } });
@@ -614,7 +617,7 @@ io.on('connection', s => {
     io.emit('avatar', { name, av }); cb({ ok: true, av });
   }
   s.on('report', ({ who, why } = {}) => { if (!s.data.name) return; MASTER.report(s.data.name, s.data.room, String(who || '').slice(0, 30), String(why || '').slice(0, 300)); console.log('[REPORT ABUSE]', new Date().toISOString(), 'by', s.data.name, 'in', s.data.room, 'against', String(who || '').slice(0, 30), '-', String(why || '').slice(0, 300)); });
-  s.on('disconnect', () => { if (!s.data.name) return; if (users.get(s.data.name.toLowerCase()) === s.id) users.delete(s.data.name.toLowerCase()); if (s.data.guest) { AVMEM.delete(s.data.name.toLowerCase()); geo.guestOff(s.data.name); } const r0 = s.data.room; mediaReset(); s.leave(r0); upd(r0); if (s.data.acct) setImmediate(() => AH.roomChanged?.(s.data.name));
+  s.on('disconnect', () => { if (!s.data.name) return; if (users.get(s.data.name.toLowerCase()) === s.id) users.delete(s.data.name.toLowerCase()); if (s.data.guest) { AVMEM.delete(s.data.name.toLowerCase()); geo.guestOff(s.data.name); } const r0 = s.data.room; mediaReset('disconnected'); s.leave(r0); upd(r0); if (s.data.acct) setImmediate(() => AH.roomChanged?.(s.data.name));
     if (s.data.room && noticeOk()) { const nm = s.data.name, rm = s.data.room, lc = nm.toLowerCase(); const old = GRACE.get(lc); if (old) clearTimeout(old.t); GRACE.set(lc, { room: rm, t: setTimeout(() => { GRACE.delete(lc); if (ROOMS[rm]) push(rm, { sys: true, who: nm, text: `${esc(nm)} has left the room.` }); }, 20000) }); } });
 });
 acc.sockets(io, AH);

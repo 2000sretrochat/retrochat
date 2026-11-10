@@ -46,14 +46,16 @@ let srv; (async () => {
     const inv = []; c.on('m:invite', x => inv.push(x));
     r = await E(a, 'm:invite', { to: C }); ok(r.ok && r.room === 'Rock', 'invite to current room'); await w(100); ok(inv.length === 1, 'invite delivered');
     ok(/already invited/.test((await E(a, 'm:invite', { to: C })).error || ''), 'per-target rate limit');
+    // Room invites now come from the room's Invite picker (room:invite-many, friends only); the old type-a-screen-name room:invite is gone.
+    await E(b, 'm:init'); await E(b, 'm:add', { name: C, msg: '' }); await E(c, 'm:respond', { name: B, accept: true }); await w(200);
     await E(c, 'm:status', { status: 'busy' });
-    await w(100); ok((await E(b, 'room:invite', { to: C })).error === C + " isn't available for invites.", 'busy target rejected');
+    await w(100); ok((await E(b, 'room:invite-many', { to: [C] })).error === C + " isn't available for invites.", 'busy target rejected');
     await E(c, 'm:status', { status: 'available' });
-    await E(c, 'blk:set', { name: B, on: true }); ok((await E(b, 'room:invite', { to: C })).error === C + " isn't available for invites.", 'blocked inviter rejected');
+    await E(c, 'blk:set', { name: B, on: true }); ok((await E(b, 'room:invite-many', { to: [C] })).error === C + " isn't available for invites.", 'blocked inviter rejected');
     await E(c, 'blk:set', { name: B, on: false }); await E(c, 'priv:set', { pmBuddies: true });
-    ok(/isn't available/.test((await E(b, 'room:invite', { to: C })).error || ''), 'buddies-only privacy rejects non-buddy');
+    ok(/friends list/.test((await E(b, 'room:invite-many', { to: [A] })).error || ''), 'room invites are friends-only');
     await E(c, 'priv:set', { pmBuddies: false }); await E(c, 'ign:set', { name: B, on: true });
-    ok(/isn't available/.test((await E(b, 'room:invite', { to: C })).error || ''), 'ignored inviter rejected');
+    ok(/isn't available/.test((await E(b, 'room:invite-many', { to: [C] })).error || ''), 'ignored inviter rejected');
     console.log(`\n${pass} passed`);
   } catch (e) { console.error('FAIL', e); process.exitCode = 1; } finally { S.forEach(s => s.disconnect()); srv.kill(); setTimeout(() => process.exit(), 300); }
 })();

@@ -17,6 +17,8 @@ const api = {
     check: () => ipcRenderer.invoke('yc-upd-check'),
     onState: cb => { if (typeof cb === 'function') ipcRenderer.on('yc-upd', (_, st) => cb(st)); }
   },
+  // master recordings are saved to Documents/Razzle Recordings (see main.js)
+  recordings: { open: n => ipcRenderer.invoke('yc-rec-open', n), write: (id, buf) => ipcRenderer.invoke('yc-rec-write', id, buf), close: id => ipcRenderer.invoke('yc-rec-close', id) },
   micVol: process.platform === 'win32'
     ? { get: () => ipcRenderer.invoke('yc-micvol', 0), step: d => ipcRenderer.invoke('yc-micvol', d) }
     : undefined
