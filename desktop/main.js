@@ -252,6 +252,7 @@ ipcMain.handle('yc-rec-close', (e, id) => {
 });
 const MICVOL = require('./micvol');
 ipcMain.handle('yc-micvol', (_, d) => (d ? MICVOL.step(d) : MICVOL.get()));
+ipcMain.on('yc-open-external', (_, u) => { try { const x = new URL(String(u)); if (x.protocol === 'https:') shell.openExternal(x.href); } catch { } });
 ipcMain.on('yc-notify', (_, t, b) => {
   if (win && !win.isFocused()) {
     win.flashFrame(true);

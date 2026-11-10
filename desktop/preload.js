@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // Keep YappDesktop API name: live Render web code already calls window.YappDesktop.
 const api = {
   notify: (t, b) => ipcRenderer.send('yc-notify', t, b),
+  openExternal: u => ipcRenderer.send('yc-open-external', String(u || '')), // e.g. footer logo -> homepage in the default browser
   isDesktop: true,
   inviteWindows: true, // room invites open in their own centered, always-on-top window
   // Saved screen names on this computer. Passwords stay in the main process (encrypted); the page only sees names.

@@ -68,10 +68,16 @@ test('desktop room window fills the window (no Social sidebar offset)', () => {
   assert.match(r137, /html\.yd body\.chat-room-active #chat\[style\*="flex"\][^{]*\{ inset: 0 !important;/);
 });
 
-test('status dropdown has no bullet characters; footer logo links to razzlesocial.com', () => {
+test('footer logo: one homepage constant, desktop opens it in the default browser', () => {
+  assert.match(R('public/site-links.js'), /window\.RAZZLE_HOME_URL = 'https:\/\/retrochat-izzg\.onrender\.com\/'/);
+  assert.match(R('desktop/preload.js'), /openExternal: u => ipcRenderer\.send\('yc-open-external'/);
+  assert.match(R('desktop/main.js'), /ipcMain\.on\('yc-open-external'[\s\S]{0,120}x\.protocol === 'https:'\) shell\.openExternal/);
+});
+test('status dropdown has no bullet characters; footer logo is a homepage link', () => {
   for (const h of [idx, msg]) {
     assert.doesNotMatch(h, /<option value="(available|busy|away|brb|invisible)">&#96(79|75);/);
-    assert.match(h, /id="footBrand" href="https:\/\/razzlesocial\.com" target="_blank" rel="noopener noreferrer"/);
+    assert.match(h, /id="footBrand" data-home-link href="\/" target="_blank" rel="noopener noreferrer"/);
+    assert.match(h, /<script src="\/site-links\.js"><\/script>/);
   }
 });
 

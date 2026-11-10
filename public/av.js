@@ -63,7 +63,7 @@
   }
   async function buildMic() {
     const c = cfg();
-    let micS = null; if (c.sys !== 'only') { const raw = await openMic(); micS = boosted(raw, c.boost); }
+    let micS = null; if (c.sys !== 'only') { const raw = await openMic(); micS = c.mode === 'music' ? raw : boosted(raw, c.boost); } // Music/stereo source (rooms 'Play from'): raw 2-channel, EC/NS/AGC off, no voice gain/limiter
     if (c.sys === 'off') { liveOut = micS; return micS; }
     if (!navigator.mediaDevices.getDisplayMedia) { alert('Sharing computer audio is not supported in this browser (try Chrome or Edge).'); if (micS) { liveOut = micS; return micS; } throw new Error('no audio source'); }
     if (!sysStream || !sysStream.getAudioTracks().some(t => t.readyState === 'live')) {
