@@ -54,7 +54,7 @@ html,body{background:transparent!important;overflow:hidden;margin:0;min-height:1
 .dock-collapsed #mwin>:not(.tbar){display:none!important}
 .dock-collapsed #mwin{height:54px!important}
 .messenger-popout #mwin{width:340px!important}
-.messenger-popout:not(:has(.im,#brw.on)) #mwin{width:100%!important}
+
 .messenger-popout #brw{left:0!important;right:356px!important;width:calc(100vw - 356px)!important;max-width:none;height:100vh!important}
 .messenger-popout #brl{max-height:none;flex:1;min-height:0}
 @media(max-width:640px){:root{--dock-width:100vw}.messenger-popout #mwin{width:100%!important}.messenger-popout #brw{width:100%!important;right:0!important;z-index:20}.im{width:100%!important;right:0!important}}

@@ -1,0 +1,39 @@
+/* Compact standalone Messenger, with native resizing in the Windows app. */
+html.standalone-messenger:not(.yd) #mwin {
+  left:12px!important;right:auto!important;top:12px!important;
+  width:var(--messenger-width,400px)!important;
+  min-width:340px;max-width:calc(100vw - 24px)!important;
+  height:calc(100dvh - 24px)!important;max-height:760px!important;
+  resize:horizontal;overflow:hidden;box-sizing:border-box;
+}
+html.standalone-messenger:not(.yd) #mwin[style*="width"] {
+  width:var(--messenger-resized-width,var(--messenger-width,400px))!important;
+}
+html.standalone-messenger:not(.yd) body {background:var(--bg,#edf4fb)!important}
+html.standalone-messenger.has-overlay:not(.yd) #mwin {
+  left:auto!important;right:0!important;top:0!important;
+  width:var(--dock-width,340px)!important;height:100dvh!important;
+  max-height:none!important;resize:none;
+}
+#mwin #signin {align-items:center!important}
+#mwin #signin > :is(label,input,.row,.pri,.err,.auth-heading,#fUp,#maint,.auth-back),
+#mwin #fIn > :is(label,input,.row,.pri,.err) {
+  width:100%!important;max-width:320px!important;box-sizing:border-box;align-self:center!important;
+}
+#mwin #menu {flex-wrap:nowrap!important;align-items:center;min-width:0}
+#mwin #menu > div {padding-left:5px!important;padding-right:5px!important;white-space:nowrap}
+#mwin #menu > :is(button,.messenger-bell,.messenger-master) {flex-shrink:0}
+#mwin #mcog {margin-left:auto!important}
+@media(max-width:420px) {
+  #mwin #menu {gap:0!important;padding-left:3px!important;padding-right:3px!important}
+  #mwin #menu .messenger-master {width:30px!important;min-width:30px!important;padding:0!important;justify-content:center}
+  #mwin #menu .messenger-master .mm-l {display:none}
+  #mwin #menu .messenger-bell {width:32px;min-width:32px}
+}
+@media(max-width:600px) {
+  html.standalone-messenger:not(.yd) #mwin {
+    left:0!important;top:0!important;width:100%!important;
+    min-width:0!important;max-width:100%!important;
+    height:100dvh!important;max-height:none!important;resize:none;
+  }
+}

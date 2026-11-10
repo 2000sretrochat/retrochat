@@ -37,7 +37,7 @@
   setInterval(syncProfiles,10000);setTimeout(syncProfiles,800);
   document.documentElement.classList.toggle('messenger-popout', !docked);
   const bar = document.querySelector('#mwin > .tbar');
-  bar.querySelector('.lgs').innerHTML = '<img class="razzle-mark" src="/social-next/conversation-circle.svg" alt="">';
+  bar.querySelector('.lgs').innerHTML = '<img class="razzle-mark" src="/icon-192.png" alt="">';
   const controls = bar.querySelectorAll('.wb');
   const control = (old, id, label, svg) => {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'wb'; button.id = id;

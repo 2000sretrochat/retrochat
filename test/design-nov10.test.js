@@ -174,12 +174,14 @@ test('Social notifications list offline messages under "Unread messages", above 
   assert.ok(la.includes('\r\n'), 'live-account.js keeps CRLF');
 });
 
-test('tray icon: 16/32 px PNGs and the 2-size ICO are packaged and used by the tray', () => {
+test('tray icon: 16/32 px PNGs and matching ICO frames are packaged and used by the tray', () => {
   const png = f => { const b = fs.readFileSync(path.join(__dirname, '..', 'desktop/build', f)); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
   assert.deepEqual(png('tray-16.png'), [16, 16]);
   assert.deepEqual(png('tray-32.png'), [32, 32]);
   const ico = fs.readFileSync(path.join(__dirname, '..', 'desktop/build/razzle-tray.ico'));
-  assert.equal(ico.readUInt16LE(4), 2);
+  const sizes=Array.from({length:ico.readUInt16LE(4)},(_,i)=>ico[6+i*16]||256);
+  assert.ok(sizes.includes(16));
+  assert.ok(sizes.includes(32));
   const main = R('desktop/main.js'), pkg = JSON.parse(R('desktop/package.json'));
   assert.match(main, /tray = new Tray\(trayIcon\(\)\)/);
   assert.match(main, /addRepresentation\(\{ scaleFactor: 2, width: 32, height: 32/);

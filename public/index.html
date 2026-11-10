@@ -174,7 +174,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 </style>
 <style id="fr-inbox-css">
 </style>
-<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script></head><body>
+<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css"></head><body>
 <div class="auth-site-header" hidden><header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
@@ -261,7 +261,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=isRoomSignIn?['Razzle',' Chat']:['Razzle',''];
-const razzleMark=(w)=>`<img class="razzle-mark" src="/razzle-social.svg" width="${w}" height="${w}" alt="" style="display:block">`;
+const razzleMark=(w)=>`<img class="razzle-mark" src="/icon-192.png" width="${w}" height="${w}" alt="" style="display:block">`;
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
 document.querySelectorAll('.lgs').forEach(e=>e.innerHTML=razzleMark(26));document.querySelectorAll('.lgs2').forEach(e=>e.innerHTML=razzleMark(22));document.querySelectorAll('.lgbig').forEach(e=>e.innerHTML=isRoomSignIn?'<img src="/razzle-chat.svg" width="56" height="56" alt="">':razzleMark(72));
 if (isRoomSignIn) {
@@ -565,4 +565,4 @@ const {startCall,onCall,onCallAns,onSig,onHang,disconnect:disconnectCalls,endCal
  socket:()=>S,contact:name=>contacts[name.toLowerCase()],openIm,findIm:name=>ims[name.toLowerCase()],notice:sys,toast,
  sound:type=>tone(type==='ring'?[[440,.18,'sine'],[480,.18,'sine'],[440,.18,'sine'],[480,.18,'sine']]:[[480,.12,'sine'],[320,.22,'sine']])
 });
-</script><script src="/mcog.js?v=2"></script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div></body></html>
+</script><script src="/mcog.js?v=2"></script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div><script src="/messenger-layout.js"></script></body></html>

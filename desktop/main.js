@@ -59,10 +59,12 @@ function wire(wc) {
 }
 function create() {
   const s = ST.messenger || {};
+  // Migrate the old wide default once, then keep the user's chosen size.
+  const resetWidth = ST.messengerCompact !== 1;
   win = new BrowserWindow({
     x: s.x, y: s.y,
-    width: s.width || 500, height: s.height || 760,
-    minWidth: 380, minHeight: 640,
+    width: resetWidth ? 400 : s.width || 400, height: s.height || 720,
+    minWidth: 340, minHeight: 540,
     title: 'Razzle Messenger',
     icon,
     frame: true,
@@ -72,6 +74,9 @@ function create() {
     show: false,
     webPreferences: PRE
   });
+  ST.messengerCompact = 1;
+  ST.messenger = win.getNormalBounds();
+  persist();
   win.setMenuBarVisibility(false);
   win.setAutoHideMenuBar(true);
   win.once('ready-to-show', () => { if (!win.isDestroyed()) win.show(); });
