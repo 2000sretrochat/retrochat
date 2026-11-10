@@ -9,6 +9,7 @@ function setup() {
     }
     if (sql.startsWith('select name,status')) return users.filter(u => u.id === args[0]);
     if (sql.startsWith('select id,name from users')) return users.filter(u => u.name.toLowerCase() === args[0]);
+    if (sql.startsWith('select owner from contacts')) return [{owner:args[0]===1?2:1}];
     if (sql.startsWith('select 1 from requests')) return [{ exists: 1 }];
     if (sql.startsWith('select 1 from contacts')) return [{ exists: 1 }];
     return [];
@@ -92,4 +93,25 @@ test('declining a contact request updates the recipient only', async () => {
   assert.equal((await send(recipient,'m:respond',{name:'Alice',accept:false})).ok,true);
   assert.equal(sender.events.length,before);
   for(const client of [recipient,dock]) assert.ok(client.events.some(event=>event[0]==='m:contacts-changed'));
+});
+
+test('idle waits for all windows and yields to a manually selected status', async () => {
+  const {socket,send}=setup(), desktop=await socket(1), dock=await socket(1,'social'), viewer=await socket(2);
+  for(const client of [desktop,dock,viewer]) await send(client,'m:init');
+  const presence=async()=>{
+    const status=viewer.events.filter(event=>event[0]==='m:presence').at(-1)?.[1];
+    return [status?.status,status?.idle];
+  };
+  await send(desktop,'m:status',{status:'available'});
+  await send(dock,'m:idle',true);
+  assert.deepEqual(await presence(),['available',false]);
+  await send(desktop,'m:idle',true);
+  assert.deepEqual(await presence(),['available',true]);
+  await send(desktop,'m:status',{status:'available'});
+  assert.deepEqual(await presence(),['available',false]);
+  await send(desktop,'m:status',{status:'busy'});
+  await send(desktop,'m:idle',true);
+  assert.deepEqual(await presence(),['busy',false]);
+  await send(desktop,'m:status',{status:'invisible'});
+  assert.deepEqual(await presence(),['offline',false]);
 });

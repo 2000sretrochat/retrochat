@@ -116,8 +116,12 @@ function sockets(io, hooks) {
   const callRoutes = new CallRoutes();
   const sentMessages = new Map(); // Share retries across Messenger reconnections.
   const online = new Map(); // uid -> Set(socket)
-  const ROOM_TAG = '[room]', AUDS = ['lol', 'doh', 'woohoo', 'wave', 'kiss', 'drumroll'], IMVS = ['none', 'beach', 'space', 'hearts', 'city', 'retro']; const state = new Map(); // uid -> {status,msg,idle,avatar,name}
-  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = on && (sr || st.showRoom !== false) ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: on ? !!st.idle : false, avatar: st ? st.avatar : 'a1' }; };
+  const ROOM_TAG = '[room]', AUDS = ['lol', 'doh', 'woohoo', 'wave', 'kiss', 'drumroll'], IMVS = ['none', 'beach', 'space', 'hearts', 'city', 'retro']; const state = new Map(); // uid -> {status,msg,avatar,name}
+  const idleNow = uid => {
+    const clients = online.get(uid);
+    return state.get(uid)?.status === 'available' && !!clients?.size && [...clients].every(client => client.data.messIdle === true);
+  };
+  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = on && (sr || st.showRoom !== false) ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: idleNow(uid), avatar: st ? st.avatar : 'a1' }; };
   const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || (st.msg !== ROOM_TAG && st.showRoom === false)) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
   setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
   const toUser = (uid, ev, data) => { for (const s of online.get(uid) || []) s.emit(ev, data); };
@@ -146,7 +150,7 @@ function sockets(io, hooks) {
     return rows.map(r => ({ name: r.name, msg: esc(r.msg) }));
   }
   async function watchers(uid) { return (await db.q('select owner from contacts where contact=$1', [uid])).map(r => r.owner); }
-  async function broadcast(uid, name) { const p = { name, ...pres(uid) }; const bl = new Set((await db.q('select blocked from blocks where owner=$1', [uid]).catch(() => [])).map(r => r.blocked)); for (const w of await watchers(uid)) toUser(w, 'm:presence', bl.has(w) ? { name, online: false, status: 'offline', msg: '', room: null, idle: false, avatar: p.avatar } : p); }
+  async function broadcast(uid, name) { const bl = new Set((await db.q('select blocked from blocks where owner=$1', [uid]).catch(() => [])).map(r => r.blocked)); const audience = await watchers(uid); const p = { name, ...pres(uid) }; for (const w of audience) toUser(w, 'm:presence', bl.has(w) ? { name, online: false, status: 'offline', msg: '', room: null, idle: false, avatar: p.avatar } : p); }
   const idOf = async n => { const r = await db.q('select id,name from users where name_lc=$1', [String(n || '').toLowerCase().slice(0, 40)]); return r[0]; };
   const mutual = async (a, b) => (await db.q('select 1 from contacts where owner=$1 and contact=$2', [a, b])).length > 0;
   const blocked = async (by, who) => (await db.q('select 1 from blocks where owner=$1 and blocked=$2', [by, who])).length > 0;
@@ -212,8 +216,8 @@ function sockets(io, hooks) {
       if (!s.data.master) { const dc = module.exports.devConflict && module.exports.devConflict(s, me); if (dc) return { error: 'Another screen name (' + dc + ') is already signed in on this computer. Sign out of it first - only one screen name per computer.' };
         for (const x of replacedSessions(s, online.get(uid) || [])) { x.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); online.get(uid).delete(x); x.disconnect(true); } }
       const [u] = await db.q('select name,status,status_msg,avatar,show_room from users where id=$1', [uid]);
-      const first = !online.has(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; s.data.messClient = clientKind(s); ready = true;
-      if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg, avatar: u.avatar, idle: false });
+      const first = !online.has(uid), wasIdle = idleNow(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; s.data.messClient = clientKind(s); s.data.messIdle = false; ready = true;
+      if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg, avatar: u.avatar });
       state.get(uid).showRoom = u.show_room !== false;
       const cs = await contactList(uid);
       const groups = (await db.q('select name from groups where owner=$1 order by name', [uid])).map(r => r.name);
@@ -228,7 +232,7 @@ function sockets(io, hooks) {
         and not exists(select 1 from blocks b where b.owner=$1 and b.blocked=o.from_id)
         returning o.id,u.name,o.body,extract(epoch from o.created)*1000 as t
       ) select * from delivered order by id`, [uid]);
-      if (first) broadcast(uid, me);
+      if (first || wasIdle !== idleNow(uid)) broadcast(uid, me);
       const st = state.get(uid);
       return { me: { name: u.name, status: st.status, msg: st.msg, avatar: st.avatar, showRoom: st.showRoom !== false, m: !!s.data.master }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.group)])],
         contacts: cs, requests: reqs, blocked: bl,
@@ -247,13 +251,13 @@ function sockets(io, hooks) {
     s.on('m:offline-dismiss', safe(async ids => ready ? offlineBox().dismiss(uid, ids) : { error: 'Sign in first.' }));
     s.on('m:offline-send', safe(async ({ to, text } = {}) => { if (!ready || flood()) return { error: 'Slow down a little.' }; return offlineBox().send({ id: uid, name: me, master: !!s.data.master }, to, text); }));
     s.on('m:status', safe(async ({ status, msg }) => {
-      if (!ready) return; const st = state.get(uid); if (STATUSES.includes(status)) st.status = status; if (typeof msg === 'string') st.msg = esc(msg.trim().slice(0, 60));
+      if (!ready) return; const st = state.get(uid); if (STATUSES.includes(status)) { st.status = status; s.data.messIdle = false; } if (typeof msg === 'string') st.msg = esc(msg.trim().slice(0, 60));
       await db.q('update users set status=$2,status_msg=$3 where id=$1', [uid, st.status, st.msg]); for (const x of online.get(uid)) if (x !== s) x.emit('m:self', { status: st.status, msg: st.msg });
       await broadcast(uid, me); return { ok: true, status: st.status, msg: st.msg };
     }));
     s.on('m:room-label',safe(async()=>({room:hooks.rawRoomOf?hooks.rawRoomOf(me):null})));
     s.on('m:showroom', safe(async on => { if (!ready) return; const st = state.get(uid); st.showRoom = !!on; await db.q('update users set show_room=$2 where id=$1', [uid, !!on]); await broadcast(uid, me); return { ok: true, showRoom: st.showRoom }; }));
-    s.on('m:idle', safe(async on => { if (!ready) return; const st = state.get(uid); if (st.idle === !!on) return; st.idle = !!on; await broadcast(uid, me); }));
+    s.on('m:idle', safe(async on => { if (!ready) return; const wasIdle = idleNow(uid); s.data.messIdle = !!on; if (wasIdle !== idleNow(uid)) await broadcast(uid, me); }));
     s.on('m:avatar', safe(async a => { if (!ready || !AVATARS.includes(a)) return { error: 'bad avatar' }; state.get(uid).avatar = a; await db.q('update users set avatar=$2 where id=$1', [uid, a]); await broadcast(uid, me); }));
     s.on('m:add', safe(async ({ name, msg }) => {
       if (!ready || flood()) return { error: 'Slow down a little.' }; const generic = { ok: true, text: 'If ' + esc(String(name).slice(0, 20)) + ' is a Razzle user, they have been sent your request.' };
@@ -349,8 +353,9 @@ function sockets(io, hooks) {
       if (!destination) return { error: 'This call is no longer active in this window.' };
       destination.emit(ev, { from: me, kind: d.kind === 'video' ? 'video' : 'audio', accept: !!d.accept, data: d.data,
         callId:d.callId, ...(ev==='m:hang'&&d.reason==='no-answer'?{reason:d.reason}:{}) }); }));
-    s.on('disconnect', async () => { callRoutes.disconnect(s); const set = online.get(uid); if (!set) return; set.delete(s); if (!set.size) { online.delete(uid); const st = state.get(uid); state.delete(uid);
-      try { await broadcast(uid, me); } catch {} if (st && st.idle) st.idle = false; } });
+    s.on('disconnect', async () => { callRoutes.disconnect(s); const set = online.get(uid); if (!set) return;
+      const wasIdle = idleNow(uid); set.delete(s); if (!set.size) { online.delete(uid); state.delete(uid); }
+      if (!set.size || wasIdle !== idleNow(uid)) { try { await broadcast(uid, me); } catch {} } });
   });
 }
 let isOnlineFn = () => false, isConnectedFn = () => false, setAvFn = async () => {}, presRawFn = null, setStatusFn = async () => {};

@@ -78,3 +78,5 @@ html:not(.dark) #mwin #list .ct:hover{background:#dfedfa!important}
 html:not(.dark) #bottom{border-top-color:#d2e0ed!important}
 html:not(.dark) #bottom button{background:#004990!important;color:white!important}
 #mwin>.tbar{height:54px!important;min-height:54px!important;padding:8px 10px!important}
+
+#mwin #foot{display:flex!important;flex:none}

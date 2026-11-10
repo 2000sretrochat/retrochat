@@ -1,5 +1,5 @@
 // Razzle homepage link (Messenger footer logo). One constant: switch to 'https://razzlesocial.com/' once that domain is live.
-window.RAZZLE_HOME_URL = 'https://retrochat-izzg.onrender.com/';
+window.RAZZLE_HOME_URL = 'https://retrochat-izzg.onrender.com/social-next/';
 (function () {
   const sync = () => document.querySelectorAll('a[data-home-link]').forEach(a => { a.href = window.RAZZLE_HOME_URL; });
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', sync) : sync();

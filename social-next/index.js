@@ -18,7 +18,9 @@ function attachSocialNext(app, express, accounts, db, io, botChat) {
     const account = await accounts.userFromCookie(req.headers.cookie).catch(() => null);
     const alias = account?.canon || account?.name;
     if (!accountName.test(alias || '')) {
-      if (req.path === '/' || req.path.startsWith('/@')) return res.redirect(303, '/?chat=1&social=1');
+      if (req.path === '/') return res.redirect(303, '/?chat=1&social=1');
+      const profile = req.path.match(/^\/@([a-z][a-z0-9_.-]{2,19})\/?$/i)?.[1];
+      if (profile) return res.redirect(303, '/?chat=1&social=1&returnProfile='+encodeURIComponent(profile));
       return res.sendStatus(401);
     }
     const csp = res.get('Content-Security-Policy');

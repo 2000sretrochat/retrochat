@@ -47,3 +47,12 @@
 .messenger-notifications .mn-offline:hover{background:#DBEBFF!important}
 .messenger-notifications .messenger-social-item{border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;padding:0!important;color:inherit!important;font:inherit!important;text-align:left;min-height:0!important}
 .messenger-notifications .mn-social.unread{font-weight:700}
+
+/* Plain, left-aligned private message transcript. */
+.im .log .transcript-message{width:100%;max-width:none}
+.im .log .transcript-message .bb{display:block;width:100%;max-width:none;padding:1px 0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none;color:var(--ink,#111);font-size:var(--messenger-message-size,14px)!important}
+.im .log .transcript-message .message-text{white-space:pre-wrap;overflow-wrap:anywhere;color:inherit}
+html:not(.dark) .im .log .transcript-message .bb{color:#111}
+.im .log .transcript-message time,.im .log .transcript-message .delivery-state{color:var(--muted,#51627b);font-size:.85em}
+.im .log .transcript-message .delivery-state{display:block;margin-top:2px}
+.im.hide-im-times .transcript-message time{display:none}

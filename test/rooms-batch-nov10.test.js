@@ -68,16 +68,16 @@ test('desktop room window fills the window (no Social sidebar offset)', () => {
   assert.match(r137, /html\.yd body\.chat-room-active #chat\[style\*="flex"\][^{]*\{ inset: 0 !important;/);
 });
 
-test('footer logo: one homepage constant, desktop opens it in the default browser', () => {
-  assert.match(R('public/site-links.js'), /window\.RAZZLE_HOME_URL = 'https:\/\/retrochat-izzg\.onrender\.com\/'/);
+test('footer logo opens Razzle Social in the default browser', () => {
+  assert.match(R('public/site-links.js'), /window\.RAZZLE_HOME_URL = 'https:\/\/retrochat-izzg\.onrender\.com\/social-next\/'/);
   assert.match(R('desktop/preload.js'), /openExternal: u => ipcRenderer\.send\('yc-open-external'/);
   assert.match(R('desktop/main.js'), /ipcMain\.on\('yc-open-external'[\s\S]{0,120}x\.protocol === 'https:'\) shell\.openExternal/);
 });
-test('status dropdown has no bullet characters; footer logo is a homepage link', () => {
+test('status dropdown has no bullet characters and footer links to Social', () => {
   for (const h of [idx, msg]) {
     assert.doesNotMatch(h, /<option value="(available|busy|away|brb|invisible)">&#96(79|75);/);
-    assert.match(h, /id="footBrand" data-home-link href="\/" target="_blank" rel="noopener noreferrer"/);
-    assert.match(h, /<script src="\/site-links\.js"><\/script>/);
+    assert.match(h, /id="footBrand" data-home-link href="\/social-next\/" target="_blank" rel="noopener noreferrer"/);
+    assert.match(h, /<script src="\/site-links\.js(?:\?v=\d+)?"><\/script>/);
   }
 });
 

@@ -74,3 +74,5 @@ create table if not exists room_music_tracks (
   duration double precision not null check (duration > 0 and duration <= 600),
   audio bytea not null check (octet_length(audio) between 4 and 8388608)
 );
+
+alter table social_posts add column if not exists audience jsonb not null default '{}';

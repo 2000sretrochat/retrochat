@@ -601,3 +601,13 @@ button.primary,a.primary,.home-hero button,.welcome-hero .welcome-join,.room-inv
 #notification-dropdown .offline-body small{display:block;font-size:12px;color:#405875;overflow-wrap:anywhere}
 #notification-dropdown .offline-body .offline-time{color:#526781}
 #notification-dropdown .offline-dot{width:6px;height:6px;flex:none;margin-top:6px;border-radius:50%;background:#0033A0}
+.post-audience fieldset{padding:8px;margin:8px 0;border:1px solid #c6d5e7;border-radius:6px}
+.post-audience legend{font-weight:600}
+.post-audience [hidden]{display:none!important}
+.post-audience label{display:block;margin:5px 0}
+.post-audience input,.post-audience select{display:block;width:100%;min-width:0}
+.post-settings{margin-left:auto}
+.post-settings summary{cursor:pointer}
+.post-settings button{display:block;margin-top:5px}
+.social-profile-gallery{display:flex;flex-wrap:wrap;gap:5px}
+.social-profile-gallery img{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #12213f}

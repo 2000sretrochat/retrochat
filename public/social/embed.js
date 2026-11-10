@@ -53,7 +53,10 @@
     if (docked) send({ type: 'collapse', collapsed });
   };
   pop.hidden = !docked;
-  pop.onclick = () => send({ type: 'popout' });
+  pop.onclick = () => {
+    const {width,height}=bar.parentElement.getBoundingClientRect();
+    send({type:'popout',width,height:collapsed?Math.min(660,screen.availHeight):height});
+  };
   if (!docked) {
     close.onclick = () => window.close();
     addEventListener('message', event => {

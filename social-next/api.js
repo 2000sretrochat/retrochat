@@ -18,6 +18,22 @@ function link(value) {
   if (!['http:','https:'].includes(url.protocol) || url.username || url.password || url.href.length > 2000) throw Object.assign(Error('Use an http or https link.'), {status:400});
   return url.href;
 }
+const audienceModes = ['profile','public','friends','private','selected'];
+function audience(value, photo = false) {
+  const mode = value?.mode;
+  const names = items => Array.isArray(items) ? [...new Set(items.filter(name => typeof name === 'string')
+    .map(name => name.trim().toLowerCase().replace(/^@/,'')).filter(name => /^[a-z][a-z0-9_.-]{2,19}$/.test(name)))].slice(0,50) : [];
+  if (photo && (!mode || mode === 'post')) return {mode:'post'};
+  if (!audienceModes.includes(mode)) throw Object.assign(Error('Choose who can see this.'),{status:400});
+  const include = names(value.include), exclude = names(value.exclude);
+  if (mode === 'selected' && !include.length) throw Object.assign(Error('Enter at least one screen name.'),{status:400});
+  return {mode,include,exclude};
+}
+function galleryPhotos(settings, {owner, master, friend, restricted}) {
+  if (owner || master) return settings.profileGallery || [];
+  if (restricted) return [];
+  return (settings.profileGallery || []).filter(item => item.mode === 'public' || item.mode === 'friends' && friend);
+}
 function publicSettings(value = {}) {
   return {portrait:value.portrait || '', headline:value.headline || '', appearance:value.appearance || null,
     visibility:value.visibility === 'private' ? 'private' : 'public', favoriteRooms:value.favoriteRooms || [],
@@ -59,11 +75,25 @@ function registerApi(router, express, db, accounts, io, botChat) {
   const audit = (req,action,target,detail='') => db.q(
     'insert into master_audit(by_name,action,target,detail) values($1,$2,$3,$4)',
     [req.socialAccount.alias,action,String(target),text(detail,500)]);
-  const access = (post, viewer, master = false) => `(
-    ${master ? 'true' : 'false'} or ${post}.wall_id=${viewer} or ${post}.author_id=${viewer} or
-    (coalesce((select value->>'visibility' from social_settings where user_id=${post}.wall_id),'public') <> 'private')
-    or exists(select 1 from contacts where owner=${post}.wall_id and contact=${viewer})
-  )`;
+  const isFriend = (owner, viewer) => `exists(select 1 from contacts where owner=${owner} and contact=${viewer})`;
+  const isBlocked = (owner, viewer) => `exists(select 1 from blocks where (owner=${owner} and blocked=${viewer}) or (owner=${viewer} and blocked=${owner}))`;
+  const profileAccess = (owner, viewer) => `(coalesce((select value->>'visibility' from social_settings where user_id=${owner}),'public') <> 'private' or ${isFriend(owner,viewer)})`;
+  const audienceAccess = (post, viewer, policy) => {
+    const name = `(select name_lc from users where id=${viewer})`;
+    return `(not coalesce((${policy}->'exclude') ? ${name},false)
+      and case coalesce(${policy}->>'mode','profile')
+        when 'private' then false when 'friends' then ${isFriend(post+'.author_id',viewer)}
+        when 'selected' then coalesce((${policy}->'include') ? ${name},false)
+        when 'profile' then (${post}.wall_id=${viewer} or ${profileAccess(post+'.wall_id',viewer)})
+        when 'public' then true when 'post' then true else false end)`;
+  };
+  const imageAccess = (post, viewer, master) => `(${master ? 'true' : 'false'} or ${post}.author_id=${viewer}
+    or ${audienceAccess(post,viewer,`coalesce(${post}.audience->'photo','{"mode":"post"}'::jsonb)`)})`;
+  const access = (post, viewer, master = false) => `(${master ? 'true' : 'false'} or ${post}.author_id=${viewer} or (
+    not ${isBlocked(post+'.author_id',viewer)} and not ${isBlocked(post+'.wall_id',viewer)}
+    and (${post}.wall_id=${post}.author_id or ${post}.wall_id=${viewer} or ${profileAccess(post+'.wall_id',viewer)})
+    and ${audienceAccess(post,viewer,post+".audience->'post'")}
+    and (${post}.body<>'' or ${post}.link<>'' or (${post}.image<>'' and ${imageAccess(post,viewer,master)}))))`;
   async function visiblePost(req, id) {
     if (!uuid.test(id)) fail('Invalid post.');
     const [post] = await db.q(`select p.* from social_posts p join users u on u.id=p.author_id
@@ -77,7 +107,8 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const ip = geo.clientIp(req.headers,req.socket.remoteAddress);
     return {ip, location:await geo.lookup(ip)};
   }
-  const postFields = `p.id,p.author_id,p.wall_id,p.body,p.link,p.image,p.feeling,p.place,p.created,p.updated,p.event_room,p.event_at,
+  const postFields = master => `p.id,p.author_id,p.wall_id,p.body,p.link,case when ${imageAccess('p','$1',master)} then p.image else '' end as image,
+    case when p.author_id=$1 then p.audience else '{}'::jsonb end as audience,p.feeling,p.place,p.created,p.updated,p.event_room,p.event_at,
     (select count(*)::int from social_event_rsvps r where r.post_id=p.id) as attendees,
     exists(select 1 from social_event_rsvps r where r.post_id=p.id and r.user_id=$1) as attending,
     u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
@@ -138,17 +169,74 @@ function registerApi(router, express, db, accounts, io, botChat) {
   router.get('/api/profile/:name',run(async(req,res) => {
     const [row] = await db.q(`select u.id,u.name,u.display_name,u.age,u.sex,u.location,u.bio,u.interests,u.profile_status,u.created,exists(select 1 from social_bot_members where user_id=u.id) as bot,
       coalesce(s.value,'{}') as settings,exists(select 1 from contacts where owner=u.id and contact=$1) as friend,
+      ${isBlocked('u.id','$1')} as either_blocked,
+      exists(select 1 from requests where from_id=$1 and to_id=u.id) as request_pending,
       exists(select 1 from blocks where owner=$1 and blocked=u.id) as blocked
       from users u left join social_settings s on s.user_id=u.id where u.name_lc=$2
       and not u.banned and not coalesce(u.deactivated,false)`,[req.socialAccount.id,String(req.params.name).toLowerCase()]);
     if (!row) fail('Profile unavailable.',404);
     const owner = row.id === req.socialAccount.id;
-    const restricted = row.settings.visibility === 'private' && !owner && !row.friend && !req.socialAccount.master;
-    const result = {id:row.id,name:row.name,displayName:row.display_name || row.name,age:row.age,sex:row.sex,
-      status:row.profile_status,memberSince:row.created,private:restricted,owner,friend:row.friend,blocked:!!row.blocked,bot:!!(req.socialAccount.master&&row.bot),
+    const restricted = !owner && !req.socialAccount.master && (row.either_blocked || row.settings.visibility === 'private' && !row.friend);
+    const result = {id:row.id,name:row.name,displayName:row.display_name || row.name,private:restricted,
+      owner,friend:row.friend,blocked:!!row.blocked,canRequest:!row.either_blocked,requestPending:row.request_pending,bot:!!(req.socialAccount.master&&row.bot),
       settings:restricted ? {portrait:row.settings.portrait || '',visibility:'private'} : publicSettings(row.settings)};
-    if (!restricted) Object.assign(result,{location:row.location,bio:row.bio,interests:row.interests});
+    if (!restricted) Object.assign(result,{age:row.age,sex:row.sex,status:row.profile_status,memberSince:row.created,
+      location:row.location,bio:row.bio,interests:row.interests,
+      gallery:galleryPhotos(row.settings,{owner,master:req.socialAccount.master,friend:row.friend,restricted})});
+    if (owner) Object.assign(result,{galleryRevision:row.settings.galleryRevision || '',galleryDefault:row.settings.galleryDefault || ''});
     res.json(result);
+  }));
+  router.put('/api/profile-gallery',run(async(req,res) => {
+    const {photos, defaultId, revision} = req.body || {};
+    if (!Array.isArray(photos) || photos.length > 5) fail('Add up to five profile photos.');
+    const gallery = photos.map(item => {
+      if (typeof item?.id !== 'string' || !uuid.test(item.id) || !['public','friends','private'].includes(item.mode)) fail('Invalid profile photo.');
+      const image = photo(item.image,450000);
+      if (!image) fail('Choose a photo.');
+      return {id:item.id,mode:item.mode,image};
+    });
+    const primary = gallery.find(item => item.id === defaultId);
+    if (new Set(gallery.map(item => item.id)).size !== gallery.length || gallery.length && !primary) fail('Choose one default photo.');
+    const [prior] = await db.q('select value from social_settings where user_id=$1',[req.socialAccount.id]);
+    const previous = prior?.value || {};
+    if ((previous.galleryRevision || '') !== revision) fail('Your photos changed. Reopen the editor and try again.',409);
+    const unchanged = primary && primary.id === previous.galleryDefault &&
+      primary.image === previous.profileGallery?.find(item => item.id === primary.id)?.image &&
+      previous.portrait === previous.galleryAvatarUrl;
+    const next = {
+      profileGallery:gallery,galleryDefault:primary?.id || '',galleryRevision:crypto.randomUUID()
+    };
+    const avatar = primary ? 'c'+crypto.randomBytes(8).toString('hex') : '';
+    const avatarUrl = '/av/'+encodeURIComponent(req.socialAccount.alias)+'?v='+avatar;
+    const [_,mime,bytes] = primary ? primary.image.match(/^data:image\/(jpeg|png|webp);base64,(.+)$/) : [];
+    if (primary && !unchanged) Object.assign(next,{portrait:avatarUrl,galleryAvatarUrl:avatarUrl,galleryAvatar:avatar});
+    else if (!primary && previous.galleryAvatar) Object.assign(next,{galleryAvatarUrl:'',galleryAvatar:''});
+    const [saved] = await db.q(`with saved as (
+      insert into social_settings(user_id,value) values($1,$2::jsonb)
+      on conflict(user_id) do update set value=
+        (case when $4 and social_settings.value->>'portrait'=social_settings.value->>'galleryAvatarUrl'
+          then social_settings.value-'portrait' else social_settings.value end) || excluded.value
+      where coalesce(social_settings.value->>'galleryRevision','')=$3 returning user_id
+    ), updated as (
+      update users set avatar=$5 from saved where users.id=saved.user_id
+        and ($6 or ($4 and users.avatar=$7)) returning users.id,users.avatar
+    ), uploaded as (
+      insert into avatars(user_id,mime,data) select id,$8,$9 from updated where $6
+      on conflict(user_id) do update set mime=excluded.mime,data=excluded.data,updated=now()
+    ), removed as (
+      delete from avatars where user_id in (select id from updated) and not $6
+    ) select saved.user_id,(select avatar from updated) as avatar from saved`,
+      [req.socialAccount.id,JSON.stringify(next),revision,!primary && !!previous.galleryAvatar,avatar || 'a1',!!primary && !unchanged,
+        previous.galleryAvatar || '',mime ? 'image/'+mime : '',bytes ? Buffer.from(bytes,'base64') : null]);
+    if (!saved) fail('Your photos changed. Reopen the editor and try again.',409);
+    if (saved.avatar) {
+      await accounts.setAvatar?.(req.socialAccount.id,saved.avatar);
+      for (const socket of io?.sockets?.sockets?.values() || []) {
+        if (socket.data.acct?.id === req.socialAccount.id) socket.data.av=saved.avatar;
+      }
+      io?.emit('avatar',{name:req.socialAccount.alias,av:saved.avatar});
+    }
+    res.json({ok:true});
   }));
   router.put('/api/block/:name',run(async(req,res) => {
     const result=await accounts.blockAccount(req.socialAccount.id,req.socialAccount.alias,req.params.name,req.body?.blocked!==false);
@@ -167,7 +255,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
   }));
   router.get('/api/posts',run(async(req,res) => {
     const wall = text(req.query.wall,20).toLowerCase();
-    const rows = await db.q(`select ${postFields} from social_posts p join users u on u.id=p.author_id
+    const rows = await db.q(`select ${postFields(req.socialAccount.master)} from social_posts p join users u on u.id=p.author_id
       join users w on w.id=p.wall_id left join social_settings s on s.user_id=u.id
       where not p.removed and not u.banned and not coalesce(u.deactivated,false)
       and not w.banned and not coalesce(w.deactivated,false)
@@ -202,23 +290,25 @@ function registerApi(router, express, db, accounts, io, botChat) {
       const [friend] = await db.q('select 1 from contacts where owner=$1 and contact=$2',[wall.id,req.socialAccount.id]);
       if (!friend) fail('Only friends can post on this wall.',403);
     }
+    const policy = {post:audience(b.audience?.post || {mode:'profile'}),photo:audience(b.audience?.photo,true)};
     const info=await originInfo(req);
     await db.q(`with added as (
-      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at)
-      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict(id) do nothing returning id,wall_id
+      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at,audience)
+      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) on conflict(id) do nothing returning id,wall_id
     ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
       select wall_id,$2,'post',id,id::text from added where wall_id<>$2 on conflict do nothing`,
-      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt]);
+      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt,JSON.stringify(policy)]);
     res.status(201).json({id});
   }));
   router.patch('/api/posts/:id',run(async(req,res) => {
     const post=await visiblePost(req,req.params.id);
     if (post.author_id!==req.socialAccount.id && !req.socialAccount.master) fail('Only the author can edit this post.',403);
     const b=req.body || {};
-    const body=text(b.body,3000), url=link(b.link), image=b.removeImage ? '' : post.image;
+    const body=b.body===undefined?post.body:text(b.body,3000), url=b.link===undefined?post.link:link(b.link), image=b.removeImage ? '' : post.image;
+    const policy = b.audience ? {post:audience(b.audience.post),photo:audience(b.audience.photo,true)} : null;
     if (!body && !url && !image) fail('Keep a thought, link, or photo.');
-    await db.q('update social_posts set body=$2,link=$3,image=$4,feeling=$5,place=$6,updated=now() where id=$1',
-      [post.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120)]);
+    await db.q('update social_posts set body=$2,link=$3,image=$4,feeling=$5,place=$6,audience=coalesce($7::jsonb,audience),updated=now() where id=$1',
+      [post.id,body,url,image,b.feeling===undefined?post.feeling:feelings.has(b.feeling)?b.feeling:'',b.location===undefined?post.place:text(b.location,120),policy && JSON.stringify(policy)]);
     res.json({ok:true});
   }));
   router.delete('/api/posts/:id',run(async(req,res) => {
@@ -261,7 +351,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const notifications=await db.q(`select n.id,n.kind,n.post_id,n.created,n.seen,u.name,
       coalesce(nullif(u.display_name,''),u.name) as display_name
       from social_notifications n join users u on u.id=n.actor_id join social_posts p on p.id=n.post_id
-      where n.recipient_id=$1 and not p.removed
+      where n.recipient_id=$1 and not p.removed and ${access('p','$1',req.socialAccount.master)}
       and (n.kind<>'comment' or exists(select 1 from social_comments where id::text=n.reference_id and not removed))
       order by n.created desc limit 100`,[req.socialAccount.id]);
     const requests=await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,

@@ -125,7 +125,7 @@ test('Messenger call window markup: status, camera toggle, Hang Up, 16:9 stage w
     const h = R(f);
     assert.match(h, /<div class=call><div class=callbar><div class=cleft><span class=cstatus><\/span><div class=cs><\/div><\/div><div class=cbtns><button type=button class="rzb camt" aria-pressed=false hidden><\/button><button type=button class="rzb danger hang">Hang Up<\/button><\/div><\/div><div class=cstage hidden>/);
     assert.match(h, /querySelector\('\.camt'\)\.onclick=\(\)=>toggleCamera\(w\)/);
-    assert.match(h, /<link rel="stylesheet" href="\/design-nov10\.css">/);
+    assert.match(h, /<link rel="stylesheet" href="\/design-nov10\.css(?:\?v=\d+)?">/);
   }
   assert.match(css, /\.call \.cstage\{position:relative;aspect-ratio:16\/9;[^}]*background:#071933/);
   assert.match(css, /video\.me\{position:absolute;right:8px;bottom:8px;width:clamp\(64px,25%,112px\)!important;height:auto!important;aspect-ratio:4\/3/);
@@ -140,7 +140,7 @@ test('Offline Messages panel: below the contact toolbar, per-message dismiss tha
   assert.match(panel, /m\.offlineId && m\.receivedOffline/);
   for (const f of ['public/index.html', 'public/social/messenger.html']) {
     const h = R(f);
-    assert.match(h, /id="q" placeholder="Search contacts\.\.\."><\/div><\/div>\n  <div id="offlinePanel" hidden><\/div>/);
+    assert.match(h, /id="q" placeholder="Search contacts\.\.\."><\/div><\/div>\r?\n  <div id="offlinePanel" hidden><\/div>/);
     assert.match(h, /dismiss:ids=>emit\("m:offline-dismiss",ids\)/);
     assert.match(h, /onRefresh:\(\)=>window\.offlinePanel\.render\(\)/);
     assert.match(h, /<script src="\/offline-panel\.js"><\/script><script src="\/messenger-inbox\.js">/);

@@ -64,7 +64,7 @@ button{font:12px Tahoma;background:linear-gradient(#fff,#e3ecf7);border:1px soli
 .gt{font-size:9px;background:#e7eef8;color:#557;border:1px solid #b9c9e0;border-radius:6px;padding:0 4px;margin-left:3px}.mem.sel .gt{color:#334}
 #foot{text-align:center;font-size:10px;color:var(--muted)}
 @media (max-width:760px){#mpane{width:140px}#log{height:240px}.meter{display:none}}
-</style><link rel="stylesheet" href="/modern.css"><script src="/theme.js"></script><script src="/icons.js"></script><script src="/flags.js"></script><script src="/profile.js"></script>
+</style><link rel="stylesheet" href="/modern.css?v=2"><script src="/theme.js"></script><script src="/icons.js"></script><script src="/flags.js"></script><script src="/profile.js?v=2"></script>
 <style>
 .win{margin:16px auto!important;overflow:visible!important}.win>.tbar{border-radius:var(--r) var(--r) 0 0}
 #login .in{padding:20px!important;line-height:1.9}.cat{color:var(--muted)!important;font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-top:14px!important}
@@ -184,7 +184,7 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
   <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <label class="social-chat-search"><span aria-hidden="true">⌕</span><input type="search" id="social-chat-search" placeholder="Search chat rooms and topics" aria-label="Search chat rooms and topics"></label>
   <a href="https://github.com/2000sretrochat/retrochat/releases/latest/download/RazzleMessenger-Setup.exe">Download Messenger</a>
-  <a href="/?chat=1" data-chat-signin>Sign in</a>
+  <a href="/?chat=1" data-chat-signin hidden>Sign in</a>
 </header>
 <div class="social-chat-layout" id="social-chat-layout">
   <aside class="site-sidebar">
@@ -207,14 +207,14 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
 <section id="login" class="win" aria-labelledby="room-entry-title">
   <div class="in">
     <h2 id="room-entry-title">Join a room</h2>
-    <div id="who"><p>Choose a guest screen name for this visit. <a href="/?chat=1" data-chat-signin>Sign in</a> or <a href="/?chat=1&amp;signup=1" data-chat-signin>sign up</a>.</p></div>
+    <p id="room-session-status" role="status">Checking your sign-in.</p><div id="who" hidden><p>Choose a guest screen name for this visit. <a href="/?chat=1" data-chat-signin>Sign in</a> or <a href="/?chat=1&amp;signup=1" data-chat-signin>sign up</a>.</p></div>
     <div class="room-entry-actions">
-      <label id="nmw" for="nm">Guest screen name<input type="text" id="nm" placeholder="Type your screen name" maxlength="20" autocomplete="off" aria-describedby="guest-name-rules guest-room-selection"><small id="guest-name-rules">3–20 characters. Start with a letter. Spaces, hyphens, and underscores are allowed.</small></label>
+      <label id="nmw" for="nm" hidden>Guest screen name<input type="text" id="nm" placeholder="Type your screen name" maxlength="20" autocomplete="off" aria-describedby="guest-name-rules guest-room-selection"><small id="guest-name-rules">3–20 characters. Start with a letter. Spaces, hyphens, and underscores are allowed.</small></label>
       <button type="button" id="go" hidden>Enter Chat</button>
       <label id="incl" style="display:none"><input type="checkbox" id="incq"> Enter incognito</label>
       <button type="button" id="mk" hidden disabled title="Create your own room">Create room</button>
     </div>
-    <p id="guest-room-selection" aria-live="polite"></p>
+    <p id="guest-room-selection" aria-live="polite" hidden></p>
     <div id="err" role="status"></div>
     <h3 class="room-chooser-title">Room directory</h3>
     <div id="rlist"></div>
@@ -266,7 +266,7 @@ document.querySelectorAll('.lgs, .lgbig').forEach(element => {
 });
 function setHdr(){$('hdr').textContent=room+' ('+(typeof ros!='undefined'?ros.length:0)+')'}
 document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('');
-const $=id=>document.getElementById(id)||(window.ydFind&&ydFind(id))||null, S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
+const $=id=>document.getElementById(id)||(window.ydFind&&ydFind(id))||null, S=io({autoConnect:false,reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
 (function(){const r=$('fsr'),L=$('log'),set=v=>{v=Math.max(11,Math.min(24,Math.round(+v||14)));r.value=v;$('fsv').textContent=v+'px';L.style.setProperty('--chatfs',v+'px');L.classList.add('fsz');localStorage.rcChatFs=v};
  set(localStorage.rcChatFs||14);r.oninput=()=>set(r.value);$('fsz').addEventListener('wheel',e=>{e.preventDefault();set(+r.value+(e.deltaY<0?1:-1))},{passive:false})})();
 let room=new URLSearchParams(location.search).get('room')||'',owner=null,acct=null, st={b:false,i:false,u:false,color:'#000000',f:'Arial'}, rooms=[], selName=null;
@@ -295,9 +295,15 @@ if (isRoomPopout) {
  document.documentElement.classList.add('room-popout', 'room-popout-pending');
  $('room-popout-status').hidden = false;
 }
-const roomAccountReady = fetch('/api/me').then(r=>r.json()).then(m=>{acct=m.name;$('go').hidden=!acct;syncRoomEntry();$('mk').hidden=!acct;$('mk').disabled=!acct;loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
+let sessionChecked=false;
+const roomAccountReady = fetch('/api/me',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Session unavailable');return r.json()}).then(m=>{
+ sessionChecked=true;acct=m.name;S.connect();$('room-session-status').hidden=true;$('who').hidden=false;$('nmw').hidden=!!acct;
+ const signIn=document.querySelector('#social-chat-header [data-chat-signin]');if(signIn&&!acct)signIn.hidden=false;
+ $('go').hidden=!acct;syncRoomEntry();$('mk').hidden=!acct;$('mk').disabled=!acct;loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
  if(isRoomPopout)return;
- if(new URLSearchParams(location.search).get('edit')&&acct)new Promise(ok=>S.emit('rooms',ok)).then(()=>editRoom(new URLSearchParams(location.search).get('edit')));else if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{});
+ if(new URLSearchParams(location.search).get('edit')&&acct)new Promise(ok=>S.emit('rooms',ok)).then(()=>editRoom(new URLSearchParams(location.search).get('edit')));else if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{
+ $('room-session-status').textContent='Could not check your sign-in. Refresh this page to try again.';S.connect();
+});
 document.addEventListener('click', event => {
  const link = event.target.closest('[data-chat-signin]');
  if (!link || !room) return;
@@ -328,7 +334,7 @@ document.querySelector('.site-sidebar').addEventListener('click', event => {
 });
 function syncRoomEntry() {
  const summary = $('guest-room-selection');
- summary.hidden = Boolean(acct);
+ summary.hidden = !sessionChecked || Boolean(acct);
  if (!acct) {
   const text = room ? 'You’ll enter ' + room + ' as a guest.' : 'Select a room below to continue as a guest.';
   if (summary.textContent !== text) summary.textContent = text;
@@ -414,7 +420,7 @@ let INC=false,ANN=false;const mpost=b=>fetch('/api/master/prefs',{method:'POST',
 function incUI(){const a=$('mInc'),b=$('mAnn');if(a)a.textContent=(INC?'\u2713 ':'')+'Incognito';if(b)b.textContent=(ANN?'\u2713 ':'')+'Announce my entry';let t=$('incTag');if(!t&&$('mcon')){t=document.createElement('span');t.id='incTag';t.style.cssText='align-self:center;font-size:11px;opacity:.7;padding:0 6px';$('mcon').after(t)}if(t)t.textContent=INC?'(incognito)':''}
 S.on('inc',d=>{INC=d.on;ANN=d.announce;incUI()});
 S.on('incwarn',d=>{if(confirm("You're incognito \u2014 send visibly?"))S.emit('say',{text:d.text,...st,vis:true})});
-function login(){if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;if(!room)return $('err').textContent='Pick a room from the list first.';if(!acct&&!$('nm').value.trim()){$('err').textContent='Enter a guest screen name to join '+room+'.';$('nm').focus();return}S.emit('login',{name:$('nm').value,room},r=>{if(r.adult)return ask18(login);if(r.error){finishIncomingPopout('failed');return $('err').textContent=r.error}if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const mr=document.createElement('script');mr.src='/api/master/recorder.js';document.head.appendChild(mr);const a=document.createElement('button');a.onclick=()=>window.openMasterConsole&&openMasterConsole();a.id='mcon';a.className='hb mst';a.title='Master Console (only you can see this)';a.innerHTML=YI.svg('shield',18)+'<span>Master</span>';$('hmst').appendChild(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon class=mst>Master Console</div><div id=mMadm class=mst>Room Admin Console (master)</div><hr>');$('mMadm').onclick=()=>openMod(selName);$('mAbout').insertAdjacentHTML('afterend','<div id=mSite class=mst>Site Moderator Key...</div>');$('mSite').onclick=()=>{const k=prompt('Site moderator key:');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMadm').insertAdjacentHTML('afterend','<div id=mInc class=mst>Incognito</div><div id=mAnn class=mst>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
+function login(){if(!sessionChecked)return; if($('incl').style.display==''&&!login._p){login._p=1;return mpost({incognito:$('incq').checked}).finally(login)}login._p=0;if(!room)return $('err').textContent='Pick a room from the list first.';if(!acct&&!$('nm').value.trim()){$('err').textContent='Enter a guest screen name to join '+room+'.';$('nm').focus();return}S.emit('login',{name:acct?'':$('nm').value,room,account:!!acct},r=>{if(r.adult)return ask18(login);if(r.error){finishIncomingPopout('failed');return $('err').textContent=r.error}if(r.m&&!window.MASTER){window.MASTER=true;const ms=document.createElement('script');ms.src='/api/master/ui.js';document.head.appendChild(ms);const mr=document.createElement('script');mr.src='/api/master/recorder.js';document.head.appendChild(mr);const a=document.createElement('button');a.onclick=()=>window.openMasterConsole&&openMasterConsole();a.id='mcon';a.className='hb mst';a.title='Master Console (only you can see this)';a.innerHTML=YI.svg('shield',18)+'<span>Master</span>';$('hmst').appendChild(a);const dd=$('mJoin').parentNode;dd.insertAdjacentHTML('afterbegin','<div id=mMcon class=mst>Master Console</div><div id=mMadm class=mst>Room Admin Console (master)</div><hr>');$('mMadm').onclick=()=>openMod(selName);$('mAbout').insertAdjacentHTML('afterend','<div id=mSite class=mst>Site Moderator Key...</div>');$('mSite').onclick=()=>{const k=prompt('Site moderator key:');if(k)S.emit('mod:site',k,r=>alert(r.error||'Site moderator mode on for this session.'))};$('mMcon').onclick=()=>window.openMasterConsole&&openMasterConsole();$('mMadm').insertAdjacentHTML('afterend','<div id=mInc class=mst>Incognito</div><div id=mAnn class=mst>Announce my entry</div>');$('mInc').onclick=()=>mpost({incognito:!INC});$('mAnn').onclick=()=>mpost({announce:!ANN});incUI()}
  me=r.name;try{drawQ()}catch(e){};$('login').style.display='none';$('brand').style.display='none';document.body.classList.add('chat-room-active');$('chat').style.display='flex';
  $('sws').innerHTML=r.colors.map(c=>`<span class="sw${c==st.color?' on':''}" data-c="${c}" title="${c=='#8b5cf6'?'Purple':c}" style="background:${c}"></span>`).join('');
  document.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{st.color=e.dataset.c;$('msg').style.color=st.color;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==e))});
@@ -852,4 +858,4 @@ document.querySelectorAll('#hdr').forEach(()=>{});
  const lab=document.createElement('span');lab.textContent='Mic';lab.className='mlb';lab.style.cssText='font:600 10px var(--sys);color:var(--muted,#567);margin-right:2px';wrap.prepend(lab);show(YAV.setBoost(YAV.cfg().boost));up.onclick=()=>show(YAV.setBoost(YAV.cfg().boost+10));dn.onclick=()=>show(YAV.setBoost(YAV.cfg().boost-10))})();
 
 (()=>{const e=document.getElementById('mMute');if(!e)return;const u=()=>e.classList.toggle('chk',localStorage.ycSound==='off');u();e.onclick=()=>{localStorage.ycSound=localStorage.ycSound==='off'?'on':'off';u()};addEventListener('storage',u);addEventListener('ycsound',u)})();
-</script><script src="/room137.js"></script><script src="/social/navigation.js"></script></body></html>
+</script><script src="/room137.js"></script><script src="/social/navigation.js?v=2"></script></body></html>
