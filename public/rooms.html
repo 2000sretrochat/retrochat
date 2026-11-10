@@ -539,8 +539,13 @@ function drawQ(){const on=MQ.on;$('hand').style.display=on&&me?'':'none';const m
  if($('mHq')){$('mHq').checked=on;$('mHq').disabled=micMax!=1;$('mHq').parentNode.title=micMax!=1?'Only available in single-mic rooms':'';$('mAn').value=String(MQ.mann||0);$('mAn').disabled=micMax!=1;const v=String(MQ.timer||0);$('mTm').value=[...$('mTm').options].some(o=>o.value==v)?v:'c';if($('mTm').value=='c')$('mTm').options[4].textContent='Custom ('+MQ.timer+'s)...'}}
 S.on('micq',d=>{if(d.room!=room)return;MQ=d;drawQ()});
 $('hand').onclick=async()=>{const up=MQ.q.indexOf(me)<0;if(up&&voff)return alert('Voice is off - click Voice to turn it back on, then raise your hand.');if(up&&!(await getMic()))return;S.emit('hand',up,r=>{if(r.error)return alert(r.error);if(r.up===undefined)return;add({sys:1,text:!r.up?'You lowered your hand.':r.pos===1&&r.free?'Your hand is up - you\'re first in line. Click Talk when you\'re ready to take the mic.':'Your hand is up - you\'re #'+r.pos+' in line.'})})};
-S.on('yourturn',({secs})=>{beep();talking=true;mic&&mic.getAudioTracks().forEach(t=>t.enabled=true);$('talk').classList.add('on');$('hf').checked=true;$('talk').innerHTML=YI.svg('mic',18)+'Talk (on)';add({sys:1,text:'It\'s your turn \u2013 you have the mic'+(secs?' for '+secs+' seconds':'')+'. Click Talk to give it up.'})});
-S.on('micdrop',()=>{talking=false;mic&&mic.getAudioTracks().forEach(t=>t.enabled=false);$('talk').classList.remove('on');$('hf').checked=false;$('talk').innerHTML=YI.svg('mic',18)+'Talk';add({sys:1,text:'Your mic time is up.'})});
+S.on('yourturn',({secs})=>{micAttempt++;micPending=false;beep();talking=true;mic&&mic.getAudioTracks().forEach(t=>t.enabled=true);$('talk').classList.add('on');$('hf').checked=true;$('talk').innerHTML=YI.svg('mic',18)+'Talk (on)';add({sys:1,text:'It\'s your turn \u2013 you have the mic'+(secs?' for '+secs+' seconds':'')+'. Click Talk to give it up.'})});
+S.on('micdrop',({reason}={})=>{
+ micAttempt++;micPending=false;latch=false;tdown=0;talking=false;
+ mic&&mic.getAudioTracks().forEach(t=>t.enabled=false);$('talk').classList.remove('on');$('hf').checked=false;
+ $('talk').innerHTML=YI.svg('mic',18)+'Talk';
+ add({sys:1,text:reason==='ignore'?'Mic Bump released your mic. You can still request a turn.':reason==='pass'?'Your mic was passed to the next chatter.':'Your mic time is up.'});
+});
 setInterval(()=>{const m=ros.find(x=>x.id==S.id);$('mtl').textContent=m&&m.talk&&m._end?Math.max(0,Math.ceil((m._end-Date.now())/1e3))+'s left':'';document.querySelectorAll('[data-dend]').forEach(e=>{const s=Math.max(0,Math.ceil((+e.dataset.dend-Date.now())/1e3));e.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')});document.querySelectorAll('[data-end]').forEach(e=>{e.textContent=' '+Math.max(0,Math.ceil((+e.dataset.end-Date.now())/1e3))+'s'})},250);
 $('mAn')&&($('mAn').onchange=e=>S.emit('set-micopts',{mann:+e.target.value},r=>{if(r.error){alert(r.error);drawQ()}}));
 $('mHq')&&($('mHq').onchange=e=>S.emit('set-micopts',{hq:e.target.checked},r=>{if(r.error){alert(r.error);drawQ()}}));
@@ -652,7 +657,7 @@ S.on('msg',add);
 let typers={};S.on('typing',({name})=>{if(ignored.has(name))return;typers[name]=Date.now()+3500;showTyping()});
 function showTyping(){$('typing').textContent=''}
 setInterval(showTyping,1000);S.on('msg',m=>{if(m.name)delete typers[m.name]});
-let dropT=0,wasDown=false;S.on('disconnect',why=>{if(!me)return;wasDown=true;latch=false;talking=false;$('talk').classList.remove('on');clearTimeout(dropT);dropT=setTimeout(()=>{if(!S.connected)$('cstat').style.display=''},3000)});
+let dropT=0,wasDown=false;S.on('disconnect',why=>{if(!me)return;wasDown=true;micAttempt++;micPending=false;latch=false;talking=false;mic?.getAudioTracks().forEach(t=>t.enabled=false);$('talk').classList.remove('on');clearTimeout(dropT);dropT=setTimeout(()=>{if(!S.connected)$('cstat').style.display=''},3000)});
 S.on('connect',()=>{clearTimeout(dropT);$('cstat').style.display='none';if(!wasDown||!me||!room)return;wasDown=false;queuedRoomIce.clear();Object.keys(pcs).forEach(k=>{try{pcs[k].close()}catch{}delete pcs[k]});document.querySelectorAll('audio[id^=au]').forEach(a=>a.remove());
  let tries=0;const rj=()=>{if(!S.connected)return;$('cstat').style.display='';S.emit('login',{name:me,room},r=>{if(!r||r.error){tries++;if(tries<12)setTimeout(rj,Math.min(30000,1500*2**Math.min(tries,5)));else console.warn('rejoin failed',r&&r.error);return}tries=0;me=r.name;$('cstat').style.display='none'})};rj()});
 // draggable windows
@@ -758,12 +763,34 @@ async function getMic(){if(mic)return true;try{mic=await YAV.buildMic();await re
  mic.getAudioTracks().forEach(t=>t.enabled=false);meter(mic,'m1');
  Object.keys(pcs).filter(x=>x[0]=='a').forEach(x=>closePc('a',x.slice(1))); // rebuild with mic
  S.emit('voice',true);S.emit('avmode',YAV.cfg().mode=='music'||YAV.cfg().sys!='off');return true}
-async function setTalk(on){if(on&&!(await getMic()))return;if(talking==on)return;talking=on;mic&&mic.getAudioTracks().forEach(t=>t.enabled=on);$('talk').classList.toggle('on',on);S.emit('talk',on,r=>{if(on&&r&&r.error&&talking){talking=false;mic&&mic.getAudioTracks().forEach(t=>t.enabled=false);$('talk').classList.remove('on');if(r.full){$('hf').checked=false;$('talk').innerHTML=YI.svg('mic',18)+'Talk';add({sys:1,text:escT(r.error)+(r.hq?'':' \u2013 wait for a free mic.')})}}})}
+let micAttempt=0,micPending=false;
+async function setTalk(on){
+ if(on ? talking||micPending : !talking&&!micPending)return;
+ const attempt=++micAttempt;
+ micPending=on;
+ if(!on){
+  talking=false;mic?.getAudioTracks().forEach(track=>track.enabled=false);
+  $('talk').classList.remove('on');S.emit('talk',false);return;
+ }
+ const ready=await getMic();
+ if(attempt!==micAttempt)return;
+ if(!ready){micPending=false;return;}
+ S.emit('talk',true,result=>{
+  if(attempt!==micAttempt)return;
+  micPending=false;
+  if(result?.ok){
+   talking=true;mic?.getAudioTracks().forEach(track=>track.enabled=true);
+   $('talk').classList.add('on');tLbl();return;
+  }
+  latch=false;tLbl();
+  if(result?.full){$('hf').checked=false;add({sys:1,text:escT(result.error)+(result.hq?'':' \u2013 wait for a free mic.')});}
+ });
+}
 const tb=$('talk');
 let tdown=0;const tLbl=()=>{const st=talkBlock();tb.classList.toggle('gray',!!st&&!micNo);tb.innerHTML=YI.svg('mic',18)+(micNo?'No mic':st?st:latch||$('hf').checked&&talking?'Talk (on)':'Talk');if(st)tb.title=st=='Dotted'?"You've been dotted":'All mics are in use'};
 tb.addEventListener('pointerdown',e=>{e.preventDefault();if(micNo||voff||$('hf').checked)return;if(latch){latch=false;setTalk(false);tLbl();tdown=0;return}tdown=Date.now();setTalk(true)});
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>tb.addEventListener(ev,e=>{if(!tdown||$('hf').checked)return;const quick=ev=='pointerup'&&Date.now()-tdown<350;tdown=0;if(quick){latch=true;tLbl()}else setTalk(false)}));
-tb.addEventListener('click',()=>{if($('hf').checked&&!micNo&&!voff)setTalk(!talking)});
+tb.addEventListener('click',()=>{if($('hf').checked&&!micNo&&!voff)setTalk(!(talking||micPending))});
 // gray Talk when this computer has no microphone
 async function micCheck(){try{const d=await navigator.mediaDevices.enumerateDevices();micNo=!d.some(x=>x.kind=='audioinput')}catch{micNo=!navigator.mediaDevices}tb.classList.toggle('dis',micNo);tb.title=micNo?'No microphone found on this computer':'Hold to talk, or click once to key up (click again to stop)';tLbl()}
 micCheck();navigator.mediaDevices&&navigator.mediaDevices.addEventListener&&navigator.mediaDevices.addEventListener('devicechange',micCheck);
@@ -824,7 +851,7 @@ S.on('roster',r=>{ownerMenus();r.forEach(m=>{if(m.tl)m._end=Date.now()+m.tl*1e3;
  Object.keys(wins).forEach(id=>{if(id!=S.id&&!r.find(m=>m.id==id&&m.cam))closeWin(id,true)});
  syncAudio()});
 S.on('history',()=>{Object.keys(wins).forEach(id=>id==S.id||closeWin(id,true));Object.keys(pcs).forEach(x=>closePc(x[0],x.slice(1)));
- if(camS)stopCam();if(mic){setTalk(false);S.emit('voice',true)}});
+ if(camS)stopCam();setTalk(false);if(mic)S.emit('voice',true)});
 </script><script>window.YTalking=()=>{try{return !!talking}catch{return false}}</script><script>
 // ---- v13: Invite picker, room icon, room-icon updates ----
 function invitePick(){if(!room)return;document.querySelectorAll('.yprof').forEach(x=>x.remove());const w=document.createElement('div');w.className='yprof invp';

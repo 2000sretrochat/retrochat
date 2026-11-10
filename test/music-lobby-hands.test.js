@@ -12,12 +12,12 @@ test('raising a hand only joins the line; it never keys anyone up', () => {
 
 test('the line advances only on a hand-off (Talk off, time up, pass, speaker gone)', () => {
   assert.match(server, /function advance\(room, handoff = false\)/);
-  assert.match(server, /if \(hqOn\(room\) && handoff\) \{ const q = qOf\(room\);/);
+  assert.match(server, /if \(hqOn\(room\) && handoff\) for \(const id of micLine\(room\)\)/);
   assert.match(server, /if \(micsUsed\(room\) < \(MICPREV\[room\] \|\| 0\)\) handoff = true;/);
   assert.match(server, /const had = s\.data\.talk; s\.data\.talk = false; s\.data\.talkUntil = 0; advance\(room, had\);/);
   assert.match(server, /passed the mic to the next in line\.' \}\); advance\(room, true\)/);
   // first in line may take a free mic with Talk; others must raise a hand
-  assert.match(server, /if \(hqOn\(room\) && qOf\(room\)\.length && QUEUE\[room\]\[0\] !== s\.id\) return ack/);
+  assert.match(server, /const next = hqOn\(room\) \? micLine\(room\)\[0\] : null;\s+if \(next && next !== s\.id\) return ack/);
 });
 
 test('Listen is never a dead button: it plays, or says why nothing is playing', () => {

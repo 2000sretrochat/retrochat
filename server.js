@@ -381,13 +381,19 @@ async function renameURoom(old, nn) {
   } catch (err) { UROOMS.set(old, r0); return { error: err.code === '23505' ? 'A room with that name already exists.' : 'Could not rename the room right now.' }; }
   UROOMS.set(name, r0); for (const M of [ROOMS, TOPICS, history, RATE, MOD, MICS, HQ, MTIMER, QUEUE, MANN, ANN, MUSICON]) if (old in M) { M[name] = M[old]; delete M[old]; }
   for (const x of socks(old)) { x.leave(old); x.join(name); x.data.room = name; } REC.rename(old, name);
+  micBump.rename(old,name);
   io.to(name).emit('room-renamed', { from: old, to: name }); push(name, { sys: true, text: 'Room renamed to ' + esc(name) }); upd(name); io.emit('rooms-changed'); return { ok: true, name }; }
 function setMics(room, n) { n = +n; if (!ROOMS[room]) return 'No such room.'; if (![1, 2, 3, 4, 5].includes(n)) return 'Mic limit must be 1 to 5.';
   MICS[room] = n; MASTER.saveMics(room, n); io.to(room).emit('mics', { room, max: n }); upd(room); return null; }
 const HQ = {[musicRoom]:true,'Philippines Karaoke':true}, MTIMER = {}, QUEUE = {}, MANN = {}; // hands-up on/off, per-turn seconds (0=off), ordered socket ids
 const qOf = r => QUEUE[r] = (QUEUE[r] || []).filter(id => { const x = io.sockets.sockets.get(id); return x && x.data.room === r && x.data.voice && !x.data.talk; });
+const micBump = require('./mic-bump').createMicBump({ db, accounts: acc, onChange: () => {
+  for (const room of Object.keys(ROOMS)) if (socks(room).length) upd(room);
+} });
+micBump.register(app);
+const micLine = room => micBump.prioritize(room,qOf(room));
 const hqOn = r => !!HQ[r] && micsOf(r) === 1;
-function micq(room) { return { room, on: hqOn(room), timer: MTIMER[room] || 0, mann: MANN[room] || 0, max: micsOf(room), q: hqOn(room) ? qOf(room).map(id => io.sockets.sockets.get(id).data.name) : [] }; }
+function micq(room) { return { room, on: hqOn(room), timer: MTIMER[room] || 0, mann: MANN[room] || 0, max: micsOf(room), q: hqOn(room) ? micLine(room).map(id => io.sockets.sockets.get(id).data.name) : [] }; }
 function startTurn(x, room) { x.data.talk = true; x.data.talkStart = Date.now(); x.data.talkAnn = 0; x.data.talkUntil = MTIMER[room] ? Date.now() + MTIMER[room] * 1000 : 0; }
 // Hands-up queue rule: raising a hand only joins the line. The next in line is keyed up automatically only on a
 // hand-off - a speaker letting go of the mic (Talk off, turn time up, "Pass mic", leaving, being dotted). If the mic
@@ -396,7 +402,13 @@ const MICPREV = {}; // room -> speakers at the last check, to notice a speaker l
 function advance(room, handoff = false) { if (!room || !ROOMS[room]) return false; let ch = false;
   for (const x of socks(room)) if (x.data.talk && x.data.talkUntil && x.data.talkUntil <= Date.now()) { x.data.talk = false; x.data.talkUntil = 0; x.emit('micdrop', { reason: 'time' }); push(room, { sys: true, text: esc(x.data.name) + "'s mic time is up." }); ch = true; handoff = true; }
   if (micsUsed(room) < (MICPREV[room] || 0)) handoff = true;
-  if (hqOn(room) && handoff) { const q = qOf(room); while (q.length && micsUsed(room) < micsOf(room)) { const x = io.sockets.sockets.get(q.shift()); if (mod(room).mm.has(x.data.name.toLowerCase())) continue; startTurn(x, room); x.emit('yourturn', { secs: MTIMER[room] || 0 }); push(room, { sys: true, text: esc(x.data.name) + ' has the mic.' }); ch = true; } }
+  if (hqOn(room) && handoff) for (const id of micLine(room)) {
+    if (micsUsed(room) >= micsOf(room)) break;
+    QUEUE[room] = QUEUE[room].filter(queued => queued !== id);
+    const x = io.sockets.sockets.get(id);
+    if (mod(room).mm.has(x.data.name.toLowerCase()) || dotLeft(room,x.data.name.toLowerCase()) !== null || x.data.inc) continue;
+    startTurn(x, room); x.emit('yourturn', { secs: MTIMER[room] || 0 }); push(room, { sys: true, text: esc(x.data.name) + ' has the mic.' }); ch = true;
+  }
   MICPREV[room] = micsUsed(room); return ch; }
 setInterval(() => { for (const r of Object.keys(ROOMS)) { let ch = advance(r);
   if (MANN[r] && micsOf(r) === 1) for (const x of socks(r)) if (x.data.talk && x.data.talkStart) { const n = Math.floor((Date.now() - x.data.talkStart) / 60e3 / MANN[r]) * MANN[r]; if (n > (x.data.talkAnn || 0)) { x.data.talkAnn = n; push(r, { sys: true, text: esc(x.data.name) + ' has been on the mic ' + n + ' minute' + (n > 1 ? 's' : '') + '.' }); } } const d = MOD[r]?.dot;
@@ -412,7 +424,13 @@ const MUSICON = {}; const musicDefault = r => r === musicRoom || ROOMS[r] === 'M
 const isMusicRoom = r => !!r && (r in MUSICON ? MUSICON[r] : musicDefault(r)), NPLAST = {};
 function npList(room) { const l = []; for (const x of socks(room)) { if (x.data.np && !x.data.talk) x.data.np = null; if (x.data.np) l.push({ name: x.data.name, artist: x.data.np.artist, song: x.data.np.song }); } return l; }
 function npSync(room) { if (!room || !isMusicRoom(room)) return; const list = npList(room), k = JSON.stringify(list); if (NPLAST[room] === k) return; NPLAST[room] = k; io.to(room).emit('np', { room, list }); }
-function upd(room) { if (room) { if(room===musicRoom)void musicLobby.tick(); lists(room); io.to(room).emit('micq', micq(room)); npSync(room); } }
+function upd(room) { if (room) {
+  const bumped = micBump.reconcile(room,socks(room),socket => {
+    socket.data.talk = false; socket.data.talkUntil = 0; socket.emit('micdrop',{reason:'ignore'});
+  });
+  if (bumped) advance(room,true);
+  if(room===musicRoom)void musicLobby.tick(); lists(room); io.to(room).emit('micq', micq(room)); npSync(room);
+} }
 const MAXVIEW = 6;
 // ---- room moderation: owner (or site admin via ADMIN_KEY) > room admins > users. All checks are server-side. ----
 const MOD = {}; const KICK_MS = 5 * 60e3;
@@ -590,6 +608,7 @@ io.on('connection', s => {
   });
   function mediaReset(why = 'left room') {
     const room = s.data.room; if (!room) return; RECW.onLeave(s, why); // a master's recording ends when they leave the room or disconnect
+    micRequest++;
     if (!s.data.inc) io.to(room).emit('media-gone', { id: s.id });
     for (const x of socks(room)) x.data.viewers?.delete(s.id);
     s.data.cam = false; s.data.talk = false; s.data.voice = false; s.data.viewers = new Set();
@@ -612,13 +631,23 @@ io.on('connection', s => {
     MUSICON[room] = on; MASTER.saveMusic && MASTER.saveMusic(room, on);
     if (!on) { for (const x of socks(room)) { x.data.np = null; x.data.music = false; } NPLAST[room] = '[]'; io.to(room).emit('np', { room, list: [] }); }
     io.to(room).emit('room:music', { room, on }); push(room, { sys: true, text: esc(s.data.name) + (on ? ' turned on music sharing in this room.' : ' turned off music sharing in this room.') }); upd(room); cb({ ok: true, on }); });
-  s.on('voice', on => { if (!s.data.name) return; s.data.voice = !!on; if (!on) s.data.talk = false; upd(s.data.room); });
-  s.on('talk', (on, cb) => { const ack = typeof cb === 'function' ? cb : () => {}; if (!s.data.name || !s.data.voice) return ack({ error: 'Voice is off.' }); const room = s.data.room;
+  let micRequest = 0;
+  s.on('voice', on => { if (!s.data.name) return; s.data.voice = !!on; if (!on) { micRequest++; s.data.talk = false; } upd(s.data.room); });
+  s.on('talk', async (on, cb) => {
+    const ack = typeof cb === 'function' ? cb : () => {};
+    const request = ++micRequest, room = s.data.room;
+    if (on && s.data.voice && !s.data.talk && !hqOn(room) && micsUsed(room) < micsOf(room) && micBump.isLower(room,s.id)) {
+      // In open-mic rooms, give competing normal-priority requests a head start.
+      await new Promise(resolve => setTimeout(resolve,650));
+      if (request !== micRequest || !s.connected || s.data.room !== room) return ack({error:'Mic request canceled.'});
+    }
+    if (!s.data.name || !s.data.voice) return ack({ error: 'Voice is off.' });
     if (on && dotLeft(room, s.data.name.toLowerCase()) !== null) { s.emit('dotted', {}); return ack({ error: "You've been dotted." }); }
     if (on && s.data.inc) return ack({ error: 'You are incognito. Send a message visibly first to use the mic.' });
     if (on && mod(room).mm.has(s.data.name.toLowerCase())) { s.emit('dotted', { muted: true }); upd(room); return ack({ error: 'Your mic is muted.' }); }
     if (on && !s.data.talk) { const max = micsOf(room), used = micsUsed(room); if (used >= max) { upd(room); return ack({ error: 'Mic is full (' + used + '/' + max + ')', full: true, used, max, hq: hqOn(room) }); }
-      if (hqOn(room) && qOf(room).length && QUEUE[room][0] !== s.id) return ack({ error: 'Hands up is on \u2013 raise your hand to get in line.', full: true, hq: true });
+      const next = hqOn(room) ? micLine(room)[0] : null;
+      if (next && next !== s.id) return ack({ error: 'Hands up is on \u2013 raise your hand to get in line.', full: true, hq: true });
       QUEUE[room] = qOf(room).filter(id => id !== s.id); startTurn(s, room); }
     else if (!on) { const had = s.data.talk; s.data.talk = false; s.data.talkUntil = 0; advance(room, had); }
     upd(room); ack({ ok: true, secs: on ? MTIMER[room] || 0 : 0 }); });
@@ -626,7 +655,7 @@ io.on('connection', s => {
     if (!hqOn(room)) return cb({ error: 'Hands up is off in this room.' }); const q = qOf(room);
     if (up) { if (!s.data.voice) return cb({ error: 'Your mic is not connected yet - allow microphone access, then raise your hand again.' }); if (s.data.talk) return cb({ error: 'You already have the mic.' }); if (!q.includes(s.id)) q.push(s.id); }
     else QUEUE[room] = q.filter(id => id !== s.id);
-    upd(room); const pos = qOf(room).indexOf(s.id); cb({ ok: true, up: pos >= 0, pos: pos + 1, free: micsUsed(room) < micsOf(room) }); }); // never keys anyone up
+    upd(room); const pos = micLine(room).indexOf(s.id); cb({ ok: true, up: pos >= 0, pos: pos + 1, free: micsUsed(room) < micsOf(room) }); }); // never keys anyone up
   s.on('handq', ({ who, op } = {}, cb) => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room; if (!roleOf(s, room) && !s.data.master) return cb({ error: 'Only the room owner and admins can manage the line.' });
     if (op === 'pass') { const cur = socks(room).filter(x => x.data.talk); if (!qOf(room).length) return cb({ error: 'Nobody is in line.' }); for (const x of cur) { x.data.talk = false; x.data.talkUntil = 0; x.emit('micdrop', { reason: 'pass' }); } push(room, { sys: true, text: esc(s.data.name) + ' passed the mic to the next in line.' }); advance(room, true); upd(room); return cb({ ok: true }); }
     const q = qOf(room), i = q.findIndex(id => io.sockets.sockets.get(id).data.name.toLowerCase() === String(who || '').toLowerCase()); if (i < 0) return cb({ error: 'Not in line.' });
@@ -681,11 +710,17 @@ io.on('connection', s => {
   const syncSibs = () => { if (s.data.acct) for (const x of io.sockets.sockets.values()) if (x !== s && x.data.acct?.id === s.data.acct.id) { x.data.ign = new Set(s.data.ign); x.data.blk = new Set(s.data.blk || []); x.data.pmb = s.data.pmb; } };
   const P = fn => async (d, cb) => { if (typeof d === 'function') { cb = d; d = {}; } cb = typeof cb === 'function' ? cb : () => {}; try { if (s.data.acct && !s.data.prefsLoaded) { await loadPrefs(); s.data.prefsLoaded = true; } cb(await fn(d || {})); } catch (e) { cb({ error: e.maint ? 'Service under maintenance' : 'Something went wrong' }); } };
   s.on('prefs', P(async () => prefs()));
-  s.on('ign:set', P(async ({ name, on }) => { const lc = String(name || '').toLowerCase().slice(0, 30); if (!/^[a-z][a-z0-9_.]{2,19}$/.test(lc)) return { error: 'Bad name.' };
+  s.on('ign:set', P(async ({ name, on }) => { const lc = String(name || '').trim().toLowerCase(); if (!/^[a-z][a-z0-9_. -]{2,19}$/.test(lc)) return { error: 'Bad name.' };
     if (s.data.name && lc === s.data.name.toLowerCase()) return { error: 'You cannot ignore yourself.' };
-    if (on === false) { s.data.ign.delete(lc); if (s.data.acct) await db.q('delete from ignores where owner=$1 and name_lc=$2', [s.data.acct.id, lc]); }
-    else { s.data.ign.add(lc); if (s.data.acct) await db.q('insert into ignores(owner,name_lc) values($1,$2) on conflict do nothing', [s.data.acct.id, lc]); }
-    syncSibs(); return { ok: true, ...(await prefs()) }; }));
+    if (on === false) { if (s.data.acct) await db.q('delete from ignores where owner=$1 and name_lc=$2', [s.data.acct.id, lc]); s.data.ign.delete(lc); }
+    else { if (s.data.acct) await db.q('insert into ignores(owner,name_lc) values($1,$2) on conflict do nothing', [s.data.acct.id, lc]); s.data.ign.add(lc); }
+    syncSibs();
+    const affected = new Set(s.data.room ? [s.data.room] : []);
+    if (s.data.acct) for (const peer of io.sockets.sockets.values()) {
+      if (peer.data.acct?.id === s.data.acct.id && peer.data.room) affected.add(peer.data.room);
+    }
+    for (const room of affected) upd(room);
+    return { ok: true, ...(await prefs()) }; }));
   s.on('blk:set', P(async ({ name, on }) => { if (!s.data.acct) return { error: 'Sign in with a screen name to block people. Guests can use Ignore.' };
     const [t] = await db.q('select id,name from users where name_lc=$1', [String(name || '').toLowerCase().slice(0, 30)]); if (!t) return { error: 'Only registered screen names can be blocked. Use Ignore for guests.' };
     if (t.id === s.data.acct.id) return { error: 'You cannot block yourself.' }; const uid = s.data.acct.id; s.data.blk = s.data.blk || new Set();
@@ -740,4 +775,5 @@ app.get('/api/admin/masters', async (req, res) => {
   } catch (e) { console.error('[admin/masters]', e.message); res.status(500).json({ error: 'Server error' }); }
 });
 
-db.init().then(() => loadURooms()).then(() => MASTER.load()).catch(e => console.error('[master load]', e.message)).finally(() => { if (!db.status().ready) { const t = setInterval(() => { if (db.status().ready) { clearInterval(t); loadURooms().then(() => MASTER.load()).catch(() => {}); } }, 2000); } }).finally(() => server.listen(process.env.PORT || 3000, () => console.log('YappChat on', process.env.PORT || 3000)));
+const loadRoomSettings = () => micBump.load().then(() => loadURooms()).then(() => MASTER.load());
+db.init().then(loadRoomSettings).catch(e => console.error('[master load]', e.message)).finally(() => { if (!db.status().ready) { const t = setInterval(() => { if (db.status().ready) { clearInterval(t); loadRoomSettings().catch(() => {}); } }, 2000); } }).finally(() => server.listen(process.env.PORT || 3000, () => console.log('YappChat on', process.env.PORT || 3000)));
