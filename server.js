@@ -105,6 +105,10 @@ const loadURooms = () => Promise.resolve().then(() => db.q('select * from user_r
 // ICE servers (STUN + optional TURN), credentials come from env, never hardcoded in the client
 let iceCache = null;
 const cloudflareTurn = require('./turn-credentials')();
+const turnUsage = require('./turn-usage')({ onPause: () => cloudflareTurn.clear() }); // free-tier guard: STUN only once month-to-date TURN egress reaches TURN_PAUSE_GB
+app.get('/api/turn-usage', async (req, res) => { res.set('Cache-Control', 'no-store'); const u = await userFromReq(req).catch(() => null); if (!u) return res.status(401).json({ error: 'Sign in first.' });
+  let m = false; try { m = !!(await db.q('select is_master from users where id=$1', [u.id]))[0]?.is_master; } catch { } if (!m) return res.status(403).json({ error: 'Masters only.' });
+  res.json(await turnUsage.status()); });
 // room preview (Browse Rooms hover / long-press): who's inside, minus incognito masters and blocked users
 app.get('/api/peek', async (req, res) => { const room = String(req.query.room || ''); if (!ROOMS[room]) return res.json({ names: [] }); const a = await userFromReq(req).catch(() => null);
   if (adultR(room) && !(await isAdultReq(req))) return res.json({ names: [] });
@@ -116,7 +120,7 @@ app.get('/api/ice', async (req, res) => { const stun = { urls: ['stun:stun.l.goo
   try { const E = process.env;
     if (E.CF_TURN_KEY_ID && E.CF_TURN_API_TOKEN) {
       const user=await userFromReq(req);
-      if(user)out.push(...await cloudflareTurn(user.id,E.CF_TURN_KEY_ID,E.CF_TURN_API_TOKEN));
+      if(user){ if(await turnUsage.isPaused())cloudflareTurn.clear(); else out.push(...await cloudflareTurn(user.id,E.CF_TURN_KEY_ID,E.CF_TURN_API_TOKEN)); }
     }
     else if (E.TURN_URLS && E.TURN_USERNAME && E.TURN_CREDENTIAL) out.push({ urls: E.TURN_URLS.split(',').map(x => x.trim()), username: E.TURN_USERNAME, credential: E.TURN_CREDENTIAL });
     else if (iceCache && iceCache.exp > Date.now()) out.push(...iceCache.list);

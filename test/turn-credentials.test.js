@@ -7,7 +7,7 @@ test('TURN credentials are scoped to a member, cached, and browser-safe',async()
   const load=createTurnCredentials({now:()=>clock,request:async(url,options)=>{
     requests++;
     assert.match(url,/\/key-id\/credentials\/generate-ice-servers$/);
-    assert.equal(JSON.parse(options.body).ttl,14400);
+    assert.equal(JSON.parse(options.body).ttl,3600);
     return {ok:true,json:async()=>({iceServers:[
       {urls:['stun:stun.cloudflare.com:3478']},
       {urls:['turn:turn.cloudflare.com:53?transport=udp','turns:turn.cloudflare.com:443?transport=tcp'],username:'short-lived',credential:'temporary'}
@@ -18,7 +18,7 @@ test('TURN credentials are scoped to a member, cached, and browser-safe',async()
   assert.equal(requests,1);
   assert.deepEqual(first,[{urls:['turns:turn.cloudflare.com:443?transport=tcp'],username:'short-lived',credential:'temporary'}]);
   await load(2,'key-id','private');assert.equal(requests,2);
-  clock+=7200001;await load(1,'key-id','private');assert.equal(requests,3);
+  clock+=1800001;await load(1,'key-id','private');assert.equal(requests,3);
 });
 test('failed credential requests can be retried',async()=>{
   let attempts=0;
