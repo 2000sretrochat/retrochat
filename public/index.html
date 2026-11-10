@@ -172,7 +172,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 </style>
 <style id="fr-inbox-css">
 </style>
-<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css"><link rel="stylesheet" href="/razzle-mobile.css"><script defer src="/razzle-mobile.js"></script></head><body>
+<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css"><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script></head><body>
 <div class="auth-site-header" hidden><header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
@@ -424,11 +424,17 @@ $('mBlocked').onclick=()=>modal('Blocked List',blockedL.length?blockedL.map(n=>`
 $('mGroup').onclick=()=>modal('Add a Group','Group name:<input type=text id=gn maxlength=24>',async()=>{const r=await emit('m:group',{group:$('gn').value});if(r.group&&!groups.includes(r.group)){groups.push(r.group);render()}return r});
 $('mMove').onclick=()=>{const n=need();if(!n)return;modal('Move '+n,`Move to group:<select id=gm>${groups.map(g=>`<option>${escT(g)}</option>`).join('')}</select>`,async()=>{const r=await emit('m:group',{name:n,group:$('gm').value});if(r.group){contacts[n.toLowerCase()].group=r.group;render()}return r})};
 $('mIm').onclick=()=>{const n=need();n&&openIm(n)};$('mBuzz').onclick=()=>{const n=need();n&&buzz(n)};
-$('mRooms').onclick=$('bRooms').onclick=()=>{const b=$('brw')||brEl;b.classList.add('on');b.style.zIndex=++zTop;if(YD){if(b._pw){try{b._pw.focus()}catch(e){}}else ydPop(b,'ybrowse',760,640,'Browse Chat Rooms',()=>{b.classList.remove('on');document.body.appendChild(b)})}loadBr()};const brEl=$('brw');
+const mobileBrowse=()=>!YD && matchMedia('(max-width: 760px)').matches;
+function openBrowseDestination(path){
+ if(!mobileBrowse()){window.open(path,'yapprooms');return;}
+ try{window.top.location.assign(path);}catch{location.assign(path);}
+}
+$('mRooms').onclick=$('bRooms').onclick=()=>{const b=$('brw')||brEl;
+if(mobileBrowse()){brTab='all';b.querySelectorAll('.tabs [data-t]').forEach(tab=>tab.classList.toggle('on',tab.dataset.t===brTab));}b.classList.add('on');b.style.zIndex=++zTop;if(YD){if(b._pw){try{b._pw.focus()}catch(e){}}else ydPop(b,'ybrowse',760,640,'Browse Chat Rooms',()=>{b.classList.remove('on');document.body.appendChild(b)})}loadBr()};const brEl=$('brw');
 let brTab='mine',brRooms=[];drag($('brw'));$('brX').onclick=()=>{brEl.classList.remove('on');brEl._pw&&brEl._pw.close()};
 // tabs live in the Browse window, which the desktop app pops out into its own window: toggle siblings, not this document
 $('brw').querySelectorAll('.tabs div').forEach(t=>t.onclick=()=>{brTab=t.dataset.t;t.parentNode.querySelectorAll('div').forEach(x=>x.classList.toggle('on',x==t));drawBr()});
-$('brq').oninput=drawBr;$('brR').onclick=loadBr;$('brC').onclick=()=>window.open('/rooms.html?create=1','yapprooms');
+$('brq').oninput=drawBr;$('brR').onclick=loadBr;$('brC').onclick=()=>openBrowseDestination('/rooms.html?create=1');
 async function loadBr(){try{brRooms=YBrowse.favs(await fetch('/api/rooms').then(r=>r.json()),true)}catch{brRooms=[]}drawBr()}
 setInterval(()=>{if($('brw').classList.contains('on'))loadBr()},5000);
 function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLowerCase():'';
@@ -442,11 +448,11 @@ function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLo
  $('brl').querySelectorAll('[data-fav]').forEach(e=>e.onclick=async()=>{const r=brRooms.find(x=>x.name==e.dataset.fav);if(await YBrowse.toggle(r.name,!r.fav,true))loadBr();else toast('Could not save favorite.')});
  if(brTab=='all'&&!brRooms.some(r=>r.rating=='R'))$('brl').insertAdjacentHTML('beforeend','<div style="padding:10px;text-align:center"><a href="#" id=br18 style="color:#e67e22">Show R-rated rooms (18+)...</a></div>');
  $('br18')&&($('br18').onclick=async e=>{e.preventDefault();if(!YProf.confirm18())return;const r=await fetch('/api/adult',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})});if(!r.ok)return alert('Could not save that.');loadBr()});
- $('brl').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>window.open('/rooms.html?room='+encodeURIComponent(b.dataset.r),'yapprooms'));
+ $('brl').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(b.dataset.r)));
  // one room per screen name: my room gets Edit, and Create Room is hidden once I have one
  const own=(brRooms.find(r=>r.owner&&me&&r.owner.toLowerCase()==me)||{}).name;$('brC').style.display=own&&!(ME&&ME.m)?'none':'';
  if(own&&brTab=='mine')$('brl').querySelectorAll('.rrow').forEach(rw=>{const j=rw.querySelector('[data-r]');if(j&&j.dataset.r==own){j.insertAdjacentHTML('beforebegin',`<button class="btn" data-edit="${escT(own)}" title="Change your room name, topic and settings">Edit</button>`)}});
- $('brl').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>window.open('/rooms.html?edit='+encodeURIComponent(b.dataset.edit),'yapprooms'))}
+ $('brl').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openBrowseDestination('/rooms.html?edit='+encodeURIComponent(b.dataset.edit)))}
 $('mProf').onclick=()=>{const n=need();n&&YProf.show(n,{me:ME&&ME.name})};$('mMyProf').onclick=()=>YProf.edit();$('mSet').onclick=()=>YSet.open();
 $('mInv').onclick=()=>{const n=need();n&&invite(n)};
 $('mHelp').onclick=()=>alert('Add a Contact sends a buddy request. Once they accept, double-click their name to PM.\nUse the PM window buttons for BUZZ!, voice calls and webcam.\nChange your status and message at the top. Right-click a contact for more options.');
