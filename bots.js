@@ -1,5 +1,6 @@
 // Idle ambience bots: per-room screen names + harmless small-talk lines in each room's language.
 // Bots never answer IMs, don't count against IP/session limits, and are toggled in Master Control.
+const {profiles:refreshProfiles,languageLines}=require('./room-bot-refresh');
 const P = {
   en: ['anyone else still up?', 'lol', 'brb getting a snack', 'this song on winamp is stuck in my head', 'so bored rn', 'my dial-up keeps disconnecting ugh', 'who likes blink-182', 'cant sleep again', 'haha nice', 'its so quiet in here tonight', 'back', 'hey all :)', 'anyone watch TRL today', 'gonna update my away message brb', 'whats everyone up to?', 'nice weather today finally'],
   zh: ['大家好！', '今天天气不错啊', '有人在吗？', '刚吃完饭，好饱', '晚上好～', '有北京的朋友吗？', '你们周末做什么？', '哈哈哈', '我去泡杯茶，马上回来', '最近在听周杰伦的歌'],
@@ -18,6 +19,7 @@ const P = {
   es: ['¡Hola a todos!', '¿Qué tal?', '¿Alguien de México?', 'Hace mucho calor hoy', 'jajaja', 'Voy por un café, ya vuelvo'],
   ru: ['Всем привет!', 'Как дела?', 'Кто из Москвы?', 'Сегодня холодно', 'хаха', 'Пойду чай попью'],
 };
+for(const [language,lines] of Object.entries(languageLines))P[language]=[...(P[language]||[]),...lines];
 const B = (room, lang, names) => names.map(n => ({ name: n, room, lang }));
 const BOTS = [
   ...B('Late Night', 'en', ['sk8rboi_1987', 'xXmoonchildXx']),
@@ -66,6 +68,7 @@ for(const [room,names] of [
   ['Late Night',['static_river','nightbus_81']],
   ['Music Lobby',['sideb_radio','tape_deck73']],
 ]) BOTS.push(...B(room,'en',names).map(b=>({...b,silent:true})));
+BOTS.push(...refreshProfiles);
 const slug = n => String(n).toLowerCase().replace(/\s*\[bot\]\s*$/, '').replace(/[^a-z0-9_]/g, '');
 BOTS.forEach((b, i) => { if (!b.id) b.id = slug(b.name); b.color = b.color || COLS[i % COLS.length]; b.font = b.font || FNTS[(i * 3) % FNTS.length]; b.av = b.silent ? '' : 'bot:' + b.id; });
 for (const b of BOTS) (byRoom[b.room] = byRoom[b.room] || []).push(b);
@@ -146,8 +149,8 @@ const LEGACY_DEFAULT_BIO = {
   mixtapebot: 'Playlist tips and song picks. Say @MixtapeBot recommend.',
 };
 const LEGACY_DEFAULT_ROOM = { gamenight: 'Lobby' };
-const PROFILE_SEEDS = BOTS.map(b => { const p = b.silent ? [b.name, '', '', ''] : PERSONA[b.id]; if (!p) throw new Error('bots.js: missing persona for ' + b.id);
-  return { id: b.id, name: b.name, display_name: p[0], location: p[1], interests: p[2], bio: p[3], avatar_key: '', room: b.room, silent: !!b.silent, interactive: !!b.interactive, lang: b.lang, legacy: b.legacy || [] }; });
+const PROFILE_SEEDS = BOTS.map(b => { const p = b.photoIndex !== undefined ? [b.displayName,b.location,b.interests,b.bio] : b.silent ? [b.name, '', '', ''] : PERSONA[b.id]; if (!p) throw new Error('bots.js: missing persona for ' + b.id);
+  return { id: b.id, name: b.name, display_name: p[0], location: p[1], interests: p[2], bio: p[3], avatar_key: '', photoIndex:b.photoIndex, room: b.room, silent: !!b.silent, interactive: !!b.interactive, lang: b.lang, legacy: b.legacy || [] }; });
 const byId = id => BOTS.find(b => b.id === String(id || '').toLowerCase());
 const byAlias = h => { h = String(h || '').toLowerCase(); return BOTS.find(b => b.interactive && (b.aliases || []).includes(h)) || BOTS.find(b => b.name.toLowerCase() === h); };
 module.exports = { BOTS, byRoom, P, line, reply, greet, PROFILE_SEEDS, HOSTS, byId, byAlias, LEGACY_DEFAULT_DISPLAY, LEGACY_DEFAULT_BIO, LEGACY_DEFAULT_ROOM };

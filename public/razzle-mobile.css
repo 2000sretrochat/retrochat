@@ -1,0 +1,147 @@
+/* Narrow and touch layouts shared by Social, Messenger and Razzle Chat. */
+#mobile-people { display: none; }
+
+@media (max-width: 1024px) {
+  body:has(#live-social-messenger) > header {
+    display: flex;
+    flex-wrap: wrap;
+    height: auto;
+    gap: 8px;
+    padding: 10px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+  }
+  body:has(#live-social-messenger) > header > .brand { margin-right: auto; }
+  body:has(#live-social-messenger) > header > .search {
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
+    order: 10;
+  }
+  body:has(#live-social-messenger) > header > .search input { width: 100%; min-width: 0; }
+  body:has(#live-social-messenger) > header > #account-menu { min-width: 0; }
+  body:has(#live-social-messenger) > header .account-name { max-width: min(34vw, 180px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body:has(#live-social-messenger) > .app,
+  body:has(#live-social-messenger) > .app:has(.home-dashboard) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 12px;
+    min-height: 0;
+    padding: 12px max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+  }
+  body:has(#live-social-messenger) > .app > :is(main, .right, .social-footer, #social-sidebar, .sidebar-toggle) {
+    grid-column: 1;
+    grid-row: auto;
+    min-width: 0;
+    margin: 0;
+    padding-top: 0;
+  }
+  body:has(#live-social-messenger) > .app > .sidebar-toggle { display: block; justify-self: start; min-height: 44px; padding: 8px 14px; }
+  body:has(#live-social-messenger) > .app > #social-sidebar { display: none; }
+  body:has(#live-social-messenger) > .app > .sidebar-toggle[aria-expanded="true"] + #social-sidebar {
+    display: block;
+    max-height: 55dvh;
+    overflow: auto;
+    padding-top: 8px;
+  }
+  body:has(#live-social-messenger) .live-chat-view { grid-template-columns: minmax(0, 1fr); }
+  body:has(#live-social-messenger) :is(.intro, .profile-toolbar, .directory-actions, .post-actions, .space-actions, .feed-nav) { flex-wrap: wrap; }
+  body:has(#live-social-messenger) :is(.post, .space-card, .space-layout > *, .room-card, .suggestion) { min-width: 0; overflow-wrap: anywhere; }
+  body:has(#live-social-messenger) :is(.post, .space-card) :is(img,video,iframe) { max-width: 100%; }
+  body:has(#live-social-messenger) > .app > .right > #live-social-messenger { height: min(660px, 82dvh); }
+  body:has(#live-social-messenger) > .app > .right > #live-social-messenger.expanded {
+    inset: env(safe-area-inset-top) env(safe-area-inset-right) auto env(safe-area-inset-left);
+    width: auto;
+    max-width: none;
+    height: calc(var(--rz-visible-height, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  body:has(#live-social-messenger) :is(dialog, .notification-panel) { max-width: calc(100vw - 24px); max-height: 85dvh; overflow: auto; }
+}
+
+@media (max-width: 760px) {
+  html:has(#chat), html:has(#chat) body { min-width: 0 !important; width: 100%; }
+  html:has(#chat) body { margin: 0; }
+  body:has(#live-social-messenger) :is(.space-layout, .home-actions, .welcome-grid, .welcome-features) { grid-template-columns: minmax(0, 1fr); }
+  body:has(#live-social-messenger) :is(.profile-portrait, .editable-profile-portrait) { max-width: min(100%, 320px); }
+  body:has(#live-social-messenger) :is(#quick-post, #wall-post-composer) > input { min-width: 0; }
+  body:has(#live-social-messenger) :is(.people-filters, .people-filter, .profile-fields) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  }
+  html:not(.ydpop) #chat[style*="flex"] {
+    position: fixed !important;
+    inset: env(safe-area-inset-top) env(safe-area-inset-right) auto env(safe-area-inset-left) !important;
+    display: flex;
+    flex-direction: column;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: calc(var(--rz-visible-height, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    max-height: none !important;
+    margin: 0 !important;
+    transform: none !important;
+    overflow: auto;
+    border-radius: 0 !important;
+  }
+  #chat > :not(#main) { flex-shrink: 0; }
+  #chat #rhead { flex-wrap: wrap; gap: 4px !important; padding: 6px 8px !important; }
+  #chat #rhead > div { flex: 1 1 65%; }
+  #chat #rhead > .sp { display: none; }
+  #chat #rhead .hb { min-height: 38px; padding: 4px 6px !important; }
+  #chat #rhead .hb span { display: inline; }
+  #chat #main { position: relative; flex: 1 0 120px; min-height: 120px; min-width: 0; }
+  #chat #lpane { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  #chat #log { flex: 1 1 auto; height: auto !important; min-height: 0; overflow: auto; overflow-wrap: anywhere; }
+  #chat #mpane { display: none !important; }
+  #chat.mobile-people-open #mpane {
+    display: flex !important;
+    flex-direction: column;
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 32;
+    width: min(270px, 84%) !important;
+    min-width: 0 !important;
+    background: var(--card, #fff);
+    box-shadow: -3px 0 16px #00205b26;
+  }
+  #chat #mem { flex: 1 1 auto; min-height: 0; overflow: auto; }
+  #mobile-people { display: inline-flex; align-items: center; }
+  #chat #vrow, #chat #vright { flex-wrap: wrap !important; gap: 6px !important; min-width: 0; overflow: visible; }
+  #chat #vrow { padding: 6px 8px !important; }
+  #chat #vright { justify-content: flex-start; flex: 1 1 100% !important; margin: 0; }
+  #chat #vrow label { font-size: 12px; }
+  #chat #vrow .meter { display: none !important; }
+  #chat #camstrip.has { max-height: min(34dvh, 220px); overflow: auto; }
+  #chat #form { min-width: 0; flex-wrap: nowrap; padding: 6px 8px !important; }
+  #chat #msg { min-width: 0; width: auto; min-height: 42px; font-size: 16px !important; }
+  #chat #form #bAa span { display: none; }
+  #chat .adph { max-height: 36px; overflow: hidden; }
+  #chat :is(.mbar, .menubar, #menu) { flex-wrap: wrap; }
+  html:has(#chat) :is(.yprof, .pmwin, .camwin, .invp, #brw) {
+    box-sizing: border-box;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(var(--rz-visible-height, 100dvh) - 16px) !important;
+    overflow: auto;
+  }
+  html:has(#chat) :is(.pmwin, .camwin) { left: 8px !important; top: 8px !important; }
+
+  html:has(#mwin), html:has(#mwin) body { min-width: 0 !important; }
+  html:has(#mwin) :is(#mwin, .im, #brw) {
+    box-sizing: border-box;
+    max-width: 100vw !important;
+    max-height: var(--rz-visible-height, 100dvh) !important;
+  }
+  html:has(#mwin) :is(#mwin, .im) { height: var(--rz-visible-height, 100dvh) !important; }
+  html:has(#mwin) .im { inset: 0 auto auto 0 !important; width: 100% !important; }
+  html:has(#mwin) .im :is(.tools, .mbar, .cbtns) { flex-wrap: wrap; }
+  html:has(#mwin) .im .log { min-width: 0; min-height: 55px; overflow-wrap: anywhere; }
+  html:has(#mwin) .im .inbox textarea { min-width: 0; font-size: 16px !important; }
+  html:has(#mwin) .im .cstage { max-height: min(34dvh, 250px); }
+  html:has(#mwin) #signin { min-height: 0; overflow: auto; }
+  html:has(#mwin) #signin input:not([type="checkbox"]) { font-size: 16px !important; }
+  html:has(#mwin) :is(.rz-offline, #list) { min-height: 0; }
+}
+
+@media (max-width: 760px) and (pointer: coarse) {
+  #mobile-people, #chat #rhead .hb, #chat #form button, #chat #vrow button,
+  body:has(#live-social-messenger) > header > #notification-bell { min-height: 44px; }
+  body:has(#live-social-messenger) :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) { font-size: 16px; }
+}

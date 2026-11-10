@@ -1,5 +1,23 @@
 const crypto=require('node:crypto');
 const {PROFILE_SEEDS}=require('../bots');
+const {posts}=require('../room-bot-refresh');
+function stablePostId(key){
+  const hash=crypto.createHash('sha256').update(key).digest('hex');
+  return hash.slice(0,8)+'-'+hash.slice(8,12)+'-4'+hash.slice(13,16)+'-a'+hash.slice(17,20)+'-'+hash.slice(20,32);
+}
+async function publishBotPost(db){
+  const pending=posts.map(([bot,slug,body,link=''])=>({bot,id:stablePostId(bot+':'+slug),body,link}));
+  await db.q(`insert into social_posts(id,author_id,wall_id,body,link)
+    select p.id,b.user_id,b.user_id,p.body,p.link
+    from unnest($1::uuid[],$2::text[],$3::text[],$4::text[]) with ordinality p(id,bot,body,link,sequence)
+    join social_bot_members b on b.bot_id=p.bot join users u on u.id=b.user_id
+    where not u.banned and not coalesce(u.deactivated,false)
+    and not exists(select 1 from social_restrictions r where r.user_id=b.user_id and r.service='social')
+    and not exists(select 1 from social_posts s where s.id=p.id)
+    and not exists(select 1 from social_posts s where s.id=any($1::uuid[]) and s.created>now()-interval '90 minutes')
+    order by p.sequence limit 1 on conflict(id) do nothing`,
+    [pending.map(p=>p.id),pending.map(p=>p.bot),pending.map(p=>p.body),pending.map(p=>p.link)]);
+}
 async function seedSocialBots(db){
   let profiles=0;
   for(const [index,seed] of PROFILE_SEEDS.entries()){
@@ -12,7 +30,7 @@ async function seedSocialBots(db){
     if(!bot)continue; // A real member who already owns an alias is never converted into a bot.
     profiles++;
     if(seed.silent)continue; // Quiet visitors keep empty walls, bios and portraits.
-    const originalPortrait='/social-next/bot-portrait/'+index+'.svg';
+        const originalPortrait=seed.photoIndex===undefined?'/social-next/bot-portrait/'+index+'.svg':'/bot-av/'+seed.id;
     await db.q(`insert into social_settings(user_id,value) values($1,$2)
       on conflict(user_id) do update set value =
         (case when social_settings.value->>'portrait'=$3
@@ -22,8 +40,8 @@ async function seedSocialBots(db){
       where social_settings.value->>'portrait'=$3 or social_settings.value->>'headline' like 'Chat bot %'`,
       [bot.user_id,JSON.stringify({portrait:originalPortrait+'?v=2',visibility:'public'}),originalPortrait]);
     // Stable UUID: one introduction, never recreated after a moderator removes it.
-    const hash=crypto.createHash('sha256').update(seed.id).digest('hex');
-    const postId=hash.slice(0,8)+'-'+hash.slice(8,12)+'-4'+hash.slice(13,16)+'-a'+hash.slice(17,20)+'-'+hash.slice(20,32);
+    if(seed.photoIndex!==undefined)continue; // New accounts receive the curated posts gradually.
+    const postId=stablePostId(seed.id);
     await db.q(`insert into social_posts(id,author_id,wall_id,body) values($1,$2,$2,$3)
       on conflict(id) do update set body=substring(social_posts.body from 24)
       where social_posts.author_id=$2 and social_posts.body like 'Chat bot introduction: %'`,
@@ -41,4 +59,4 @@ async function seedSocialBots(db){
   if(directory)console.info('[social-bots] directory counts', directory);
   return profiles;
 }
-module.exports={seedSocialBots};
+module.exports={seedSocialBots,publishBotPost};

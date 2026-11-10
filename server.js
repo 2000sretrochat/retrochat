@@ -24,7 +24,7 @@ const masterNames = () => new Set([...io.sockets.sockets.values()].filter(x => x
 async function masterLc() { try { return new Set((await db.q('select name_lc from users where is_master')).map(r => r.name_lc)); } catch { return masterNames(); } }
 const { DIR, PATH, ADULT_ROOMS } = require('./rooms-dir');
 const ROOMS = {}; for (const [c, rs] of Object.entries(DIR)) for (const r of rs) ROOMS[r] = c;
-const TOPICS = { 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?', 'The Lounge':'Good company. No particular agenda.' };
+const TOPICS = { 'Philippines Karaoke':'OPM, videoke and sing-alongs. Raise your hand for a turn at the mic.', 'Lobby':'Welcome! Pull up a chair and say hi','Friends':'Make new friends and catch up with old ones','Chit Chat':'Talk about anything and everything','Late Night':'For the night owls - who else is still up?', 'The Lounge':'Good company. No particular agenda.' };
 for (const r of Object.keys(ROOMS)) if (!TOPICS[r]) TOPICS[r] = ADULT_ROOMS.has(r) ? r + ' - adults only (18+)' : 'Welcome to ' + r + ' - chat about ' + r.toLowerCase();
 const MAXLEN = 300, HIST = 50, COLORS = ['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033','#8b5cf6'];
 const GRACE = new Map(); const users = new Map(); const VERSION = 'v13.4'; // lower(name) -> socket.id
@@ -205,12 +205,40 @@ async function visitQuietly() {
   setTimeout(() => { quietVisitor = null; upd(room); }, 120e3).unref?.();
 }
 setTimeout(visitQuietly, (5 + Math.random() * 15) * 60e3).unref?.();
-const lastBot = {};
-function botTick(room) { const busy = socks(room).length > 0; setTimeout(() => botTick(room), (busy ? 40 + Math.random() * 110 : 240 + Math.random() * 360) * 1000).unref?.();
-  const bs = botsIn(room).filter(b => !b.silent && !(TRIVIA_GAME.active(room) && b.trivia)); if (!bs.length) return; const b = bs[Math.floor(Math.random() * bs.length)];
-  const line = BOTMOD.line(b, room, lastBot[room]); lastBot[room] = line; botSay(room, b, line);
-  // sometimes a second bot answers a moment later, so it reads like a conversation
-  if (bs.length > 1 && Math.random() < 0.35) { const o = bs.filter(x => x !== b)[Math.floor(Math.random() * (bs.length - 1))]; setTimeout(() => botsIn(room).includes(o) && botSay(room, o, BOTMOD.reply(o, b.name)), 6000 + Math.random() * 14000).unref?.(); } }
+const {exchanges}=require('./room-bot-refresh');
+const {publishBotPost}=require('./social-next/bots');
+const recentBotLines=new Map();
+const rememberBotLine=(room,text)=>{
+  const lines=recentBotLines.get(room)||[];
+  recentBotLines.set(room,[...lines.slice(-9),text]);
+};
+const postBotUpdate=()=>{if(db.status().ready && botsOn)publishBotPost(db).catch(error=>console.error('[social-bots] post:',error.message));};
+setTimeout(()=>{
+  postBotUpdate();
+  setInterval(postBotUpdate,95*60e3).unref();
+},10*60e3).unref();
+function botTick(room) {
+  const busy=socks(room).length>0;
+  setTimeout(()=>botTick(room),(busy?120+Math.random()*240:420+Math.random()*360)*1000).unref?.();
+  if(!busy)return;
+  const bs=botsIn(room).filter(b=>!b.silent&&!(TRIVIA_GAME.active(room)&&b.trivia));
+  if(!bs.length)return;
+  const recent=recentBotLines.get(room)||[];
+  const topics=(exchanges[room]||[]).filter(([line])=>!recent.includes(line));
+  const exchange=topics[Math.floor(Math.random()*topics.length)];
+  const b=bs[Math.floor(Math.random()*bs.length)];
+  const line=exchange?.[0] || Array.from({length:12},()=>BOTMOD.line(b,room,recent.at(-1))).find(text=>!recent.includes(text));
+  if(!line)return;
+  rememberBotLine(room,line);botSay(room,b,line);
+  const others=bs.filter(bot=>bot!==b);
+  if(exchange && others.length && Math.random()<0.4){
+    const other=others[Math.floor(Math.random()*others.length)];
+    setTimeout(()=>{
+      if(!socks(room).length||!botsIn(room).includes(other)||(recentBotLines.get(room)||[]).includes(exchange[1]))return;
+      rememberBotLine(room,exchange[1]);botSay(room,other,exchange[1]);
+    },10000+Math.random()*24000).unref?.();
+  }
+}
 // a bot may greet a person who says hi or mentions it; trivia answers are recognized from normal chat
 async function botHear(room, who, text) { const bs = botsIn(room).filter(b => !b.silent); if (!bs.length) return; const t = String(text).toLowerCase();
   const handle = t.match(/@([a-z0-9_]+)/)?.[1]; const target = handle ? BOTMOD.byAlias(handle) : null; const host = target && bs.includes(target) ? target : null;
@@ -282,6 +310,10 @@ app.get('/bot-av/:id', async (req, res) => { const b = BOTMOD.byId(req.params.id
   if (db.status().ready) { try { const [r] = await db.q('select mime,data from bot_avatars where bot_id=$1', [b.id]); if (r) return res.type(r.mime).send(r.data); } catch { } }
   const key = String(b.avatar_key || '').replace(/[^a-z0-9_-]/g, ''); const f = key && require('path').join(BOT_AV_DIR, key + '.svg');
   if (f && require('fs').existsSync(f)) return res.type('image/svg+xml').sendFile(f);
+  if(b.photoIndex!==undefined){
+    const portrait=require('path').join(__dirname,'public','room-bot-portraits',b.id+'.jpg');
+    if(require('fs').existsSync(portrait))return res.type('image/jpeg').sendFile(portrait);
+  }
   const ini = esc(String(b.display_name || BOTMOD.PROFILE_SEEDS.find(x => x.id === b.id)?.display_name || b.name).trim().slice(0, 1).toUpperCase());
   res.type('image/svg+xml').send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" rx="14" fill="${b.color || '#4b6cb7'}"/><text x="48" y="62" font-family="Tahoma,Arial" font-size="44" font-weight="700" text-anchor="middle" fill="#fff">${ini}</text></svg>`); });
 app.get('/api/profile/:name', async (req, res) => { const n = String(req.params.name || ''), lc = n.toLowerCase(); res.set('Cache-Control', 'no-store');
@@ -324,7 +356,7 @@ function seen(room, vm) { return socks(room).filter(x => vm || !x.data.inc); }
 function members(room, vm) { return [...seen(room, vm).map(x => x.data.name), ...botsIn(room).map(b => b.name)].sort((a,b)=>a.localeCompare(b)); }
 function roster(room, vm) { return seen(room, vm).map(x => ({ ...(vm && x.data.inc ? { inc: true } : {}), name: x.data.name, av: x.data.av || '', id: x.id, guest: !!x.data.guest, cam: !!x.data.cam, talk: !!x.data.talk, ...(x.data.music ? { music: true } : {}), ...(x.data.idle ? { idle: true } : {}), tl: x.data.talk && x.data.talkUntil ? Math.max(0, Math.ceil((x.data.talkUntil - Date.now()) / 1000)) : 0, role: x.data.master ? '' : roleOf(x, room), dot: dotLeft(room, x.data.name.toLowerCase()) !== null, dl: Math.ceil((dotLeft(room, x.data.name.toLowerCase()) || 0) / 1000), mt: mod(room).mt.has(x.data.name.toLowerCase()), mm: mod(room).mm.has(x.data.name.toLowerCase()), voice: !!x.data.voice, viewers: x.data.cam ? [...(x.data.viewers||[])].map(v => io.sockets.sockets.get(v)?.data.name).filter(Boolean) : [] })).concat(botsIn(room).map(b => ({ name: b.name, av: b.av, id: 'bot-' + b.id, guest: true, bot: true, cam: false, talk: false, tl: 0, role: '', dot: false, dl: 0, mt: false, mm: false, voice: false, viewers: [] }))).sort((a,b)=>a.name.localeCompare(b.name)); }
 const MICS = {}; const MIC_DEFAULT_OFFICIAL = 3;
-const micsOf = r => MICS[r] || (UROOMS.has(r) || r===musicRoom ? 1 : MIC_DEFAULT_OFFICIAL);
+const micsOf = r => MICS[r] || (UROOMS.has(r) || r===musicRoom || r==='Philippines Karaoke' ? 1 : MIC_DEFAULT_OFFICIAL);
 const micsUsed = r => socks(r).filter(x => x.data.talk).length;
 function parseSecs(t) { if (t == null || t === '' || t === 'off' || t === 0 || t === '0') return 0; const m = String(t).trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs|seconds?|m|min|mins|minutes?)?$/); if (!m) return null;
   const v = Math.round(parseFloat(m[1]) * (m[2] && m[2][0] === 'm' ? 60 : 1)); return v >= 5 && v <= 300 ? v : null; }
@@ -344,7 +376,7 @@ async function renameURoom(old, nn) {
   io.to(name).emit('room-renamed', { from: old, to: name }); push(name, { sys: true, text: 'Room renamed to ' + esc(name) }); upd(name); io.emit('rooms-changed'); return { ok: true, name }; }
 function setMics(room, n) { n = +n; if (!ROOMS[room]) return 'No such room.'; if (![1, 2, 3, 4, 5].includes(n)) return 'Mic limit must be 1 to 5.';
   MICS[room] = n; MASTER.saveMics(room, n); io.to(room).emit('mics', { room, max: n }); upd(room); return null; }
-const HQ = {[musicRoom]:true}, MTIMER = {}, QUEUE = {}, MANN = {}; // hands-up on/off, per-turn seconds (0=off), ordered socket ids
+const HQ = {[musicRoom]:true,'Philippines Karaoke':true}, MTIMER = {}, QUEUE = {}, MANN = {}; // hands-up on/off, per-turn seconds (0=off), ordered socket ids
 const qOf = r => QUEUE[r] = (QUEUE[r] || []).filter(id => { const x = io.sockets.sockets.get(id); return x && x.data.room === r && x.data.voice && !x.data.talk; });
 const hqOn = r => !!HQ[r] && micsOf(r) === 1;
 function micq(room) { return { room, on: hqOn(room), timer: MTIMER[room] || 0, mann: MANN[room] || 0, max: micsOf(room), q: hqOn(room) ? qOf(room).map(id => io.sockets.sockets.get(id).data.name) : [] }; }

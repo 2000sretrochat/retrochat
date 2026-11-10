@@ -7,7 +7,7 @@ const DIR_TREE = {
   'Cultures & Community': {
     'General': ['Lobby', 'Friends', 'Chit Chat', 'Late Night', 'The Lounge', 'Advice Central', 'Cultures and Community Lobby', 'Holiday Happenings'],
     'Hangouts': ['Chat Central', "Jerry's Diner", 'The Hot Tub', 'The Ranch', 'The Tiki Lounge'],
-    'Countries & Cultures': { 'Africa & Caribbean': ['African-American Chat', 'Afro-Caribbean'], 'Asia': ['Asian American Chat', 'Asian Chat', 'Korean Chat'], 'Middle East': ['Arab American Chat', 'Arab Chat', 'Persian Chat'], 'Americas': ['Hispanic and Latino Chat', 'Indigenous Peoples', 'Native American Chat'] },
+    'Countries & Cultures': { 'Africa & Caribbean': ['African-American Chat', 'Afro-Caribbean'], 'Asia': ['Asian American Chat', 'Asian Chat', 'Korean Chat', 'Philippines Karaoke'], 'Middle East': ['Arab American Chat', 'Arab Chat', 'Persian Chat'], 'Americas': ['Hispanic and Latino Chat', 'Indigenous Peoples', 'Native American Chat'] },
     'Groups': ["30's", "40's", "50's", 'Seniors 60+', 'Older and Wiser', 'Generation X', 'Disabled Chat', 'Special Needs Families', 'Expats Everywhere', 'Geek and Proud', 'Ravers and Clubbers', 'The Graveyard', "Women's Room"],
     'Crime': ['Crime Fighters', 'Police and Fire'], 'Food & Drink': ['Beer Lovers', 'The Kitchen', 'Wine Lovers'], 'Issues & Causes': ['Breaking News', 'Race Relations'],
   },
