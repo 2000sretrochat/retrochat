@@ -4,10 +4,19 @@ const css=`#thm{display:none!important}#mcog{margin-left:auto;align-self:center;
 #mcogdd{position:fixed;z-index:9999;display:none;background:var(--card,#fff);color:var(--ink,#12213F);border:1px solid var(--line,#d5e2f0);border-radius:12px;box-shadow:var(--shadow,0 8px 24px rgba(0,0,0,.2));padding:6px;width:236px;max-height:calc(100vh - 8px);overflow-y:auto;font-size:13px}
 #mcogdd.open{display:block}#mcogdd .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}#mcogdd .it:hover{background:#0033A0;color:#fff}#mcogdd .it .r{margin-left:auto;font-size:12px;opacity:.8}
 #mcogdd hr{border:0;border-top:1px solid var(--line,#d5e2f0);margin:4px 0}#mcogdd .fs{display:flex;gap:4px;padding:4px 10px 6px}#mcogdd .fs span{flex:1;text-align:center;border:1px solid var(--line,#d5e2f0);border-radius:8px;padding:3px 0;cursor:pointer}#mcogdd .fs span.on{background:#0033A0;color:#fff;border-color:#0033A0}
-#mcogdd .h{font-size:11px;color:var(--muted,#5b6b85);padding:4px 10px 0;font-weight:600}html.mfs-s #mwin{font-size:12px}html.mfs-l #mwin{font-size:15px}html.mfs-l #mwin .cl,html.mfs-l #mwin #cl{font-size:15px}html.mfs-s #mwin #cl{font-size:12px}`;
+#mcogdd .h{font-size:11px;color:var(--muted,#5b6b85);padding:4px 10px 0;font-weight:600}
+:root{--messenger-name-size:13px;--messenger-detail-size:12px;--messenger-menu-size:13px;--messenger-message-size:14px}
+html.mfs-s{--messenger-name-size:12px;--messenger-detail-size:11px;--messenger-menu-size:12px;--messenger-message-size:12px}
+html.mfs-l{--messenger-name-size:17px;--messenger-detail-size:15px;--messenger-menu-size:15px;--messenger-message-size:17px}
+#mwin #list .ct .n,#mwin #me .nm{font-size:var(--messenger-name-size)!important}
+#mwin #list .ct .sm,#mwin #list .grp,#mwin #me #smsg,#mwin #me #stsel{font-size:var(--messenger-detail-size)!important}
+#mwin #menu>div,#mcogdd{font-size:var(--messenger-menu-size)!important}
+.im .log,.im .inbox textarea{font-size:var(--messenger-message-size)!important}
+@media(max-width:760px){.im .inbox textarea{font-size:max(16px,var(--messenger-message-size))!important}}`;
 const COG='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
 const MOON='<svg viewBox="0 0 24 24" width="16" height="16" fill="#3b4f8a"><path d="M20.5 14.6A8.5 8.5 0 019.4 3.5a8.5 8.5 0 1011.1 11.1z"/></svg>',SUN='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f5b301" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" fill="#f5b301"/><path d="M12 2v2.2M12 19.8V22M2 12h2.2M19.8 12H22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>';
-const fsApply=()=>{const f=L.ycMFs||'m';document.documentElement.classList.remove('mfs-s','mfs-l');if(f!='m')document.documentElement.classList.add('mfs-'+f)};fsApply();
+const fsApply=()=>{const f=L.ycMFs;document.documentElement.classList.toggle('mfs-s',f==='s');document.documentElement.classList.toggle('mfs-l',f==='l')};fsApply();
+addEventListener('storage',event=>{if(event.key==='ycMFs')fsApply()});
 function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
  const b=document.createElement('button');b.id='mcog';b.type='button';b.title='Quick settings';b.setAttribute('aria-label','Quick settings');b.innerHTML=COG;m.appendChild(b);
  const d=document.createElement('div');d.id='mcogdd';document.body.appendChild(d);

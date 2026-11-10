@@ -136,11 +136,11 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 .rrow .uc{display:flex;align-items:center;gap:6px;color:var(--muted);width:60px;font-size:13px}
 #brw .ft{display:flex;gap:10px;padding:14px 16px}
 @media (max-width:760px){#brw{left:0!important;top:0!important;width:100%;max-width:none}.im{width:100%!important}}
-</style><link rel="stylesheet" href="/social/embed.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css"><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script></head><body>
+</style><link rel="stylesheet" href="/social/embed.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script></head><body>
 <div id="mwin" class="win">
  <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
  <div id="menu">
-  <div>Messenger<div class="dd"><div id="mStatus">Change My Status...</div><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom" title="Let friends see which chat room you are in">&#10003; Show the room I'm in</div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
+  <div>Messenger<div class="dd"><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom" title="Let friends see which chat room you are in">&#10003; Show the room I'm in</div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
   <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mProf">View Profile of Selected</div><div id="mMyProf">Edit My Profile...</div><div id="mGroup" style="display:none"></div><div id="mMove" style="display:none"></div><hr><div id="mRem">Remove Selected Contact</div><div id="mBlock">Block Selected Contact</div><div id="mBlocked">Blocked List...</div></div></div>
   <div>Actions<div class="dd"><div id="mIm">Send a PM to Selected</div><div id="mBuzz">Buzz Selected</div><div id="mInv">Invite to Room</div><hr><div id="mRooms">Browse Chat Rooms...</div></div></div>
   <div>Help<div class="dd"><div id="mHelp">Getting Started</div><div id="mAbout">About</div></div></div>
@@ -302,8 +302,6 @@ const dec=s=>{const t=document.createElement('textarea');t.innerHTML=s||'';retur
 function roomMode(on){$('smsg').value=on?'':dec(ME.msg||'');$('smsg').placeholder=on?"Showing the room I'm in (type to switch back)":"What's on your mind?";$('stsel').value=ME.status}
 $('stsel').onchange=async()=>{if($('stsel').value=='showroom'){const r=await emit('m:status',{msg:'[room]'});if(r&&r.ok){ME.msg='[room]';roomMode(true);toast("Buddies now see the room you're in.")}else $('stsel').value=ME.status;return}const r=await emit('m:status',{status:$('stsel').value});if(r.status){ME.status=r.status;setMyAv()}};
 $('smsg').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();$('smsg').blur()}});$('smsg').onchange=()=>{const v=$('smsg').value;if(!v&&ME.msg=='[room]')return;emit('m:status',{msg:v}).then(r=>{if(r&&r.ok){ME.msg=r.msg;roomMode(false)}})};
-$('mStatus').onclick=()=>modal('Change My Status',`<select id=xs>${Object.keys(STL).slice(0,5).map(k=>`<option value=${k}${k==ME.status?' selected':''}>${STL[k]}</option>`).join('')}</select><input type=text id=xm maxlength=60 placeholder="Custom status message" value="${escT(dec(ME.msg))}">`,
- async()=>{const r=await emit('m:status',{status:$('xs').value,msg:$('xm').value});if(r.status){ME.status=r.status;ME.msg=r.msg;$('stsel').value=r.status;$('smsg').value=dec(r.msg)}return r});
 function pickAv(){YAv.editor(S,{name:ME.name,onSaved:av=>{ME.avatar=av;setMyAv()}})}
 $('mAvatar').onclick=e=>{e.stopPropagation();pickAv()};
 let lastAct=Date.now(),idle=false;['mousemove','keydown','pointerdown'].forEach(ev=>addEventListener(ev,()=>{lastAct=Date.now();if(idle&&S){idle=false;S.emit('m:idle',false)}},{passive:true}));
@@ -321,7 +319,22 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=Object.values(con
  document.querySelectorAll('.wct').forEach(e=>e.oncontextmenu=async ev=>{ev.preventDefault();if(confirm('Stop watching '+e.dataset.w+'?')){await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:e.dataset.w,remove:true})});loadWatch()}});
  document.querySelectorAll('.ct:not(.wct)').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>{if(ME&&e.dataset.n.toLowerCase()==ME.name.toLowerCase())return window.YProf&&YProf.show(e.dataset.n,{me:ME.name});openIm(e.dataset.n).querySelector('textarea').focus()};
   e.querySelectorAll('[data-jr]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();window.open('/rooms.html?room='+encodeURIComponent(a.dataset.jr),'yapprooms')});
-  e.oncontextmenu=ev=>{ev.preventDefault();sel=e.dataset.n;render();$('mInv').style.opacity=invOk(sel)?'':'.45';$('mInv').title=invOk(sel)?'':sel+" isn't available for invites";document.querySelectorAll('#menu>div')[1].classList.add('open')}})}
+  e.tabIndex=0;
+  e.oncontextmenu=ev=>openContactMenu(ev,e);
+  e.onkeydown=ev=>{if(ev.key==='ContextMenu'||(ev.shiftKey&&ev.key==='F10'))openContactMenu(ev,e);};
+ })}
+const openContactMenu=createMessengerContactMenu({
+ contact:name=>contacts[name.toLowerCase()],
+ selected:(name,row)=>{sel=name;$('tree').querySelector('.ct.sel')?.classList.remove('sel');row.classList.add('sel');},
+ blocked:name=>blockedL.some(item=>item.toLowerCase()===name.toLowerCase()),
+ isSelf:name=>name.toLowerCase()===ME?.name.toLowerCase(),
+ canInvite:name=>invOk(name),
+ actions:{
+  profile:()=>$('mProf').click(),message:()=>$('mIm').click(),invite:()=>$('mInv').click(),
+  remove:()=>$('mRem').click(),block:()=>$('mBlock').click(),
+  unblock:async name=>{const result=await emit('m:block',{name,on:false});if(result.error)toast(result.error);}
+ }
+});
 function showReq(request){messengerInbox.add(request);SND.im();toast(escT(request.name)+' sent you a contact request.');}
 const addC=()=>modal('Add a Contact','Screen name:<input type=text id=an maxlength=20>Message (optional):<input type=text id=am maxlength=120 placeholder="Hi, it\'s me!">',async()=>{const r=await emit('m:add',{name:$('an').value.trim(),msg:$('am').value});if(!r.error)toast(r.text);return r},'Send Request');
 $('bAdd').onclick=$('mAdd').onclick=addC;
@@ -447,5 +460,5 @@ const {startCall,onCall,onCallAns,onSig,onHang,disconnect:disconnectCalls,endCal
  socket:()=>S,contact:name=>contacts[name.toLowerCase()],openIm,findIm:name=>ims[name.toLowerCase()],notice:sys,toast,
  sound:type=>tone(type==='ring'?[[440,.18,'sine'],[480,.18,'sine'],[440,.18,'sine'],[480,.18,'sine']]:[[480,.12,'sine'],[320,.22,'sine']])
 });
-</script><script src="/mcog.js"></script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div><script src="/social/embed.js"></script></body></html>
+</script><script src="/mcog.js?v=2"></script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div><script src="/social/embed.js"></script></body></html>
 

@@ -1,6 +1,9 @@
 /* Razzle Messenger design handoff (Nov 10, 2026) — shared tokens and the 12 design items.
    Navy #00205B · action #0033A0 · orange #FF9900 · surface #F1F6FC · border #C6D5E7 · edge #9DB3CC · hover #DBEBFF */
 :root{--rz-navy:#00205B;--rz-action:#0033A0;--rz-orange:#FF9900;--rz-surface:#F1F6FC;--rz-border:#C6D5E7;--rz-edge:#9DB3CC;--rz-hover:#DBEBFF;--rz-text:#132849;--rz-muted:#526781;--rz-focus:#356AA6}
+.messenger-contact-menu{position:fixed;z-index:10000;min-width:168px;max-width:calc(100vw - 8px);max-height:calc(100dvh - 8px);overflow:auto;padding:4px;background:var(--card,#fff);color:var(--ink,#132849);border:1px solid var(--line,#C6D5E7);border-radius:6px;box-shadow:0 5px 18px #00205b36}
+.messenger-contact-menu button{display:block;width:100%;min-height:32px;padding:5px 8px!important;border:0!important;border-radius:3px!important;background:transparent!important;color:inherit!important;box-shadow:none!important;text-align:left;font-size:var(--messenger-menu-size,13px)!important}
+.messenger-contact-menu button:is(:hover,:focus-visible){background:var(--rz-action)!important;color:#fff!important}
 .rz-ico{display:inline-block;width:16px;height:16px;flex:none;vertical-align:middle}
 /* shared design button (modern.css styles every <button> with !important, so these must too) */
 .rzb,.call .cs button{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:4px 10px!important;border:1px solid #9DB3CC!important;border-radius:4px!important;background:#F1F6FC!important;color:#00205B!important;font:13px/1.2 Tahoma,'Segoe UI',sans-serif!important;cursor:pointer;box-shadow:none!important;white-space:nowrap}
