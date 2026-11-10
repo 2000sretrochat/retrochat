@@ -63,3 +63,4 @@ html:not(.dark) .im .log .transcript-message .bb{color:#111}
 #menu .messenger-master svg{flex:none;width:18px;height:18px}
 @media (max-width:379px){#menu .messenger-master{width:36px;padding:0!important;justify-content:center}#menu .messenger-master .mm-l{display:none}}
 @media (pointer:coarse){#menu .messenger-master{height:44px;min-width:44px}}
+html.dark #menu .messenger-master{color:#E8EEF7!important}html.dark #menu .messenger-master:hover{background:#1d2a44!important;border-color:#3a4d6e!important}

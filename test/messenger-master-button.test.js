@@ -68,6 +68,7 @@ test('both Messenger pages create the button only from the server role (/api/me 
   assert.match(read('accounts.js'), /m = !!\(await db\.q\('select is_master from users where id=\$1', \[u\.id\]\)\)\[0\]\?\.is_master;[^\n]*res\.json\(u \? \(m \? \{ name: u\.name, m: true \}/);
   const css = read('public/messenger-inbox.css');
   assert.match(css, /#menu \.messenger-master\{display:inline-flex!important;/);
+  assert.match(css, /html\.dark #menu \.messenger-master\{color:#E8EEF7!important\}/);
   assert.match(css, /@media \(max-width:379px\)\{#menu \.messenger-master\{width:36px;/);
 });
 
