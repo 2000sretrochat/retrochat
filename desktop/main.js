@@ -17,8 +17,10 @@ const show = () => { if (!win) return; if (win.isMinimized()) win.restore(); win
 app.on('second-instance', show);
 const internal = u => { try { return new URL(u).origin === ORIGIN; } catch { return false; } };
 const SIZES = { browse: [760, 640], room: [1000, 700], im: [440, 560] };
-function kindOf(url, frame) { if (frame === 'ybrowse') return 'browse'; if (/^yim_/.test(frame || '')) return 'im'; if (/\/rooms\.html/.test(url)) return 'room'; return 'other'; }
+function kindOf(url, frame) { if (/^yinvite_/.test(frame || '')) return 'invite'; if (frame === 'ybrowse') return 'browse'; if (/^yim_/.test(frame || '')) return 'im'; if (/\/rooms\.html/.test(url)) return 'room'; return 'other'; }
 function popupOpts(url, frame) {
+  if (kindOf(url, frame) === 'invite') return { key: null, o: { width: 360, height: 210, center: true, resizable: false, minimizable: false, maximizable: false, alwaysOnTop: true, show: false,
+    icon, title: 'Chat Room Invitation', frame: true, autoHideMenuBar: true, menuBarVisible: false, backgroundColor: '#f4f8fc', webPreferences: PRE } };
   const k = kindOf(url, frame), key = k === 'im' ? frame : k, b = ST[key] || {}, d = SIZES[k] || [900, 680];
   return { key, o: {
     x: b.x, y: b.y, width: b.width || d[0], height: b.height || d[1],
@@ -40,6 +42,13 @@ function wire(wc) {
   wc.on('did-create-window', (w, { url, frameName }) => {
     w.setMenuBarVisibility(false);
     w.setAutoHideMenuBar(true);
+    if (kindOf(url, frameName) === 'invite') {
+      // Center on the display the user is looking at, keep on top, and take focus.
+      const { screen } = require('electron'), a = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea, [bw, bh] = w.getSize();
+      w.setBounds({ x: Math.round(a.x + (a.width - bw) / 2), y: Math.round(a.y + (a.height - bh) / 2), width: bw, height: bh });
+      w.setAlwaysOnTop(true, 'floating'); w.show(); w.focus(); w.flashFrame(true);
+      return;
+    }
     track(w, popupOpts(url, frameName).key);
     if (kindOf(url, frameName) === 'room') w.on('page-title-updated', (e, t) => {
       e.preventDefault();

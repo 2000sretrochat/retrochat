@@ -136,7 +136,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 .rrow .uc{display:flex;align-items:center;gap:6px;color:var(--muted);width:60px;font-size:13px}
 #brw .ft{display:flex;gap:10px;padding:14px 16px}
 @media (max-width:760px){#brw{left:0!important;top:0!important;width:100%;max-width:none}.im{width:100%!important}}
-</style><link rel="stylesheet" href="/social/embed.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/messenger-inbox.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script></head><body>
+</style><link rel="stylesheet" href="/social/embed.css"><link rel="stylesheet" href="/messenger-inbox.css"><script src="/messenger-inbox.js"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script></head><body>
 <div id="mwin" class="win">
  <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
  <div id="menu">
@@ -290,7 +290,7 @@ S.on('m:offline-read',ids=>{
  S.on('m:im-echo',m=>{const w=openIm(m.to);line(w,ME.name,m)});
  S.on('m:typing',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;w.querySelector('.typ').textContent=from+' is typing...';clearTimeout(w._tt);w._tt=setTimeout(()=>clearTyp(w),4000)});
  S.on('m:buzz',({from})=>{const w=openIm(from);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(from)}: BUZZ!!!</div>`);scroll(w);SND.buzz();if(localStorage.ycShake!='off')for(const el of [w,$('mwin')]){el.classList.remove('buzzing');void el.offsetWidth;el.classList.add('buzzing')}});
- S.on('m:invite',({id,from,room,rating,ttl})=>{SND.im();invPopup(from,room,rating,()=>emit('m:invite-decline',{id}),id,ttl)});S.on('m:invite-gone',({id})=>{invPops[id]?.remove();delete invPops[id]});
+ S.on('m:invite',({id,from,room,rating,ttl})=>{SND.im();invPopup(from,room,rating,()=>emit('m:invite-decline',{id}),id,ttl)});S.on('m:invite-gone',({id})=>window.RazzleInvite&&RazzleInvite.close(id));
  S.on('m:call',onCall);S.on('m:callans',onCallAns);S.on('m:sig',onSig);S.on('m:hang',onHang);S.on('disconnect',disconnectCalls);
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=APP_NAME.join('')+' Messenger'});
@@ -355,10 +355,8 @@ const invOk=n=>{const c=contacts[String(n).toLowerCase()];return !c||(c.online&&
 async function invite(n){if(!invOk(n))return toast(escT(n)+" isn't available for invites.");let r=await emit('m:invite',{to:n});
  if(r&&r.error&&/Join a chat room first/.test(r.error)){const rs=await fetch('/api/rooms').then(r=>r.json());return modal('Invite '+n+' to a Chat Room',`You're not in a room right now. Pick one:<br>Room:<select id=ir>${rs.map(r=>`<option value="${escT(r.name)}">${escT(r.name)} (${r.count})</option>`).join('')}</select>`,async()=>{const r=await emit('m:invite',{to:n,room:$('ir').value});if(!r.error){const w=openIm(n);sys(w,'You invited '+n+' to '+r.room+'.')}return r},'Invite')}
  if(r&&r.error)return toast(escT(r.error));if(r&&r.ok){const w=openIm(n);sys(w,'You invited '+n+' to '+r.room+'.')}}
-const invPops={};
-function invPopup(from,room,rating,onDecline,id,ttl){const d=document.createElement('div');if(id)invPops[id]=d;d.className='win on';d.style.cssText='position:fixed;right:18px;bottom:18px;width:300px;z-index:9999';
- d.innerHTML=`<div class=tbar><span>Chat Room Invitation</span></div><div style="padding:12px"><b>${escT(from)}</b> has invited you to join the chat room <b>${escT(room)}</b>${rating=='R'?' <span style="color:#c00">(R, 18+)</span>':''}.<div style="margin-top:10px;text-align:right"><button class="btn" data-a=d>Reject</button> <button class="btn pri" data-a=j>Accept</button></div></div>`;
- document.body.appendChild(d);d.querySelector('[data-a=j]').onclick=async()=>{d.remove();if(id){const r=await emit('m:invite-accept',{id});if(!r||!r.ok)return toast(escT((r&&r.error)||'This invitation has expired.'))}window.open('/rooms.html?room='+encodeURIComponent(room),'yapprooms')};d.querySelector('[data-a=d]').onclick=()=>{onDecline&&onDecline();d.remove()};setTimeout(()=>{d.remove();delete invPops[id]},ttl||120e3)}
+function invPopup(from,room,rating,onDecline,id,ttl){if(!id||!window.RazzleInvite)return;RazzleInvite.show({id,from,room,rating,ttl},{onReject:()=>onDecline&&onDecline(),
+ onAccept:async()=>{const r=await emit('m:invite-accept',{id});if(!r||!r.ok)return toast(escT((r&&r.error)||'This invitation has expired.'));window.open('/rooms.html?room='+encodeURIComponent(room),'yapprooms')}})}
 // ---------- IM windows ----------
 const ims={};const COLORS=['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033','#8b5cf6'];
 const ts=t=>`<span class=ts>[${new Date(t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}]</span>`;
