@@ -232,3 +232,8 @@ html.yd.ydpop .contact-profile .profile-photos { grid-auto-rows: clamp(32px, cal
 .room-peek-button { flex: none; padding: 3px 5px !important; }
 .chat-text-size-label { color:var(--muted); font-size:12px; font-weight:600; }
 @media(max-width:850px) { .chat-text-size-label span { display:none; } }
+
+.room-alert-stack { position:fixed; inset:auto max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) auto; width:min(320px, calc(100vw - 24px)); display:grid; gap:6px; z-index:6000; }
+.room-activity-toast { display:flex; align-items:center; gap:7px; padding:8px 9px; border:1px solid var(--line,#cbd8ea); border-radius:7px; background:var(--card,#fff); color:var(--ink,#12213f); box-shadow:0 3px 14px #13284922; font:13px/1.35 system-ui,sans-serif; }
+.room-activity-toast span { flex:1; min-width:0; overflow-wrap:anywhere; }
+.room-activity-toast button { padding:4px 7px !important; white-space:nowrap; }

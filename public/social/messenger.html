@@ -188,7 +188,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"></template></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=6"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=6">
+<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=6"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=7"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',''];
@@ -258,7 +258,7 @@ async function refreshContacts(){
   for(const contact of result.contacts)if(!groups.includes(contact.group))groups.push(contact.group);
   messengerInbox.reset(result.requests);render();
 }
-function start(){$('signin').style.display='none';$('main').style.display='flex';S=io({auth:RazzleDevice.auth('social'),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
+function start(){$('signin').style.display='none';$('main').style.display='flex';S=io({auth:RazzleDevice.auth('social'),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));
  S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);lastAct=Date.now();idle=false;ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;syncBlocked(r);contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
   $('mydevice').innerHTML=RazzleDevice.icon(ME.device);$('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
   $('reqs').innerHTML='';messengerInbox.reset(r.requests);render();

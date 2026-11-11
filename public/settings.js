@@ -1,10 +1,34 @@
 // Settings window: Privacy (buddy-only private messages), Blocked list, Ignore list. Shared by Rooms and Messenger.
 window.YSet=(function(){const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let S=null,P={ignored:[],blocked:[],hide:[],pmBuddies:false,account:false};const subs=[];
+const alertKeys={room:'ycFollowedRoomAlerts',webcam:'ycWebcamAlerts'};
+const alertEnabled=kind=>localStorage.getItem(alertKeys[kind])==='on';
+const syncAlerts=()=>{if(S?.connected)S.emit('room-alerts:set',{room:alertEnabled('room'),webcam:alertEnabled('webcam')});};
+addEventListener('storage',event=>{if(Object.values(alertKeys).includes(event.key))syncAlerts();});
+function showRoomAlert(alert,join){
+ if(!alert || !Object.hasOwn(alertKeys,alert.kind) || !alertEnabled(alert.kind) || document.hidden) return;
+ const recent=JSON.parse(localStorage.getItem('ycRecentRoomAlerts')||'[]');
+ if(recent.includes(alert.id))return;
+ localStorage.setItem('ycRecentRoomAlerts',JSON.stringify([...recent.slice(-19),alert.id]));
+ let stack=document.querySelector('.room-alert-stack');
+ if(!stack){stack=document.createElement('aside');stack.className='room-alert-stack';stack.setAttribute('aria-label','Room notifications');document.body.append(stack);}
+ if(stack.children.length>=3)stack.firstElementChild.remove();
+ const toast=document.createElement('div');toast.className='room-activity-toast';
+ const message=document.createElement('span');message.setAttribute('role','status');
+ message.textContent=alert.kind==='webcam'?alert.name+' went live on webcam in '+alert.room:alert.room+' is active now';
+ const button=document.createElement('button');button.type='button';button.textContent='Join';
+ const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Dismiss notification');
+ let timer;const dismiss=()=>{clearTimeout(timer);toast.remove();if(!stack.children.length)stack.remove();};
+ const expire=()=>{clearTimeout(timer);timer=setTimeout(dismiss,12_000);};
+ button.onclick=()=>{dismiss();join(alert.room);};close.onclick=dismiss;
+ toast.onmouseenter=()=>clearTimeout(timer);toast.onmouseleave=()=>{if(!toast.contains(document.activeElement))expire();};
+ toast.onfocusin=()=>clearTimeout(timer);toast.onfocusout=event=>{if(!toast.contains(event.relatedTarget)&&!toast.matches(':hover'))expire();};
+ toast.append(message,button,close);stack.append(toast);expire();
+}
 const fire=()=>subs.forEach(f=>f(P));
 function emit(ev,d){return new Promise(r=>d===undefined?S.emit(ev,r):S.emit(ev,d,r))}
 async function refresh(){const r=await emit('prefs');if(r&&!r.error){P=r;fire()}return P}
-function init(sock){S=sock;S.on('connect',refresh);S.on('signed-elsewhere',d=>{alert((d&&d.text)||'Signed in elsewhere');});
+function init(sock,join){S=sock;S.on('connect',refresh);if(join){S.on('connect',syncAlerts);S.on('room-alert',alert=>showRoomAlert(alert,join));syncAlerts();}S.on('signed-elsewhere',d=>{alert((d&&d.text)||'Signed in elsewhere');});
  S.on('connect_error',e=>{if(/Too many users|banned/i.test(e.message)){S.io.opts.reconnection=false;alert(e.message=='banned'?'You are banned.':e.message)}});if(S.connected)refresh()}
 const hidden=n=>P.hide.includes(String(n||'').replace(/&#39;/g,"'").toLowerCase());
 async function setIgnore(n,on){const r=await emit('ign:set',{name:n,on});if(r.error)alert(r.error);else{P=r;fire()}return r}
@@ -21,12 +45,14 @@ async function renderSettings(tab){await refresh();const w=document.createElemen
  <h4 style="margin:4px 0">Privacy</h4>${P.account?`<label><input type=checkbox id=ysPm ${P.pmBuddies?'checked':''}> Only allow private messages from people on my buddy list</label>`:'<small>Sign in with a screen name to use privacy settings.</small>'}
  <h4 style="margin:12px 0 4px">Blocked list</h4><small style="color:var(--muted)">Blocked people can't see you online, PM you, add you, or view your cam.</small>${P.account?list(P.blocked,'b','Unblock'):'<div><small>Guests can use Ignore.</small></div>'}
  <h4 style="margin:12px 0 4px">Ignore list</h4><small style="color:var(--muted)">You won't see or hear ignored chatters in rooms.${P.account?'':' (Guests: this session only.)'}</small>${list(P.ignored,'i','Unignore')}
+ ${P.account?`<h4 style="margin:12px 0 4px">Notifications</h4><label><input type=checkbox id=ysRoomAlerts ${alertEnabled('room')?'checked':''}> Followed rooms become active</label><br><label><input type=checkbox id=ysWebcamAlerts ${alertEnabled('webcam')?'checked':''}> Someone goes live on webcam</label><p class="archive-help">Show a quiet Join notification while Razzle is open.</p>`:''}
  <h4 style="margin:12px 0 4px">Sounds</h4><label><input type=checkbox id=ysMute ${localStorage.ycSound=='off'?'checked':''}> Mute all sounds</label><br><label><input type=checkbox id=ysPmPop ${localStorage.ycPmPop!='off'?'checked':''}> Pop up new private messages</label><br><label><input type=checkbox id=ysNsnd ${localStorage.ycNotifSound!='off'?'checked':''}> Notification sound (soft chime for new notifications)</label><br><label><input type=checkbox id=ysShake ${localStorage.ycShake=='off'?'checked':''}> Disable buzz shake</label><br><label><input type=checkbox id=ysRb ${localStorage.ycRoomBuzz!='off'?'checked':''}> Allow room buzzes (sound + shake)</label><br><label><input type=checkbox id=ysDoor ${localStorage.ycDoor!='off'?'checked':''}> Play door open/close sounds when buddies sign in or out</label><h4 style="margin:12px 0 4px">Read receipts</h4><label><input type=checkbox id=ysRr> Read receipts (show &quot;Seen&quot; in PMs; only works when both people turn it on)</label>
  ${window.YDict?`<h4 style="margin:12px 0 4px">Dictation</h4><label>Speech-to-text language <select id=ysDl><option value="">Browser default</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="es-ES">Español</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="pt-BR">Português</option><option value="ru-RU">Русский</option><option value="zh-CN">中文 (普通话)</option><option value="zh-HK">粵語</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="fil-PH">Filipino</option><option value="vi-VN">Tiếng Việt</option><option value="th-TH">ไทย</option><option value="id-ID">Bahasa Indonesia</option><option value="ms-MY">Bahasa Melayu</option><option value="hi-IN">हिन्दी</option><option value="ta-IN">தமிழ்</option><option value="te-IN">తెలుగు</option><option value="pa-IN">ਪੰਜਾਬੀ</option><option value="bn-IN">বাংলা</option><option value="gu-IN">ગુજરાતી</option><option value="mr-IN">मराठी</option><option value="ur-PK">اردو</option><option value="ar-SA">العربية</option><option value="tr-TR">Türkçe</option><option value="pl-PL">Polski</option><option value="nl-NL">Nederlands</option></select></label>`:''}
  <h4 style="margin:12px 0 4px">Message Archive</h4>${P.account?`<label><input type=checkbox id=ysArc> Save new private messages</label><p class="archive-help">Turning this off stops saving new messages. Messages already saved stay here until you delete them.</p><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"><input id=ysAq placeholder="Search messages or a screen name" style="flex:1"><button id=ysAs>Search</button><button id=ysAd>Delete all</button></div><div id=ysAr style="font-size:12px;margin-top:4px"></div>`:'<small>Sign in with a screen name to keep an archive.</small>'}</div>`;
  sectionSettings(w,tab);
  document.body.appendChild(w);w.querySelector('.x').onclick=()=>w.remove();
  {const dl=w.querySelector('#ysDl');if(dl){dl.value=localStorage.ycDictLang||'';dl.onchange=()=>YDict.setLang(dl.value)}}
+ for(const [id,kind] of [['ysRoomAlerts','room'],['ysWebcamAlerts','webcam']]){const input=w.querySelector('#'+id);if(input)input.onchange=()=>{localStorage.setItem(alertKeys[kind],input.checked?'on':'off');syncAlerts();};}
  w.querySelector('#ysPmPop').onchange=e=>{localStorage.ycPmPop=e.target.checked?'on':'off'};w.querySelector('#ysNsnd').onchange=e=>{localStorage.ycNotifSound=e.target.checked?'on':'off'};w.querySelector('#ysMute').onchange=e=>{localStorage.ycSound=e.target.checked?'off':'on';try{window.dispatchEvent(new Event('ycsound'))}catch(x){}};
  w.querySelector('#ysDoor').onchange=e=>localStorage.ycDoor=e.target.checked?'on':'off';w.querySelector('#ysShake').onchange=e=>localStorage.ycShake=e.target.checked?'off':'on';w.querySelector('#ysRb').onchange=e=>localStorage.ycRoomBuzz=e.target.checked?'on':'off';
  {const rr=w.querySelector('#ysRr');fetch('/api/receipts').then(r=>r.json()).then(j=>rr.checked=!!j.on).catch(()=>{});rr.onchange=()=>fetch('/api/receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:rr.checked})}).then(r=>r.json()).then(j=>{window.YRR=!!j.on})}

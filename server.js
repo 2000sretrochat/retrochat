@@ -510,7 +510,42 @@ function modAct(s, room, { action, who, mins } = {}, cb) {
 // per-IP socket cap + per-socket event rate limit (masters get a higher ceiling)
 const IPCONN = new Map(), MAXCONN = +process.env.MAX_SOCKETS_PER_IP || 30, KEYTRY = new Map();
 io.use((s, next) => { const ip = geo.clientIp(s.handshake.headers, s.handshake.address); const n = IPCONN.get(ip) || 0; if (n >= MAXCONN) return next(new Error('Too many connections')); IPCONN.set(ip, n + 1); s.once('disconnect', () => { const m = (IPCONN.get(ip) || 1) - 1; m > 0 ? IPCONN.set(ip, m) : IPCONN.delete(ip); }); next(); });
+const roomAlertCooldowns = new Set();
+async function notifyRoomActivity(kind, room, source) {
+  const webcam = kind === 'webcam', actor = source.data.acct;
+  const live = () => source.data.room === room && source.data.cam && !source.data.inc &&
+    acc.presenceRaw(actor.id).status !== 'invisible';
+  if (webcam && (!actor || !live())) return;
+  const eligible = socket => socket.connected && socket.data.roomAlerts?.[kind] && socket.data.acct &&
+    socket.data.acct.id !== actor?.id && socket.data.room !== room &&
+    AH.rawRoomOf(socket.data.acct.name) !== room && (!adultR(room) || socket.data.adult || socket.data.master) &&
+    (socket.data.master || !kickedLeft(room, socket.data.acct.name));
+  const recipients = [...io.sockets.sockets.values()].filter(eligible);
+  if (!recipients.length) return;
+  const key = JSON.stringify([kind, room, webcam ? actor.id : null]);
+  if (roomAlertCooldowns.has(key)) return;
+  roomAlertCooldowns.add(key);
+  setTimeout(() => roomAlertCooldowns.delete(key), 60_000).unref();
+  const excluded = webcam ? new Set((await db.q(
+    'select blocked as id from blocks where owner=$1 union select owner as id from blocks where blocked=$1 union select owner as id from ignores where name_lc=$2',
+    [actor.id, actor.name.toLowerCase()])).map(row => String(row.id))) : null;
+  const followers = webcam ? null : new Set((await db.q('select owner from favorites where room=$1', [room])).map(row => row.owner));
+  if (!ROOMS[room] || (webcam ? !live() : !seen(room).length)) return;
+  const alert = { id: require('node:crypto').randomUUID(), kind, room, ...(webcam ? { name: source.data.name } : {}) };
+  for (const socket of recipients) {
+    if (!eligible(socket)) continue;
+    const { id, name } = socket.data.acct;
+    if (webcam ? excluded.has(String(id)) || source.data.camBlock?.has(name.toLowerCase()) : !followers.has(name.toLowerCase())) continue;
+    socket.emit('room-alert', alert);
+  }
+}
+function roomActivity(kind, room, source) {
+  notifyRoomActivity(kind, room, source).catch(error => console.warn('[room-alert]', error.message));
+}
 io.on('connection', s => {
+  s.on('room-alerts:set', options => {
+    if(s.data.acct)s.data.roomAlerts={room:options?.room===true,webcam:options?.webcam===true};
+  });
   { let win = Date.now(), cnt = 0, strikes = 0; s.use((pkt, next) => { const now = Date.now(); if (now - win > 10e3) { win = now; cnt = 0; } const lim = s.data.master ? 800 : 300;
     if (++cnt > lim) { if (++strikes > 50) { s.disconnect(true); return; } const cb = pkt[pkt.length - 1]; if (typeof cb === 'function') cb({ error: 'Slow down - too many actions.' }); return; } next(); }); }
   let stamps = [];
@@ -555,10 +590,12 @@ io.on('connection', s => {
   const graceSkip = room => { const g = GRACE.get(s.data.name.toLowerCase()); if (!g) return false; GRACE.delete(s.data.name.toLowerCase()); clearTimeout(g.t); return g.room === room; };
   const noticeOk = () => !s.data.master || (s.data.announce && !s.data.inc); // masters enter/leave silently by default
   function join(room) {
+    const opening = s.data.room !== room && !seen(room).length;
     if (s.data.room) { s.leave(s.data.room); if (noticeOk()) push(s.data.room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has left the room.` }); lists(s.data.room); }
     const old = s.data.room; mediaReset(); if (old) upd(old);
     s.data.np = null; s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); s.emit('history', { room, music: isMusicRoom(room), np: isMusicRoom(room) ? npList(room) : [], topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, icon: UROOMS.get(room)?.icon || '', rating: rateOf(room), mics: micsOf(room), ann: ANN[room] || '', rec: REC.isOn(room) });
     if (!graceSkip(room) && noticeOk()) push(room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has entered the room.` }); upd(room); s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce });
+    if(opening && !s.data.inc)roomActivity('room',room,s);
   }
   s.on('create-room', ({ name, topic, rating, mics, cat, icon }, cb) => {
     if (typeof cb !== 'function') return; if (!s.data.acct) return cb({ error: 'Guests cannot create rooms. Get a free screen name to create one.' });
@@ -695,7 +732,7 @@ io.on('connection', s => {
     push(r, { sys: true, text: 'Mic settings: hands up ' + (HQ[r] ? 'on' : 'off') + ', turn limit ' + (MTIMER[r] ? MTIMER[r] + 's' : 'off') + ', mic timer ' + (MANN[r] ? MANN[r] + ' min' : 'off') + '.' }); cb({ ok: true }); });
   s.on('set-mics', (n, cb) => { cb = typeof cb === 'function' ? cb : () => {}; if (roleOf(s, s.data.room) !== 'owner') return cb({ error: 'Only the room owner can change the mic limit.' });
     const e = setMics(s.data.room, n); if (e) return cb({ error: e }); saveURoom(s.data.room); push(s.data.room, { sys: true, text: 'Mic limit set to ' + MICS[s.data.room] + (MICS[s.data.room] === 1 ? ' (single mic).' : ' talkers at once.') }); cb({ ok: true }); });
-  s.on('cam', on => { if (!s.data.name || (on && s.data.inc)) return; if (on && s.data.guest && !s.data.master) return s.emit('msg', { sys: true, text: 'Guests can\'t broadcast a webcam. Get a free screen name to use your cam.' }); s.data.cam = !!on; if (!on) { io.to(s.data.room).emit('cam-off', { id: s.id }); s.data.viewers = new Set(); } upd(s.data.room); });
+  s.on('cam', on => { if (!s.data.name || !s.data.room || (on && s.data.inc)) return; if (on && s.data.guest && !s.data.master) return s.emit('msg', { sys: true, text: 'Guests can\'t broadcast a webcam. Get a free screen name to use your cam.' }); const started=!!on && !s.data.cam; s.data.cam = !!on; if (!on) { io.to(s.data.room).emit('cam-off', { id: s.id }); s.data.viewers = new Set(); } upd(s.data.room); if(started)roomActivity('webcam',s.data.room,s); });
   s.on('view', (id, cb) => { if (s.data.inc) return cb && cb({ error: 'You are incognito.' }); const t = same(id); if (!t || !t.data.cam) return cb && cb({ error: 'That webcam is not available.' });
     t.data.viewers = t.data.viewers || new Set(); if (!s.data.master && t.data.acct && s.data.acct && t.data.blk?.has(s.data.acct.id)) return cb && cb({ error: 'That webcam is not available.' }); if (t.data.camBlock?.has(s.data.name.toLowerCase())) return cb && cb({ error: t.data.name + ' has blocked you from viewing their webcam.' });
     if (!t.data.viewers.has(s.id) && t.data.viewers.size >= MAXVIEW) return cb && cb({ error: 'That webcam has the maximum number of viewers (' + MAXVIEW + ').' });
