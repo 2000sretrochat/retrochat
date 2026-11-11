@@ -112,19 +112,42 @@
     modal('<h2>Edit photos</h2><div class="directory-actions"><button class="secondary" data-photo-activity="portrait">Change or remove profile picture</button><button class="primary" data-photo-activity="add">Add a photo</button></div>'+
       own.filter(post=>post.image&&post.author_id===myId).map(post=>'<div class="photo-editor-row"><img src="'+esc(post.image)+'" alt="Posted photo"><button class="secondary" data-shared-edit="'+post.id+'">Edit audience</button><button class="secondary" data-remove-photo="'+post.id+'">Remove photo</button></div>').join(''));
   };
+  const socialPlatforms=[['youtube.com','YouTube','<rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="m10 9 6 3-6 3z" fill="white"/>'],['instagram.com','Instagram','<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/>'],['x.com','X','<path d="M4 3h4l12 18h-4zM20 3 4 21"/>']];
+  function platformIcon(paths){return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">'+paths+'</svg>';}
+  function socialLinksMarkup(links={}){return '<div class="profile-social-links">'+socialPlatforms.filter(([domain])=>links[domain]).map(([domain,title,paths])=>'<a href="'+esc(links[domain])+'" target="_blank" rel="noopener noreferrer" aria-label="'+title+' profile">'+platformIcon(paths)+'<span>'+title+'</span></a>').join('')+'</div>';}
+  const beforeSocialLinksEdit=editProfile;
+  editProfile=function(){
+    beforeSocialLinksEdit();const form=$('#edit-form');if(!form)return;
+    const fields=document.createElement('fieldset');fields.className='profile-link-fields';fields.innerHTML='<legend>Your links <small>Optional</small></legend>'+socialPlatforms.map(([domain,title,paths],i)=>{
+      const value=session.settings.socialLinks?.[domain]||'';const path=value?new URL(value).pathname.slice(1)+new URL(value).search:'';
+      return '<label>'+platformIcon(paths)+title+'<span class="profile-domain-field"><span>'+domain+'/</span><input name="socialLink'+i+'" maxlength="350" aria-label="'+title+' channel or profile" placeholder="'+(i===0?'@yourchannel':'yourname')+'" value="'+esc(path)+'" autocomplete="off"></span></label>';
+    }).join('');form.querySelector('button.primary').before(fields);
+  };
+  function albumMarkup(record,owner=false){const photos=(record.gallery||[]).filter(p=>!publicPreview||p.mode==='public');return '<section class="space-card messenger-photo-album"><h3>Messenger profile pictures</h3><p>Public Messenger photos. Your Social profile picture is separate.</p><div class="social-profile-gallery">'+photos.map((p,i)=>'<figure><img src="'+esc(p.image)+'" alt="Messenger profile picture '+(i+1)+'">'+(owner&&p.id===record.galleryDefault?'<figcaption>Messenger default</figcaption>':'')+'</figure>').join('')+'</div>'+(!photos.length?'<p>No Messenger profile pictures yet.</p>':'')+(owner&&!publicPreview?'<a class="text-action" href="/?chat=1" target="_blank" rel="noopener">Manage pictures in Messenger</a>':'')+'</section><section class="space-card timeline-photo-album"><h3>Timeline photos</h3><p>Photos with their original captions and audiences.</p><div class="timeline-photo-list" data-photo-owner="'+esc(record.name)+'"></div></section>';}
+  async function loadTimelinePhotos(container,before='',cursorId=''){
+    if(!container.isConnected)return;
+    const query=new URLSearchParams({name:container.dataset.photoOwner,before,cursorId});if(publicPreview)query.set('public','1');
+    try{const rows=await api('/photos?'+query);if(!container.isConnected)return;
+      container.querySelector('[data-photo-next]')?.remove();
+      rows.map(normalize).forEach(post=>container.insertAdjacentHTML('beforeend','<figure class="timeline-photo"><button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Timeline photo"></button><figcaption><p>'+esc(post.text||'')+'</p><small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></figcaption>'+(!publicPreview&&post.author_id===myId?'<button type="button" class="text-action" data-shared-edit="'+post.id+'">Edit caption or audience</button>':'')+'</figure>'));
+      if(!rows.length&&!before)container.textContent='No timeline photos to show.';
+      if(rows.length===40){const last=rows[rows.length-1],b=document.createElement('button');b.type='button';b.dataset.photoNext='';b.className='secondary';b.textContent='More photos';b.onclick=()=>{b.disabled=true;loadTimelinePhotos(container,last.created,last.id);};container.append(b);}
+    }catch(error){const b=container.querySelector('[data-photo-next]');if(b)b.disabled=false;toast(error.message);}
+  }
   function sharedCard(post) {
     const owner=!publicPreview && post.author_id===myId, moderator=!publicPreview && (session.master || owner || post.wall_id===myId);
     const comments=(post.comments || []).map(comment=>'<div class="shared-comment">'+author(comment.name)+
       '<small>'+esc(new Date(comment.created).toLocaleString())+'</small><p>'+esc(comment.body)+'</p>'+
       ((comment.author_id===myId || post.wall_id===myId || session.master)?'<button type="button" class="text-action" data-shared-comment-remove="'+comment.id+'">Delete comment</button>':'')+'</div>').join('');
     return '<article class="post" data-post-id="'+post.id+'"><div class="post-top">'+author(post.name)+
-      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+postDetailsMarkup(post)+'<p>'+esc(post.text)+'</p>'+eventCard(post)+
+      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+(post.pinned&&current==='profile'?'<span class=post-pin-marker>📌 Pinned</span>':'')+postDetailsMarkup(post)+'<p>'+esc(post.text)+'</p>'+eventCard(post)+
       (post.image?'<button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Shared photo"></button>':'')+
       (post.url?'<div class="link-preview">'+postLinkMedia(post.url)+'<a href="'+esc(post.url)+'" target="_blank" rel="noopener noreferrer">'+esc(new URL(post.url).hostname)+'</a></div>':'')+
       '<div class="post-actions"><button type="button" data-shared-like="'+post.id+'" aria-pressed="'+post.liked+'">'+(post.liked?'♥ Liked':'♡ Like')+' '+post.likes+'</button>'+
       '<button type="button" data-shared-comment="'+post.id+'">Comment '+(post.comments?.length || '')+'</button>'+
       (moderator?'<details class="post-settings"><summary>Post settings</summary>'+
         (owner?'<button type="button" data-shared-edit="'+post.id+'">Edit post or audience</button>':'')+
+        (owner&&post.wall_id===myId?'<button type="button" data-shared-pin="'+post.id+'" data-pinned="'+!!post.pinned+'">'+(post.pinned?'Unpin from profile':'Pin to profile')+'</button>':'')+
         '<button type="button" data-shared-delete="'+post.id+'">Delete post</button></details>':'')+'</div>'+comments+'</article>';
   }
   card=sharedCard;
@@ -137,13 +160,23 @@
   };
   function renderOwner() {
     ownerProfile(me);
+    document.querySelectorAll('.space-actions button,.space-posts > .empty button').forEach(button=>{if(/share something/i.test(button.textContent))button.remove();});
+    const viewLabel=document.querySelector('.profile-toolbar > span');if(viewLabel&&publicPreview)viewLabel.textContent=visibility==='private'?'Private view':'Public view';
+    document.querySelector('.space-about > .space-card')?.insertAdjacentHTML('beforeend',socialLinksMarkup(session.settings.socialLinks));
     const stream=$('.space-posts');
     stream?.querySelectorAll(':scope > .post').forEach(node=>node.remove());
     mountAudience($('#wall-post-composer'));
     const publicPost=post=>post.audience?.post?.mode==='public' || (!post.audience?.post?.mode || post.audience.post.mode==='profile') && visibility!=='private';
     const publicPhoto=post=>!post.audience?.photo?.mode || ['post','public','profile'].includes(post.audience.photo.mode);
     const posts=publicPreview?own.filter(publicPost).map(post=>publicPhoto(post)?post:{...post,image:null}).filter(post=>post.text||post.url||post.image):own;
+    const photoBox=[...document.querySelectorAll('.space-about > .space-card')].find(card=>card.querySelector('h3')?.textContent.startsWith('My photos'));
+    if(photoBox)photoBox.innerHTML='<h3>Photos</h3><button type="button" class="text-action" data-open-albums>View photo albums</button>';
     if(spaceTab==='posts')stream?.insertAdjacentHTML('beforeend',posts.map(sharedCard).join(''));
+    if(stream&&(spaceTab==='photos'||publicPreview&&visibility==='private')){
+      if(spaceTab==='photos')stream.querySelectorAll(':scope > :not(.space-tabs)').forEach(node=>node.remove());
+      const albums=document.createElement('div');albums.className='profile-albums';stream.append(albums);
+      api('/profile/'+encodeURIComponent(me)).then(record=>{if(!albums.isConnected)return;albums.innerHTML=albumMarkup(record,true);loadTimelinePhotos(albums.querySelector('.timeline-photo-list'));}).catch(error=>toast(error.message));
+    }
     loadArticlePreviews();
   }
   profile=function(name) {
@@ -160,16 +193,17 @@
       $('#content').classList.remove('custom-space');$('#content').removeAttribute('style');
       $('#heading').textContent=record.displayName;$('#subheading').textContent='@'+record.name.toLowerCase();
       const wall=record.friend&&!record.private?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message"></textarea><button class="primary">Post</button></form></section>':'';
-      const gallery=record.gallery?.length?'<section class="space-card"><h3>Profile photos</h3><div class="social-profile-gallery">'+record.gallery.map((photo,i)=>'<img src="'+esc(photo.image)+'" alt="Profile photo '+(i+1)+'">').join('')+'</div></section>':'';
+      const gallery=record.gallery?.length?'<section class="space-card"><h3>Messenger profile pictures</h3><div class="social-profile-gallery">'+record.gallery.map((photo,i)=>'<img src="'+esc(photo.image)+'" alt="Profile photo '+(i+1)+'">').join('')+'</div></section>':'';
       $('#content').innerHTML='<div class="space-layout"><aside class="space-about"><section class="space-card">'+
         (record.settings.portrait?'<img class="profile-portrait" src="'+esc(record.settings.portrait)+'" alt="Profile photo">':profileAvatar(record.name))+
-        '<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span>'+(record.bot?'<p class="bot-profile-badge">Chat bot</p>':'')+'<p>'+esc(record.bio || '')+
+        socialLinksMarkup(record.settings.socialLinks)+'<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span>'+(record.bot?'<p class="bot-profile-badge">Chat bot</p>':'')+'<p>'+esc(record.bio || '')+
         '</p><div class="profile-basics">'+esc([record.age,record.sex,record.location].filter(Boolean).join(' · '))+'</div><div class="space-actions">'+
         '<button class="secondary" data-live-message="'+esc(record.name)+'">Message</button>'+
         (!record.friend && record.canRequest?'<button type="button" class="secondary" data-live-request="'+esc(record.name)+'"'+(record.requestPending?' disabled>Request sent':' >Add friend')+'</button>':'')+
         '<button class="text-action" data-profile-block="'+esc(record.name)+'" data-blocked="'+record.blocked+'">'+(record.blocked?'Unblock':'Block')+'</button>'+
         '<button class="text-action" data-profile-report="'+esc(record.name)+'">Report</button></div></section>'+gallery+'</aside><section class="space-posts">'+
-        (record.private?'<section class="space-card private-notice"><h3>Private profile</h3><p>This person shares their space with friends.</p></section>':wall)+rows.map(normalize).map(sharedCard).join('')+'</section></div>';
+        (record.private?'<section class="space-card private-notice"><h3>Private profile</h3><p>This person shares their space with friends.</p></section>':wall)+rows.map(normalize).map(sharedCard).join('')+'<details class=space-card><summary>Photos</summary>'+albumMarkup(record)+'</details></section></div>';
+      document.querySelectorAll('.timeline-photo-list').forEach(container=>loadTimelinePhotos(container));
       mountAudience($('#friend-wall-form'));
       loadArticlePreviews();
     }).catch(error=>{if(generation===profileGeneration)$('#content').innerHTML='<section class="empty">'+esc(error.message)+'</section>';});
@@ -388,7 +422,7 @@
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button)return;
     const d=button.dataset;
-    if(!Object.keys(d).some(key=>['sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','sharedAccept','sharedDecline','sharedNotification','sharedOffline','liveMessage','liveRequest','liveRemove'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
+    if(!Object.keys(d).some(key=>['openAlbums','sharedPin','sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','sharedAccept','sharedDecline','sharedNotification','sharedOffline','liveMessage','liveRequest','liveRemove'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
     event.preventDefault();event.stopImmediatePropagation();
     try {
       if(d.sharedLike){like(d.sharedLike);return;}
@@ -406,7 +440,9 @@
         modal('<h2>Edit post</h2><form id="shared-edit-form" data-post="'+post.id+'"><label>Post<textarea name="body" maxlength="3000">'+esc(post.text)+'</textarea></label><label>Link<input name="url" type="url" value="'+esc(post.url)+'"></label>'+
           (post.image?'<label><input type="checkbox" name="removeImage">Remove photo</label>':'')+'<button class="primary">Save</button></form>');
         mountPostDetails($('#shared-edit-form'),post);mountAudience($('#shared-edit-form'),{post:{mode:'profile'},...post.audience},!!post.image);return;
-      } else if(d.sharedPhoto){const post=postsById.get(d.sharedPhoto);if(post?.image)modal('<h2>Photo</h2><img class="profile-photo-detail" src="'+esc(post.image)+'" alt="Shared photo">');return;}
+      } else if(d.openAlbums!==undefined){spaceTab='photos';profile(me);return;}
+      else if(d.sharedPin){await api('/posts/'+encodeURIComponent(d.sharedPin)+'/pin','PUT',{pinned:d.pinned!=='true'});}
+      else if(d.sharedPhoto){const post=postsById.get(d.sharedPhoto);if(post?.image)modal('<h2>Photo</h2><p>'+esc(post.text||'')+'</p><img class="profile-photo-detail" src="'+esc(post.image)+'" alt="Shared photo">');return;}
       else if(d.liveMessage){privateChat(d.liveMessage);return;}
       else if(d.liveRequest){
         button.disabled=true;
@@ -431,6 +467,9 @@
     event.preventDefault();event.stopImmediatePropagation();
     const f=form.elements,button=form.querySelector('button.primary');if(button.disabled)return;button.disabled=true;
     try {
+      window.RazzleInterests.clean(f.interests.value);
+      const socialLinks={};socialPlatforms.forEach(([domain],i)=>{const value=f['socialLink'+i]?.value.trim();if(value)socialLinks[domain]=/^https?:\/\//i.test(value)||value.startsWith(domain+'/')?value:'https://'+domain+'/'+value;});
+      session.settings=await api('/settings','PATCH',{socialLinks});
       const response=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({displayName:f.displayAlias.value.trim(),age:f.age.value,location:f.location.value.trim(),
           bio:f.bio.value.trim(),interests:f.interests.value.trim(),sex:f.sex.value,profileStatus:f.personalStatus.value.trim()})});

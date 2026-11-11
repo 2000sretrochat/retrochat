@@ -76,3 +76,11 @@ create table if not exists room_music_tracks (
 );
 
 alter table social_posts add column if not exists audience jsonb not null default '{}';
+
+-- Freeze legacy Social defaults before Messenger avatars change independently.
+update social_settings s set value=jsonb_set(s.value,'{portrait}',p.image)
+from (select ss.user_id,photo.entry->'image' as image from social_settings ss,
+  lateral jsonb_array_elements(coalesce(ss.value->'profileGallery','[]'::jsonb)) photo(entry)
+  where ss.value->>'portrait'=ss.value->>'galleryAvatarUrl' and photo.entry->>'id'=ss.value->>'galleryDefault') p
+where s.user_id=p.user_id;
+alter table social_posts add column if not exists pinned boolean not null default false;

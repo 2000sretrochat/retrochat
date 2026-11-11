@@ -44,14 +44,7 @@ function openPreviewAccount() {
   show('feed');
 }
 
-const interestChoices = [
-  'Music', 'Movies', 'TV', 'Books', 'Podcasts', 'Gaming', 'Board Games',
-  'Food', 'Cooking', 'Baking', 'Coffee', 'Travel', 'Photography', 'Art',
-  'Writing', 'Crafts', 'DIY', 'Gardening', 'Pets', 'Nature', 'Hiking',
-  'Camping', 'Fitness', 'Sports', 'Dancing', 'Cars', 'Motorcycles',
-  'Technology', 'Science', 'History', 'Languages', 'Comedy', 'Volunteering',
-  'Family', 'Education', 'Politics', 'Faith and Spirituality',
-];
+const interestChoices = window.RazzleInterests.choices;
 const samplePeopleDetails = {
   NightOwl: { sex: 'Female', age: 29, location: 'Portland, Oregon, United States', interests: ['Music', 'Travel'] },
   RetroFan: { sex: 'Male', age: 38, location: 'Columbus, Ohio, United States', interests: ['Politics', 'Government', 'Cars'] },
@@ -102,25 +95,7 @@ editProfile = function () {
   nameLabel.firstChild.textContent = 'Profile name';
   nameLabel.querySelector('small').textContent = 'This name appears on your profile. Your @username stays the same.';
   const input = form.elements.interests;
-  const fieldset = document.createElement('fieldset');
-  fieldset.className = 'interest-options';
-  const selected = () => input.value.split(',').map(value => value.trim()).filter(Boolean);
-  fieldset.innerHTML = '<legend>Choose your interests</legend>' + interestChoices.map(interest =>
-    `<label><input type="checkbox" value="${esc(interest)}"> ${esc(interest)}</label>`
-  ).join('');
-  function syncChoices() {
-    const values = selected().map(value => value.toLowerCase());
-    fieldset.querySelectorAll('input').forEach(box => { box.checked = values.includes(box.value.toLowerCase()); });
-  }
-  syncChoices();
-  input.addEventListener('input', syncChoices);
-  fieldset.addEventListener('change', event => {
-    const choice = event.target;
-    const values = selected().filter(value => value.toLowerCase() !== choice.value.toLowerCase());
-    if (choice.checked) values.push(choice.value);
-    input.value = values.join(', ');
-  });
-  input.closest('label').after(fieldset);
+  window.RazzleInterests.mount(input);
 };
 
 
