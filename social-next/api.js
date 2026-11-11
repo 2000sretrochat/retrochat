@@ -208,7 +208,8 @@ function registerApi(router, express, db, accounts, io, botChat) {
       if (typeof item?.id !== 'string' || !uuid.test(item.id) || !['public','friends','private'].includes(item.mode)) fail('Invalid profile photo.');
       const image = photo(item.image,450000);
       if (!image) fail('Choose a photo.');
-      return {id:item.id,mode:item.mode,image};
+      const icon=photo(item.icon,100000);
+      return {id:item.id,mode:item.mode,image,...(icon?{icon}:{})};
     });
     const primary = gallery.find(item => item.id === defaultId);
     if (new Set(gallery.map(item => item.id)).size !== gallery.length || gallery.length && !primary) fail('Choose one default photo.');
@@ -223,7 +224,8 @@ function registerApi(router, express, db, accounts, io, botChat) {
       else if(old && item.mode!==old.mode && item.mode!=='public')fail('Messenger profile photos are public.');
     }
     const unchanged = primary && primary.id === previous.galleryDefault &&
-      primary.image === previous.profileGallery?.find(item => item.id === primary.id)?.image;
+      primary.image === previous.profileGallery?.find(item => item.id === primary.id)?.image &&
+      (primary.icon || '') === (previous.profileGallery?.find(item => item.id === primary.id)?.icon || '');
     const socialSnapshot=previous.portrait && previous.portrait===previous.galleryAvatarUrl
       ? previous.profileGallery?.find(item=>item.id===previous.galleryDefault)?.image : null;
     const next = {
@@ -231,7 +233,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
     };
     const avatar = primary ? 'c'+crypto.randomBytes(8).toString('hex') : '';
     const avatarUrl = '/av/'+encodeURIComponent(req.socialAccount.alias)+'?v='+avatar;
-    const [_,mime,bytes] = primary ? primary.image.match(/^data:image\/(jpeg|png|webp);base64,(.+)$/) : [];
+    const [_,mime,bytes] = primary ? (primary.icon || primary.image).match(/^data:image\/(jpeg|png|webp);base64,(.+)$/) : [];
     if (primary && !unchanged) Object.assign(next,{galleryAvatarUrl:avatarUrl,galleryAvatar:avatar});
     else if (!primary && previous.galleryAvatar) Object.assign(next,{galleryAvatarUrl:'',galleryAvatar:''});
     const [saved] = await db.q(`with saved as (

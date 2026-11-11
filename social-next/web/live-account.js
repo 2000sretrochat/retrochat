@@ -54,7 +54,8 @@
       context.drawImage(image,0,0,canvas.width,canvas.height);
       let data=canvas.toDataURL('image/jpeg',0.8);
       if(data.length>700000)data=canvas.toDataURL('image/jpeg',0.55);
-      if(data.length>700000)throw Error('Choose a smaller photo.');
+      while(data.length>700000&&canvas.width>256&&canvas.height>256){const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);canvas.width=Math.round(canvas.width*.8);canvas.height=Math.round(canvas.height*.8);canvas.getContext('2d').drawImage(copy,0,0,canvas.width,canvas.height);data=canvas.toDataURL('image/jpeg',.65);}
+      if(data.length>700000)throw Error('Could not compress that photo. Try another image.');
       return data;
     } finally {URL.revokeObjectURL(url);}
   }

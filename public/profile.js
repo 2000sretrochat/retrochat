@@ -53,7 +53,7 @@ async function editPhotos(name) {
  const w=win('Messenger Profile Pictures','<p>Add up to 5 photos. All photos saved here are public. Choose your Messenger default; your Social default stays separate.</p><div class=profile-gallery-editor></div><label class=profile-photo-drop tabindex=0>Drop photos here or choose files<input type=file multiple accept="image/jpeg,image/png,image/webp"></label><p class=perr role=status></p><div class=pbtn><button class=btn data-back>Cancel</button><button class="btn pri" data-save>Save photos</button></div>');
  const list=w.querySelector('.profile-gallery-editor'),input=w.querySelector('input[type=file]'),error=w.querySelector('.perr'),save=w.querySelector('[data-save]');
  function draw(){
-  list.innerHTML=photos.map((photo,i)=>`<div class=gallery-row><img src="${E(photo.image)}" alt="Photo ${i+1}"><label><input type=radio name=primary value="${i}" ${photo.id===defaultId?'checked':''}> Default</label><span class=gallery-public>Public</span><button type=button data-remove="${i}">Remove</button></div>`).join('');
+  list.innerHTML=photos.map((photo,i)=>`<div class=gallery-row><img src="${E(photo.icon||photo.image)}" alt="Photo ${i+1}"><label><input type=radio name=primary value="${i}" ${photo.id===defaultId?'checked':''}> Default</label><span class=gallery-public>Public</span><button type=button data-crop="${i}">Crop icon</button><button type=button data-remove="${i}">Remove</button></div>`).join('');
   input.disabled=photos.length>=5;
  }
  list.onchange=event=>{
@@ -62,12 +62,29 @@ async function editPhotos(name) {
   else if(target.dataset.visibility!==undefined)photos[Number(target.dataset.visibility)].mode=target.value;
  };
  list.onclick=event=>{
+  const crop=event.target.closest('[data-crop]');if(crop){cropIcon(photos[Number(crop.dataset.crop)]);return;}
   const button=event.target.closest('[data-remove]');if(!button)return;
   const [removed]=photos.splice(Number(button.dataset.remove),1);
   if(removed.id===defaultId)defaultId=photos[0]?.id||'';
   draw();
  };
  let busy=false;
+ async function cropIcon(photo){
+  if(busy)return;busy=true;save.disabled=input.disabled=true;list.inert=true;error.textContent='';
+  const panel=document.createElement('section');panel.className='profile-icon-crop';
+  panel.innerHTML='<h3>Crop your Messenger icon</h3><p>Your full photo stays in the gallery. Drag the preview or adjust the sliders.</p><canvas width=256 height=256 tabindex=0 aria-label="Messenger icon crop preview"></canvas><label>Horizontal position<input type=range data-crop-x min=0 max=100 value=50></label><label>Vertical position<input type=range data-crop-y min=0 max=100 value=50></label><label>Zoom<input type=range data-crop-zoom min=1 max=3 step=.05 value=1></label><div class=pbtn><button type=button data-crop-cancel>Cancel crop</button><button type=button class="btn pri" data-crop-use>Use as Messenger icon</button></div>';
+  list.after(panel);const q=s=>panel.querySelector(s),canvas=q('canvas'),x=q('[data-crop-x]'),y=q('[data-crop-y]'),zoom=q('[data-crop-zoom]');
+  const close=()=>{panel.remove();busy=false;list.inert=false;save.disabled=false;draw();};q('[data-crop-cancel]').onclick=close;
+  try{
+   const image=new Image();image.src=photo.image;await image.decode();if(!panel.isConnected)return;
+   function drawCrop(){const side=Math.min(image.naturalWidth,image.naturalHeight)/Number(zoom.value),sx=(image.naturalWidth-side)*Number(x.value)/100,sy=(image.naturalHeight-side)*Number(y.value)/100;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,256,256);ctx.drawImage(image,sx,sy,side,side,0,0,256,256);}
+   panel.querySelectorAll('input').forEach(control=>control.oninput=drawCrop);
+   let drag=null;canvas.onpointerdown=event=>{canvas.setPointerCapture(event.pointerId);drag={x:event.clientX,y:event.clientY,sx:Number(x.value),sy:Number(y.value)};};
+   canvas.onpointermove=event=>{if(!drag)return;const side=Math.min(image.naturalWidth,image.naturalHeight)/Number(zoom.value),size=canvas.getBoundingClientRect().width,dx=image.naturalWidth-side,dy=image.naturalHeight-side;if(dx)x.value=Math.max(0,Math.min(100,drag.sx-(event.clientX-drag.x)/size*side/dx*100));if(dy)y.value=Math.max(0,Math.min(100,drag.sy-(event.clientY-drag.y)/size*side/dy*100));drawCrop();};canvas.onpointerup=canvas.onpointercancel=()=>drag=null;
+   q('[data-crop-use]').onclick=()=>{let icon='';for(const quality of [.88,.72,.55,.35]){icon=canvas.toDataURL('image/jpeg',quality);if(icon.length<=100000)break;}if(icon.length>100000){error.textContent='Could not compress that icon. Try another photo.';return;}photo.icon=icon;defaultId=photo.id;close();error.textContent='Icon crop ready. Save photos to apply it.';};
+   drawCrop();canvas.focus();panel.scrollIntoView({block:'nearest'});
+  }catch(e){close();error.textContent='Could not crop that photo. Please try another image.';}
+ }
  async function addFiles(files){
   if(busy)return;busy=true;
   if(files.length>5-photos.length){error.textContent='Add up to 5 photos. Remove a photo to make room.';busy=false;return;}
@@ -81,7 +98,8 @@ async function editPhotos(name) {
    canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
    const context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
    let data=canvas.toDataURL('image/jpeg',0.8);if(data.length>450000)data=canvas.toDataURL('image/jpeg',0.55);
-   if(data.length>450000)throw Error('Choose a smaller photo.');
+   while(data.length>450000&&canvas.width>256&&canvas.height>256){const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);canvas.width=Math.round(canvas.width*.8);canvas.height=Math.round(canvas.height*.8);canvas.getContext('2d').drawImage(copy,0,0,canvas.width,canvas.height);data=canvas.toDataURL('image/jpeg',.65);}
+   if(data.length>450000)throw Error('Could not compress that photo. Try another image.');
    const id=crypto.randomUUID();photos.push({id,mode:'public',image:data});if(photos.length===1)defaultId=id;
   }catch(e){error.textContent=e.message;}finally{if(url)URL.revokeObjectURL(url);input.value='';draw();}
   }busy=false;save.disabled=false;draw();

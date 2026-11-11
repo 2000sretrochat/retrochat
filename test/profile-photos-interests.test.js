@@ -22,7 +22,7 @@ test('Messenger gallery saves preserve the Social default and require public new
   const previous={portrait:'/av/Alice?v=old',galleryAvatarUrl:'/av/Alice?v=old',galleryAvatar:'old',galleryDefault:id,profileGallery:[{id,mode:'private',image:old}],galleryRevision:'r1'};
   const writes=[];const db={q:async(sql,args)=>{
     if(sql==='select value from social_settings where user_id=$1')return [{value:previous}];
-    if(sql.startsWith('with saved as')){writes.push({value:JSON.parse(args[1]),snapshot:args[9],sql});return [{user_id:4}];}
+    if(sql.startsWith('with saved as')){writes.push({value:JSON.parse(args[1]),snapshot:args[9],bytes:args[8],sql});return [{user_id:4}];}
     return [];
   }};
   const app=express(),router=express.Router();router.use((req,res,next)=>{req.socialAccount={id:4,alias:'Alice',master:false};next();});registerApi(router,express,db,{});app.use(router);
@@ -35,6 +35,12 @@ test('Messenger gallery saves preserve the Social default and require public new
   assert.match(writes[0].sql,/social_settings.value->>'portrait'=social_settings.value->>'galleryAvatarUrl'/);
   assert.notEqual(writes[0].value.galleryAvatarUrl,previous.galleryAvatarUrl);
   assert.equal(writes[0].value.profileGallery[0].mode,'public');
+  const icon='data:image/jpeg;base64,aWNs';
+  assert.equal((await send({photos:[{id,mode:'public',image,icon}],defaultId:id,revision:'r1',publishAll:true})).status,200);
+  assert.equal(writes[1].value.profileGallery[0].image,image);
+  assert.equal(writes[1].value.profileGallery[0].icon,icon);
+  assert.equal(writes[1].bytes.toString(),'icl');
+  assert.equal((await send({photos:[{id,mode:'public',image,icon:'data:image/jpeg;base64,'+'A'.repeat(100001)}],defaultId:id,revision:'r1'})).status,400);
   assert.equal((await send({photos:[],defaultId:'',revision:'stale'})).status,409);
 });
 test('pinning is limited to the author on their own profile',async t=>{
