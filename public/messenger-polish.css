@@ -224,3 +224,11 @@ html.dark body #mwin #tabs > div {
   border-color: var(--line) !important;
 }
 html.dark .im :is(.ihead,.inbox,.fmt,.mbar) { background: var(--card) !important; color: var(--ink) !important; }
+
+html.yd.ydpop .contact-profile .profile-photos { grid-auto-rows: clamp(32px, calc((100dvh - 260px) / 2), 98px); }
+#me .stw #stdot { position: static !important; inset: auto !important; margin: 0; flex: none; align-self: center; }
+#rhead #thm { position: static !important; flex: none; margin-left: 6px; }
+.room-owner-line { color: var(--muted); font-size: 11px; margin-top: 3px; }
+.room-peek-button { flex: none; padding: 3px 5px !important; }
+.chat-text-size-label { color:var(--muted); font-size:12px; font-weight:600; }
+@media(max-width:850px) { .chat-text-size-label span { display:none; } }

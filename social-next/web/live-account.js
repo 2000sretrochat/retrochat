@@ -61,7 +61,7 @@
   }
   const audienceLabels={profile:'Profile default',public:'Public',friends:'Friends',private:'Only me',selected:'Specific people',post:'Same as post'};
   function mountAudience(form,policy={},hasPhoto=false){
-    if(!form)return;
+    if(!form||form.querySelector('.post-audience'))return;
     const fields=document.createElement('details');fields.className='post-details post-audience';fields.open=!!policy.post;
     const field=(part,modes,label)=>'<fieldset data-part="'+part+'"><legend>'+label+'</legend><label>Who can see it<select name="'+part+'Audience">'+
       modes.map(mode=>'<option value="'+mode+'"'+(policy[part]?.mode===mode?' selected':'')+'>'+audienceLabels[mode]+'</option>').join('')+
@@ -242,7 +242,7 @@
       remember(record);
       $('#content').classList.remove('custom-space');$('#content').removeAttribute('style');
       $('#heading').textContent=record.displayName;$('#subheading').textContent='@'+record.name.toLowerCase();
-      const wall=record.friend&&!record.private?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message" placeholder="Say something to '+esc(record.displayName)+'"></textarea><button class="primary">Post</button></form></section>':'';
+      const wall=record.friend&&!record.private?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message" placeholder="Say something to '+esc(record.displayName)+'"></textarea><button class="primary">'+$('#quick-post .wall-note-icon').outerHTML+'Post</button></form></section>':'';
       const gallery=messengerGallery(record.gallery);
       const message='<button type="button" class="secondary" data-live-message="'+esc(record.name)+'">Message</button>';
       const add=!record.friend && record.canRequest?'<button type="button" class="secondary" data-live-request="'+esc(record.name)+'"'+(record.requestPending?' disabled>Request sent':'>Add friend')+'</button>':'';

@@ -118,7 +118,7 @@ test('Messenger explains contacts-only privacy, Do Not Disturb, and unavailable 
   await send(recipient, 'm:status', { status: 'busy' });
   assert.match((await send(sender, 'm:im', message)).error, /Do Not Disturb/);
   unavailable = true;
-  assert.equal((await send(sender, 'm:im', message)).error, 'Bob is unavailable for private messages.');
+  assert.equal((await send(sender, 'm:im', message)).error, 'Bob only accepts private messages from people on their contact list.');
   assert.equal(recipient.events.filter(event => event[0] === 'm:im').length, 0);
   assert.equal(writes, 0);
 });

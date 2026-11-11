@@ -3,7 +3,7 @@
 // [code, title, eyes, mouth, extra, anim]
 const L=[
 [':)','happy','dot','smile','',''],[':(','sad','dot','frown','',''],[';)','winking','wink','smile','','winkA'],[':D','big grin','dot','grin','','bob'],
-[';;)','batting eyelashes','lash','smile','','flutter'],['>:D<','big hug','dot','grin','arms','pulse'],[':-/','confused','dot','slant','',''],[':x','love struck','heart','smallo','','pulse'],
+[';;)','batting eyelashes','lash','smile','','flutter'],['>:D<','big hug','closed','smile','hug','pulse'],[':-/','confused','dot','slant','',''],[':x','love struck','heart','smallo','','pulse'],
 [':">','blushing','dot','smile','blush',''],[':P','tongue','dot','tongue','','wag'],[':-*','kiss','dot','kiss','kisses','pulse'],['=((','broken heart','dot','frown','broken','shake'],
 [':-O','surprise','big','o','','pulse'],['X(','angry','x','frown','red','shake'],[':>','smug','dot','smirk','',''],['B-)','cool','shades','smile','',''],
 [':-S','worried','dot','wave','','shake'],['#:-S','whew!','dot','wave','sweat','shake'],['>:)','devil','dot','grin','horns','bob'],[':((','crying','dot','frown','tears','shake'],
@@ -31,6 +31,7 @@ const L=[
 [':-P','tongue','dot','tongue','','wag'],[':-x','love struck','heart','smallo','','pulse'],[':O','surprise','big','o','','pulse'],[':*','kiss','dot','kiss','kisses','pulse'],
 ['|-)','sleepy','closed','flat','zzz','bob'],['\\:D/','dancing','dot','grin','','spin2'],['O:)','angel','dot','smile','halo','bob'],['0-+','april','dot','smile','',''],['🤮','sick','queasy','puke','green','retch'],
 ];
+L.push(['💋','blown kiss','','','lips',''],['💓','beating heart','','','beat','pulse'],['💤','sleeping Zs','','','zzz','']);
 const ORDER=L.map(r=>r[0]).filter(code=>code!=='🤮');L.sort((a,b)=>b[0].length-a[0].length);
 const OV=(x)=>`<ellipse cx="${x}" cy="8.6" rx="1.3" ry="2"/><circle cx="${x-.4}" cy="7.8" r=".45" fill="#fff"/>`;
 const eye={queasy:'<path d="M5 8l4 1.8-4 1M17 8l-4 1.8 4 1" fill="none" stroke="#234321" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>',dot:OV(7.5)+OV(14.5),wink:'<g class="wo">'+OV(7.5)+'</g><path class="wc" d="M5.6 9.2q1.9-1.6 3.8 0" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>'+OV(14.5),
@@ -50,13 +51,13 @@ kiss:'<ellipse cx="11" cy="14.8" rx="1.9" ry="1.5" fill="#e0103a" stroke="#000" 
 smirk:'<path d="M7 14.5q5 1.5 8.5-1.5" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>',wave:'<path d="M6.5 15q1.2-1.5 2.4 0t2.2 0 2.2 0 2.2 0" stroke="#000" fill="none" stroke-width="1.1"/>',
 flat:'<path d="M7 15h8" stroke="#000" stroke-width="1.2"/>',teeth:'<rect x="7" y="13.5" width="8" height="3" fill="#fff" stroke="#000" stroke-width=".7"/><path d="M9 13.5v3M11 13.5v3M13 13.5v3" stroke="#000" stroke-width=".5"/>',
 zip:'<path d="M6.5 15h9" stroke="#000" stroke-width="1.2"/><path d="M7.5 14v2M9 14v2M10.5 14v2M12 14v2M13.5 14v2" stroke="#666" stroke-width=".6"/>'};
-const ex={arms:'<path d="M.5 16q1.5-4 3.5-3.5M21.5 16q-1.5-4-3.5-3.5" stroke="#000" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M.5 16q1.5-4 3.5-3.5M21.5 16q-1.5-4-3.5-3.5" stroke="#ffc400" stroke-width="1.4" fill="none" stroke-linecap="round"/>',blush:'<ellipse class="bl" cx="5.3" cy="12.3" rx="2.2" ry="1.3" fill="#ff5d6c" opacity=".75"/><ellipse class="bl" cx="16.7" cy="12.3" rx="2.2" ry="1.3" fill="#ff5d6c" opacity=".75"/>',
+const ex={hug:'<path d="M2 12q-3 4 2 6 2 1 6-2M20 12q3 4-2 6-2 1-6-2" fill="none" stroke="#9d530b" stroke-width="3.5" stroke-linecap="round"/><path d="M2 12q-3 4 2 6 2 1 6-2M20 12q3 4-2 6-2 1-6-2" fill="none" stroke="#ffd248" stroke-width="2.3" stroke-linecap="round"/>',lips:'<path d="M2 12q5-7 8-2 4-4 8 2-7 10-16 0Z" fill="#e63965"/><path d="M3 12q6 2 14 0" stroke="#9f1542" fill="none"/><path class="rc-float" d="M16 5q-2-3 1-3 1 0 2 1 2-2 3 0 1 2-3 5z" fill="#ea4879"/>',beat:'<path d="M11 20C-6 10 4 0 11 6 18 0 28 10 11 20Z" fill="#e33261" stroke="#9c2145"/>',arms:'<path d="M.5 16q1.5-4 3.5-3.5M21.5 16q-1.5-4-3.5-3.5" stroke="#000" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M.5 16q1.5-4 3.5-3.5M21.5 16q-1.5-4-3.5-3.5" stroke="#ffc400" stroke-width="1.4" fill="none" stroke-linecap="round"/>',blush:'<ellipse class="bl" cx="5.3" cy="12.3" rx="2.2" ry="1.3" fill="#ff5d6c" opacity=".75"/><ellipse class="bl" cx="16.7" cy="12.3" rx="2.2" ry="1.3" fill="#ff5d6c" opacity=".75"/>',
 kisses:'<path d="M17 4a.8.8 0 0 1 1.4-.6.8.8 0 0 1 1.4.6l-1.4 1.7z" fill="#e00"/>',broken:'<path d="M15 2a1.5 1.5 0 0 1 2.5-1 1.5 1.5 0 0 1 2.5 1l-2.5 3z" fill="#e00"/><path d="M17.5 1l-.6 1.6.9.8-.4 1.6" stroke="#fff" fill="none" stroke-width=".5"/>',
 sweat:'<path d="M17.5 4q1.5 2 0 3t0-3z" fill="#4af"/>',horns:'<path d="M4 4l1 4 3-2zM18 4l-1 4-3-2z" fill="#c00"/>',horns2:'<path d="M4 2l2 5 2-1zM18 2l-2 5-2-1z" fill="#999"/>',
 tears:'<path d="M6.5 11v4M15.5 11v4" stroke="#4af" stroke-width="1.3" class="tear"/>',halo:'<ellipse cx="11" cy="2" rx="5" ry="1.3" fill="none" stroke="#fd0" stroke-width="1.2"/>',
 hand:'<path d="M17 13h3v-4h1v6h-4z" fill="#fc9" stroke="#963" stroke-width=".5"/>',phone:'<rect x="16" y="9" width="3" height="7" rx="1" fill="#333"/>',steam:'<path d="M5 3q1-2 2 0t2 0M13 3q1-2 2 0t2 0" stroke="#999" fill="none" stroke-width=".8"/>',
 tee:'<path d="M15 3h5M17.5 3v4" stroke="#00c" stroke-width="1.2"/>',dream:'<circle cx="18" cy="4" r="1.5" fill="#fff" stroke="#99c" stroke-width=".5"/><circle cx="20" cy="2" r="1" fill="#fff" stroke="#99c" stroke-width=".5"/>',
-zzz:'<text x="15" y="5" font-size="5" fill="#33c" font-weight="bold">z</text>',L:'<text x="3" y="16" font-size="8" fill="#0a0" font-weight="bold">L</text>',green:'<circle cx="11" cy="11" r="9.5" fill="#9d5" opacity=".7"/>',
+zzz:'<g class="rc-float" fill="#5575d1" font-family="sans-serif" font-weight="bold"><text x="8" y="15" font-size="7">z</text><text x="13" y="10" font-size="9">z</text><text x="17" y="5" font-size="10">z</text></g>',L:'<text x="3" y="16" font-size="8" fill="#0a0" font-weight="bold">L</text>',green:'<circle cx="11" cy="11" r="9.5" fill="#9d5" opacity=".7"/>',
 nose:'<circle cx="11" cy="12" r="1.8" fill="#e22"/>',hat:'<path d="M6 3l5-3 5 3z" fill="#c3f" stroke="#609" stroke-width=".5"/>',drool:'<path d="M12 17v3" stroke="#6cf" stroke-width="1"/>',
 q:'<text x="16" y="6" font-size="6" fill="#00c" font-weight="bold">?</text>',clap:'<circle cx="3" cy="16" r="2" fill="#fc9"/><circle cx="19" cy="16" r="2" fill="#fc9"/>',clock:'<circle cx="18.5" cy="4" r="2.5" fill="#fff" stroke="#000" stroke-width=".5"/><path d="M18.5 4V2.5M18.5 4h1" stroke="#000" stroke-width=".5"/>',
 red:'<circle cx="11" cy="11" r="9.5" fill="#f53" opacity=".45"/>',cowboy:'<path d="M2 4h18l-3-1-1-3h-10l-1 3z" fill="#963"/>',thumbd:'<path d="M17 12h3v5h-1.5v2h-1.5z" fill="#fc9" stroke="#963" stroke-width=".5"/>',
@@ -88,6 +89,7 @@ const st=document.createElement('style');st.textContent=`.rcw{display:inline-blo
 @keyframes rcbl{50%{opacity:1}}.rcs .bl{animation:rcbl 1s infinite}
 @keyframes rcRetch{0%,28%,78%,100%{transform:scale(.92);opacity:0}36%,67%{transform:scale(1);opacity:1}}
 .rcs .rc-vomit{animation:rcRetch 1.8s ease-in-out infinite;transform-origin:11px 14.8px}
+@keyframes rcFloat{0%,100%{opacity:.5;transform:translateY(2px)}50%{opacity:1;transform:translateY(-2px)}}.rc-float{animation:rcFloat 1.6s ease-in-out infinite}
 @media(prefers-reduced-motion:reduce){.rcs,.rcs *{animation:none!important}}
 .rcs .tear{animation:rcbob .6s infinite}.rcs{transform-origin:11px 11px}`;document.head.appendChild(st);
 document.body.insertAdjacentHTML('beforeend','<svg width="0" height="0" style="position:absolute"><defs><radialGradient id="rcg" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fffac0"/><stop offset=".48" stop-color="#ffdf43"/><stop offset=".81" stop-color="#ffb913"/><stop offset="1" stop-color="#db8209"/></radialGradient><radialGradient id="rcg-green" cx=".34" cy=".3" r=".8"><stop offset="0" stop-color="#f1ffbe"/><stop offset=".5" stop-color="#b6df61"/><stop offset="1" stop-color="#579735"/></radialGradient></defs></svg>');

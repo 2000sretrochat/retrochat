@@ -2,7 +2,7 @@ const EM = require('./emails');
 const mailer = require('./mail');
 // Shared Razzle accounts and Messenger sockets.
 const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db'), geo = require('./geo');
-const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{2,19}$/, STATUSES = ['available', 'busy', 'away', 'brb', 'invisible'];
+const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{3,19}$/, STATUSES = ['available', 'busy', 'away', 'brb', 'invisible'];
 const AVATARS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sha = t => crypto.createHash('sha256').update(t).digest('hex');
@@ -50,7 +50,7 @@ function http(app, express, hooks = {}) { H = hooks;
     if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return res.status(403).json({ error: 'Sign-ups from your network are not allowed.' });
     if (limited('su:' + geo.clientIp(req.headers, req.socket.remoteAddress), +process.env.SIGNUP_LIMIT || 5, 3600e3)) return res.status(429).json({ error: 'Too many sign-ups from your network. Try again later.' });
     const { name, password, remember } = req.body || {}; let { email } = req.body || {}; if (typeof email === 'string') email = email.trim();
-    if (typeof name !== 'string' || !NAME_RE.test(name)) return res.status(400).json({ error: 'Screen names are 3-20 characters, start with a letter, and use letters, numbers, _ or .' });
+    if (typeof name !== 'string' || !NAME_RE.test(name)) return res.status(400).json({ error: 'Screen names are 4–20 characters, start with a letter, and use letters, numbers, _ or .' });
     if (req.body.agree !== true) return res.status(400).json({ error: 'Please agree to the Terms and Rules (18 or older) to sign up.' });
     if (RESERVED.test(name) || (H.reservedName && H.reservedName(name))) return res.status(400).json({ error: 'That screen name is not available.' });
     if (typeof password !== 'string' || password.length < 8 || password.length > 100) return res.status(400).json({ error: 'Passwords must be 8-100 characters.' });
@@ -350,7 +350,7 @@ function sockets(io, hooks) {
       if (recipient?.banned || recipient?.deactivated)
         return { error: 'This account cannot receive your private messages.' };
       if ((await db.q('select 1 from social_bot_members where user_id=$1', [t.id])).length)
-        return { error: t.name + ' is unavailable for private messages.' };
+        return { error: t.name + ' only accepts private messages from people on their contact list.' };
       if (recipient?.pm_buddies && !await mutual(t.id, uid))
         return { error: t.name + ' only accepts private messages from people on their contact list.' };
       if (!await mutual(uid, t.id))

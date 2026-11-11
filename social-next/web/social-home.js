@@ -1216,7 +1216,7 @@ function mountOwnerWallComposer() {
   form.querySelector('#plan-room-event')?.remove();
   form.id = 'wall-post-composer';
   form.hidden = false;
-  form.querySelector('.post-details')?.remove();
+  form.querySelectorAll('.post-details').forEach(field=>field.remove());
   const thought = document.createElement('textarea');
   thought.id = 'wall-text';
   thought.name = 'thought';
@@ -1232,7 +1232,7 @@ function mountOwnerWallComposer() {
   form.querySelector('.post-attachments').open = false;
   form.querySelector('.post-attachments input[type=file]').value = '';
   form.elements.attachmentUrl.value = '';
-  send.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M4 3.5 22 12 4 20.5z"/></svg>';
+  send.replaceChildren(send.querySelector('.wall-note-icon'));
   form.querySelector('.avatar').outerHTML = profileAvatar('Zainy');
   wall.replaceWith(form);
   mountPostDetails(form);

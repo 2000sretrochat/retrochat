@@ -539,7 +539,8 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
 .post-attachments > label { display: grid; gap: 4px; margin-top: 8px; }
 .post-attachments input { width: 100%; min-width: 0; font: inherit; }
 .post-attachments input[type=url] { padding: 8px; border: 1px solid #bfd3e9; border-radius: 5px; }
-#social-sidebar .wall-note-icon { width: 17px; height: 17px; vertical-align: -3px; margin-right: 4px; }
+.wall-note-icon { width: 17px; height: 17px; vertical-align: -3px; margin-right: 4px; }
+.wall-send .wall-note-icon { width: 20px; height: 20px; margin: 0; }
 .messenger-promo p { margin: 8px 0 12px; font-size: 13px; line-height: 1.45; }
 .messenger-promo .eyebrow { color: inherit; opacity: .85; }
 .messenger-promo > a.primary { display: inline-block; background: #fff !important; color: #004990 !important; border-color: #fff !important; }

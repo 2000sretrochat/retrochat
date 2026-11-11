@@ -96,9 +96,9 @@ const MESSENGER_VERSION = (() => { try { return require('./desktop/package.json'
 const roomList = (adult, vm) => Object.entries(ROOMS).filter(([n]) => adult || !adultR(n)).map(([name, cat]) => { const ss = seen(name, vm); return { name, cat, path: PATH[name] || [], topic: TOPICS[name], rating: rateOf(name), mics: micsOf(name), count: ss.length + botsIn(name).length, cams: ss.filter(x => x.data.cam).length, owner: UROOMS.get(name)?.owner || null, icon: UROOMS.get(name)?.icon || '', user: UROOMS.has(name) }; });
 // favorites + "mine" (owner/admin) decoration for a signed-in account
 const userFromReq = req => acc.userFromCookie(req.headers.cookie);
-async function decorate(list, acct) { if (!acct) return list; const lc = acct.name.toLowerCase(); let f = new Set();
+async function decorate(list, acct) { if (!acct) return list; const lc = acct.name.toLowerCase(); const canPeek=(await masterLc()).has(lc); let f = new Set();
   try { f = new Set((await db.q('select room from favorites where owner=$1', [lc])).map(r => r.room)); } catch {}
-  return list.map(r => ({ ...r, fav: f.has(r.name), mine: UROOMS.get(r.name)?.ownerLc === lc ? 'owner' : (MOD[r.name]?.admins?.has?.(lc) ? 'admin' : '') })); }
+  return list.map(r => ({ ...r, fav: f.has(r.name), ...(canPeek ? {canPeek:true} : {}), mine: UROOMS.get(r.name)?.ownerLc === lc ? 'owner' : (MOD[r.name]?.admins?.has?.(lc) ? 'admin' : '') })); }
 app.post('/api/fav', express.json(), async (req, res) => { const a = await userFromReq(req).catch(() => null); if (!a) return res.status(401).json({ error: 'Sign in to save favorites.' });
   const room = String(req.body?.room || ''); if (!ROOMS[room]) return res.status(404).json({ error: 'No such room.' }); const lc = a.name.toLowerCase();
   try { await db.q(req.body?.on ? 'insert into favorites(owner,room) values($1,$2) on conflict do nothing' : 'delete from favorites where owner=$1 and room=$2', [lc, room]); res.json({ ok: true }); } catch { res.status(503).json({ error: 'Favorites are unavailable right now.' }); } });
@@ -119,6 +119,10 @@ const RECW = require('./recordings').wireRecordings(REC, { app, express, emitRoo
 // room preview (Browse Rooms hover / long-press): who's inside, minus incognito masters and blocked users
 app.get('/api/peek', async (req, res) => { const room = String(req.query.room || ''); if (!ROOMS[room]) return res.json({ names: [] }); const a = await userFromReq(req).catch(() => null);
   if (adultR(room) && !(await isAdultReq(req))) return res.json({ names: [] });
+  if(req.query.full==='1') {
+    if(!a || !(await masterLc()).has(a.name.toLowerCase()))return res.status(403).json({error:'Room list preview is unavailable.'});
+    return res.set('Cache-Control','no-store').json({names:roster(room,true).map(person=>person.name)});
+  }
   let mine = new Set(); if (a) try { mine = new Set((await db.q('select blocked from blocks where owner=$1 union select owner from blocks where blocked=$1', [a.id])).map(r => r.blocked)); } catch { }
   const names = socks(room).filter(x => !x.data.inc && !(x.data.acct && mine.has(x.data.acct.id))).map(x => x.data.name).concat(botsIn(room).map(b => b.name || b));
   res.set('Cache-Control', 'no-store').json({ names: names.slice(0, 30), more: Math.max(0, names.length - 30) }); });
@@ -516,7 +520,7 @@ io.on('connection', s => {
     if (account && !s.data.acct) return cb({error:'Your room connection could not use your sign-in. Reload this page to reconnect.'});
     name = s.data.acct ? s.data.acct.name : String(name || '').trim();
     if (!s.data.acct) {
-      if (!/^[A-Za-z][A-Za-z0-9 _-]{2,19}$/.test(name)) return cb({ error: 'Guest screen names must be 3–20 characters, start with a letter, and use only letters, numbers, spaces, hyphens, or underscores.' });
+      if (!/^[A-Za-z][A-Za-z0-9 _-]{3,19}$/.test(name)) return cb({ error: 'Guest screen names must be 4–20 characters, start with a letter, and use only letters, numbers, spaces, hyphens, or underscores.' });
       if (/razzle/i.test(name)) return cb({ error: 'Guest screen names cannot contain “razzle”.' });
       const cleanName = name.toLowerCase().replace(/[013457]/g, digit => ({ 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't' })[digit]);
       const nameWords = cleanName.split(/[ _-]+/);
@@ -717,11 +721,11 @@ io.on('connection', s => {
   s.on('room:invite-decline', ({ id } = {}) => { if (!s.data.acct) return; AH.inviteAnswer({ uid: s.data.acct.id, name: s.data.acct.name }, id, false); });
   s.on('room:invite-accept', ({ id } = {}, cb) => { if (typeof cb !== 'function') return; if (!s.data.acct) return cb({ error: 'Sign in first.' }); cb(AH.inviteAnswer({ uid: s.data.acct.id, name: s.data.acct.name }, id, true)); });
   s.on('pm', async ({ to, text } = {}, cb) => { if (!s.data.name) return cb?.({ error: 'Join a room before sending a private message.' }); const id = users.get(String(to || '').toLowerCase()); const t0 = id && io.sockets.sockets.get(id), t = t0 && (!t0.data.inc || s.data.master) ? t0 : null;
-    text = String(text || '').trim().slice(0, MAXLEN); if (!text) return cb?.({ error: 'Enter a message.' }); { const fl = FLOOD.check(s.data.acct?.name || s.data.name, text, s.data.master); if (fl) return cb && cb({ error: fl }); } if (isBot(to)) return cb?.({ ok: true, text: esc(text) }); if (!t) return cb && cb({ error: to + ' is not online.' });
+    text = String(text || '').trim().slice(0, MAXLEN); if (!text) return cb?.({ error: 'Enter a message.' }); { const fl = FLOOD.check(s.data.acct?.name || s.data.name, text, s.data.master); if (fl) return cb && cb({ error: fl }); } if (isBot(to)) return cb?.({ error: 'This user only accepts private messages from people on their contact list.' }); if (!t) return cb && cb({ error: to + ' is not online.' });
     if (s.data.guest && !s.data.master && !(s.data.pmFrom && s.data.pmFrom.has(t.data.name.toLowerCase()))) return cb && cb({ error: 'Guests can only reply to private messages. Get a free screen name to start a conversation.' });
     if (t.data.guest && !s.data.guest) (t.data.pmFrom = t.data.pmFrom || new Set()).add(s.data.name.toLowerCase());
     const now = Date.now(); stamps = stamps.filter(x => now - x < 10000); if (stamps.length >= 5) return cb && cb({ error: 'You are sending messages too fast.' }); stamps.push(now);
-    if (!s.data.master && t.data.acct && ((s.data.acct && t.data.blk?.has(s.data.acct.id)) || (t.data.pmb && !(s.data.acct && await mutualC(t.data.acct.id, s.data.acct.id))))) return cb && cb({ error: "This user isn't accepting messages." });
+    if (!s.data.master && t.data.acct && ((s.data.acct && t.data.blk?.has(s.data.acct.id)) || (t.data.pmb && !(s.data.acct && await mutualC(t.data.acct.id, s.data.acct.id))))) return cb && cb({ error: 'This user only accepts private messages from people on their contact list.' });
     t.emit('pm', { from: s.data.name, text: esc(text), t: now }); cb && cb({ ok: true, text: esc(text) }); });
   // ---- ignore / block / privacy ----
   s.data.ign = s.data.ign || new Set();

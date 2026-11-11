@@ -80,7 +80,7 @@ a{color:var(--blue);cursor:pointer}
 #modal{display:none;position:fixed;inset:0;background:rgba(16,35,74,.35);z-index:200;align-items:center;justify-content:center}#modal.on{display:flex}
 #modal .win{width:320px}#modal .in{padding:12px;display:flex;flex-direction:column;gap:6px;background:#fff}
 @media (max-width:760px){#mwin{left:0;top:0;width:100%;height:100vh;max-height:none}.im{left:0!important;top:0!important;width:100%;height:100vh}.im .log{flex:1;height:auto}}
-</style><link rel="stylesheet" href="/modern.css?v=2"><script src="/theme.js"></script><script src="/icons.js"></script><script src="/flags.js"></script><link rel="stylesheet" href="/profile-interests.css"><script src="/profile-interests.js"></script><script src="/profile.js?v=5"></script>
+</style><link rel="stylesheet" href="/modern.css?v=2"><script src="/theme.js?v=6"></script><script src="/icons.js"></script><script src="/flags.js"></script><link rel="stylesheet" href="/profile-interests.css"><script src="/profile-interests.js"></script><script src="/profile.js?v=5"></script>
 <style>
 #mwin{left:20px;top:20px;width:310px;height:calc(100vh - 40px);max-height:720px}
 #signin{background:var(--card)!important;padding:28px 22px!important;gap:10px!important}#signin label{color:var(--ink)!important;font-weight:600!important}
@@ -213,7 +213,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
    <div>Don't have a screen name? <a id="toUp">Get one free</a></div>
   </div>
   <div id="fUp" style="display:none;flex-direction:column;gap:6px;align-self:stretch">
-   <label for="uName">Choose a screen name</label><input type="text" id="uName" maxlength="20" autocomplete="username"><div id="uAv" style="font-size:11px;min-height:14px"></div>
+   <label for="uName">Choose a screen name</label><input type="text" id="uName" minlength="4" maxlength="20" autocomplete="username"><div id="uAv" style="font-size:11px;min-height:14px"></div>
    <label for="uPw">Password (8+ characters)</label><input type="password" id="uPw" maxlength="100" autocomplete="new-password">
    <label for="uPw2">Confirm password</label><input type="password" id="uPw2" maxlength="100" autocomplete="new-password">
    <label for="uEm">Email</label><input type="email" id="uEm" required maxlength="200" autocomplete="email"><label style="font-weight:normal;display:flex;gap:6px;align-items:flex-start;margin-top:6px"><input type="checkbox" id="uAgree"> <span>I agree to the <a href="/terms" target="_blank">Terms and Rules</a> and I'm 18 or older</span></label>
@@ -257,7 +257,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"></template></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/desktop-signin.js"></script><script src="/desktop-updates.js"></script><script src="/device.js"></script><script src="/yd.js?v=5"></script><script src="/browse.js"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=2"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=5">
+<script src="/desktop-signin.js"></script><script src="/desktop-updates.js"></script><script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=6"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=6">
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=isRoomSignIn?['Razzle',' Chat']:['Razzle',''];
@@ -312,7 +312,7 @@ if (isRoomSignIn && roomSignInParams.get('signup') === '1') $('toUp').click();
 async function doIn(){$('eIn').textContent='';const r=window.RazzleSignin&&RazzleSignin.active?await RazzleSignin.signIn():await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;if(!isRoomSignIn)await api('/api/signin-presence',{invisible:$('iInv').checked}).catch(()=>{});$('iPw').value='';start();masterCheck()}
 $('bIn').onclick=doIn;['iName','iPw'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doIn()}}));
 let avT;$('uName').addEventListener('input',()=>{clearTimeout(avT);const n=$('uName').value.trim();if(!n)return $('uAv').textContent='';avT=setTimeout(async()=>{const r=await fetch('/api/available?name='+encodeURIComponent(n)).then(r=>r.json()).catch(()=>({}));
- $('uAv').innerHTML=r.valid===false?'<span class=err>3-20 characters, start with a letter; letters, numbers, _ or .</span>':r.available?'<span class=ok>&#10004; '+escT(n)+' is available</span>':r.error?'':'<span class=err>&#10008; '+escT(n)+' is taken</span>'},350)});
+ $('uAv').innerHTML=r.valid===false?'<span class=err>4–20 characters, start with a letter; letters, numbers, _ or .</span>':r.available?'<span class=ok>&#10004; '+escT(n)+' is available</span>':r.error?'':'<span class=err>&#10008; '+escT(n)+' is taken</span>'},350)});
 async function doUp(){$('eUp').textContent='';if(!$('uEm').checkValidity()){$('uEm').reportValidity();return;}if($('uPw').value!==$('uPw2').value)return $('eUp').textContent='Passwords do not match.';
  if(!$('uAgree').checked)return $('eUp').textContent='Please agree to the Terms and Rules (18 or older) to sign up.';const r=await api('/api/signup',{agree:true,name:$('uName').value.trim(),password:$('uPw').value,email:$('uEm').value.trim(),remember:$('uRem').checked});if(r.error)return $('eUp').textContent=r.error;window.RazzleSignin&&RazzleSignin.note($('uName').value.trim());$('uPw').value=$('uPw2').value='';if (window.YVerify) await YVerify.send(); start()}
 $('bUp').onclick=doUp;$('fUp').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doUp()}});
@@ -462,7 +462,7 @@ async function loadBr(){try{const response=await fetch('/api/rooms');if(!respons
 setInterval(()=>{if(brEl.classList.contains('on'))loadBr()},5000);
 function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLowerCase():'';
  const mt=r=>!q||r.name.toLowerCase().includes(q)||(r.topic||'').toLowerCase().includes(q);
- const row=r=>`<div class=rrow>${YBrowse.star(r)}${r.icon?`<span class=rtileic>${r.icon}</span>`:YI.room(r.name,40)}<div class=t><div class=rn>${escT(r.name)}${YProf.badge(r.rating)}${r.mine?' <small>('+r.mine+')</small>':''}</div><div class=tp>${escT(r.topic||'')}</div></div><div class=uc title="people / on cam">${YI.svg('users',18)}${r.count}${r.cams?' &middot; &#128247;'+r.cams:''}</div><button class="btn join" data-r="${escT(r.name)}">Join</button></div>`;
+ const row=r=>`<div class=rrow>${YBrowse.star(r)}${r.icon?`<span class=rtileic>${r.icon}</span>`:YI.room(r.name,40)}<div class=t><div class=rn>${escT(r.name)}${YProf.badge(r.rating)}${r.mine?' <small>('+r.mine+')</small>':''}</div><div class=tp>${escT(r.topic||'')}</div></div><div class=uc title="people / on cam">${YI.svg('users',18)}${r.count}${r.cams?' &middot; &#128247;'+r.cams:''}</div>${r.canPeek?`<button type="button" class="btn room-peek-button" data-room-peek="${escT(r.name)}" aria-label="See who is in ${escT(r.name)}" title="See who is in this room">${YI.svg('users',16)}</button>`:''}<button class="btn join" data-r="${escT(r.name)}">Join</button></div>`;
  const hd=t=>`<div style="padding:6px 10px;font-weight:700;background:var(--soft,#eaf3fd)">${escT(t)}</div>`;let h='';
  if(brTab=='top'){const t=YBrowse.top(brRooms.filter(mt));h=hd('Top 10 busiest rooms (live)')+t.map(row).join('')}
  else if(brTab=='mine')h=YBrowse.mine(brRooms,me).filter(mt).map(row).join('');
