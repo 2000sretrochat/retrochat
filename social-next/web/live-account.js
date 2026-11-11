@@ -124,13 +124,29 @@
       return '<label>'+platformIcon(paths)+title+'<span class="profile-domain-field"><span>'+domain+'/</span><input name="socialLink'+i+'" maxlength="350" aria-label="'+title+' channel or profile" placeholder="'+(i===0?'@yourchannel':'yourname')+'" value="'+esc(path)+'" autocomplete="off"></span></label>';
     }).join('');form.querySelector('button.primary').before(fields);
   };
-  function albumMarkup(record,owner=false){const photos=(record.gallery||[]).filter(p=>!publicPreview||p.mode==='public');return '<section class="space-card messenger-photo-album"><h3>Messenger profile pictures</h3><p>Public Messenger photos. Your Social profile picture is separate.</p><div class="social-profile-gallery">'+photos.map((p,i)=>'<figure><img src="'+esc(p.image)+'" alt="Messenger profile picture '+(i+1)+'">'+(owner&&p.id===record.galleryDefault?'<figcaption>Messenger default</figcaption>':'')+'</figure>').join('')+'</div>'+(!photos.length?'<p>No Messenger profile pictures yet.</p>':'')+(owner&&!publicPreview?'<a class="text-action" href="/?chat=1" target="_blank" rel="noopener">Manage pictures in Messenger</a>':'')+'</section><section class="space-card timeline-photo-album"><h3>Timeline photos</h3><p>Photos with their original captions and audiences.</p><div class="timeline-photo-list" data-photo-owner="'+esc(record.name)+'"></div></section>';}
+  let profileMode='owner';
+  function previewAllows(policy, fallback='profile'){
+    const mode=policy?.mode || fallback;
+    return mode==='public' || mode==='post' || mode==='friends' && profileMode==='friend' ||
+      mode==='profile' && (profileMode==='friend' || visibility!=='private');
+  }
+  function messengerGallery(photos){
+    return photos?.length?'<section class="space-card"><h3>Messenger profile pictures</h3><div class="social-profile-gallery">'+
+      photos.map((photo,i)=>'<button type="button" class="profile-photo-open" data-profile-photo aria-label="Open Messenger profile picture '+(i+1)+'"><img src="'+esc(photo.image)+'" alt="Messenger profile picture '+(i+1)+'"></button>').join('')+'</div></section>':'';
+  }
+  function privateNotice(actions=''){
+    return '<section class="space-card private-notice"><h3>This profile is private</h3><p>Add this person as a friend to see their full profile, or send them a message.</p>'+actions+'</section>';
+  }
+  function albumMarkup(record,owner=false){const photos=(record.gallery||[]).filter(p=>!publicPreview||p.mode==='public'||profileMode==='friend'&&p.mode==='friends');return '<section class="space-card messenger-photo-album"><h3>Messenger profile pictures</h3><p>Public Messenger photos. Your Social profile picture is separate.</p><div class="social-profile-gallery">'+photos.map((p,i)=>'<figure><img src="'+esc(p.image)+'" alt="Messenger profile picture '+(i+1)+'">'+(owner&&p.id===record.galleryDefault?'<figcaption>Messenger default</figcaption>':'')+'</figure>').join('')+'</div>'+(!photos.length?'<p>No Messenger profile pictures yet.</p>':'')+(owner&&!publicPreview?'<a class="text-action" href="/?chat=1" target="_blank" rel="noopener">Manage pictures in Messenger</a>':'')+'</section><section class="space-card timeline-photo-album"><h3>Timeline photos</h3><p>Photos with their original captions and audiences.</p><div class="timeline-photo-list" data-photo-owner="'+esc(record.name)+'"></div></section>';}
+  function renderTimelinePhotos(container,rows){
+      rows.forEach(post=>container.insertAdjacentHTML('beforeend','<figure class="timeline-photo"><button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Timeline photo"></button><figcaption><p>'+esc(post.text||'')+'</p><small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></figcaption>'+(!publicPreview&&post.author_id===myId?'<button type="button" class="text-action" data-shared-edit="'+post.id+'">Edit caption or audience</button>':'')+'</figure>'));
+  }
   async function loadTimelinePhotos(container,before='',cursorId=''){
     if(!container.isConnected)return;
     const query=new URLSearchParams({name:container.dataset.photoOwner,before,cursorId});if(publicPreview)query.set('public','1');
     try{const rows=await api('/photos?'+query);if(!container.isConnected)return;
       container.querySelector('[data-photo-next]')?.remove();
-      rows.map(normalize).forEach(post=>container.insertAdjacentHTML('beforeend','<figure class="timeline-photo"><button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Timeline photo"></button><figcaption><p>'+esc(post.text||'')+'</p><small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></figcaption>'+(!publicPreview&&post.author_id===myId?'<button type="button" class="text-action" data-shared-edit="'+post.id+'">Edit caption or audience</button>':'')+'</figure>'));
+      renderTimelinePhotos(container,rows.map(normalize));
       if(!rows.length&&!before)container.textContent='No timeline photos to show.';
       if(rows.length===40){const last=rows[rows.length-1],b=document.createElement('button');b.type='button';b.dataset.photoNext='';b.className='secondary';b.textContent='More photos';b.onclick=()=>{b.disabled=true;loadTimelinePhotos(container,last.created,last.id);};container.append(b);}
     }catch(error){const b=container.querySelector('[data-photo-next]');if(b)b.disabled=false;toast(error.message);}
@@ -160,30 +176,55 @@
       .map(sharedCard).join('') || '<section class="empty">No posts yet. Share something or visit a friend’s space.</section>';
   };
   function renderOwner() {
+    if(!publicPreview)profileMode='owner';
     ownerProfile(me);
+    publicPreview=profileMode!=='owner';
     document.querySelectorAll('.space-actions button,.space-posts > .empty button').forEach(button=>{if(/share something/i.test(button.textContent))button.remove();});
     const toolbar=document.querySelector('.profile-toolbar');
     if(toolbar){
       toolbar.classList.add('profile-view-toolbar');
-      toolbar.innerHTML='<div class="profile-view-tabs" role="group" aria-label="Profile viewing mode"><button type="button" data-profile-mode="owner" aria-pressed="'+!publicPreview+'">My Profile</button><button type="button" data-profile-mode="visitor" aria-pressed="'+publicPreview+'">Visitor View</button></div><span class="profile-visibility-badge">'+(visibility==='private'?'Private profile':'Public profile')+'</span><button type="button" class="profile-view-settings" aria-label="Appearance and privacy settings" title="'+(publicPreview?'Return to My Profile to change settings':'Appearance and privacy settings')+'" '+(publicPreview?'disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m10 3-.7 2.1-2 .9-2-.5-2 3.4 1.4 1.6v2.9l-1.4 1.6 2 3.5 2-.5 2 .9L10 21h4l.7-2.1 2-.9 2 .5 2-3.5-1.4-1.6v-2.9L20.7 9l-2-3.5-2 .5-2-.9L14 3z"/><circle cx="12" cy="12" r="3"/></svg></button><p class="profile-view-explanation">'+(publicPreview?(visibility==='private'?'Visitor view · Non-friends see your private-profile notice and public photos.':'Visitor view · This is what people outside your friends list can see.'):'My Profile · Edit your profile and manage your posts and photos.')+'</p>';
-      toolbar.querySelectorAll('[data-profile-mode]').forEach(button=>button.onclick=()=>{publicPreview=button.dataset.profileMode==='visitor';profile(me);});
+      const modes=[['owner','My Profile'],['friend','Friend View'],['public','Public View']];
+      toolbar.innerHTML='<div class="profile-view-tabs" role="group" aria-label="Profile viewing mode">'+
+        modes.map(([mode,label])=>'<button type="button" data-profile-mode="'+mode+'" aria-pressed="'+(mode===profileMode)+'">'+label+'</button>').join('')+
+        '</div><span class="profile-visibility-badge">'+(visibility==='private'?'Private profile':'Public profile')+'</span><button type="button" class="profile-view-settings" aria-label="Appearance and privacy settings" title="'+(publicPreview?'Return to My Profile to change settings':'Appearance and privacy settings')+'" '+(publicPreview?'disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m10 3-.7 2.1-2 .9-2-.5-2 3.4 1.4 1.6v2.9l-1.4 1.6 2 3.5 2-.5 2 .9L10 21h4l.7-2.1 2-.9 2 .5 2-3.5-1.4-1.6v-2.9L20.7 9l-2-3.5-2 .5-2-.9L14 3z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+      toolbar.querySelectorAll('[data-profile-mode]').forEach(button=>button.onclick=()=>{
+        profileMode=button.dataset.profileMode;
+        publicPreview=profileMode!=='owner';
+        profile(me);
+      });
       toolbar.querySelector('.profile-view-settings').onclick=()=>{if(!publicPreview)appearanceSettings();};
     }
     if(publicPreview)document.querySelector('.profile-wall')?.remove();
+    if(profileMode==='public' && visibility==='private'){
+      const about=$('.space-about');
+      const card=about?.firstElementChild;
+      if(card){
+        [...card.children].filter(node=>!node.matches('.profile-portrait,h2,.handle')).forEach(node=>node.remove());
+        [...about.children].slice(1).forEach(node=>node.remove());
+        api('/profile/'+encodeURIComponent(me)).then(record=>{
+          if(about.isConnected)about.insertAdjacentHTML('beforeend',messengerGallery((record.gallery||[]).filter(photo=>photo.mode==='public')));
+        }).catch(error=>toast(error.message));
+      }
+      const actions='<div class="space-actions"><button type="button" class="secondary" disabled>Add friend</button><button type="button" class="secondary" disabled>Message</button></div>';
+      const stream=$('.space-posts');
+      if(stream)stream.innerHTML=privateNotice(actions);
+      return;
+    }
     document.querySelector('.space-about > .space-card')?.insertAdjacentHTML('beforeend',socialLinksMarkup(session.settings.socialLinks));
     const stream=$('.space-posts');
     stream?.querySelectorAll(':scope > .post').forEach(node=>node.remove());
     mountAudience($('#wall-post-composer'));
-    const publicPost=post=>post.audience?.post?.mode==='public' || (!post.audience?.post?.mode || post.audience.post.mode==='profile') && visibility!=='private';
-    const publicPhoto=post=>!post.audience?.photo?.mode || ['post','public','profile'].includes(post.audience.photo.mode);
-    const posts=publicPreview?own.filter(publicPost).map(post=>publicPhoto(post)?post:{...post,image:null}).filter(post=>post.text||post.url||post.image):own;
+    const posts=publicPreview?own.filter(post=>previewAllows(post.audience?.post))
+      .map(post=>previewAllows(post.audience?.photo,'post')?post:{...post,image:null})
+      .filter(post=>post.text||post.url||post.image):own;
     const photoBox=[...document.querySelectorAll('.space-about > .space-card')].find(card=>card.querySelector('h3')?.textContent.startsWith('My photos'));
     if(photoBox)photoBox.innerHTML='<h3>Photos</h3><button type="button" class="text-action" data-open-albums>View photo albums</button>';
+    if(publicPreview){const tabs=stream?.querySelectorAll('.space-tabs button');if(tabs?.length){tabs[0].textContent='Posts ('+posts.length+')';if(tabs[1])tabs[1].textContent='Photos';}}
     if(spaceTab==='posts')stream?.insertAdjacentHTML('beforeend',posts.map(sharedCard).join(''));
-    if(stream&&(spaceTab==='photos'||publicPreview&&visibility==='private')){
+    if(stream&&spaceTab==='photos'){
       if(spaceTab==='photos')stream.querySelectorAll(':scope > :not(.space-tabs)').forEach(node=>node.remove());
       const albums=document.createElement('div');albums.className='profile-albums';stream.append(albums);
-      api('/profile/'+encodeURIComponent(me)).then(record=>{if(!albums.isConnected)return;albums.innerHTML=albumMarkup(record,true);loadTimelinePhotos(albums.querySelector('.timeline-photo-list'));}).catch(error=>toast(error.message));
+      api('/profile/'+encodeURIComponent(me)).then(record=>{if(!albums.isConnected)return;albums.innerHTML=albumMarkup(record,true);const timeline=albums.querySelector('.timeline-photo-list');if(profileMode==='friend'){const photos=posts.filter(post=>post.image);renderTimelinePhotos(timeline,photos);if(!photos.length)timeline.textContent='No timeline photos to show.';}else{loadTimelinePhotos(timeline);}}).catch(error=>toast(error.message));
     }
     loadArticlePreviews();
   }
@@ -201,16 +242,18 @@
       $('#content').classList.remove('custom-space');$('#content').removeAttribute('style');
       $('#heading').textContent=record.displayName;$('#subheading').textContent='@'+record.name.toLowerCase();
       const wall=record.friend&&!record.private?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message"></textarea><button class="primary">Post</button></form></section>':'';
-      const gallery=record.gallery?.length?'<section class="space-card"><h3>Messenger profile pictures</h3><div class="social-profile-gallery">'+record.gallery.map((photo,i)=>'<img src="'+esc(photo.image)+'" alt="Profile photo '+(i+1)+'">').join('')+'</div></section>':'';
+      const gallery=messengerGallery(record.gallery);
+      const message='<button type="button" class="secondary" data-live-message="'+esc(record.name)+'">Message</button>';
+      const add=!record.friend && record.canRequest?'<button type="button" class="secondary" data-live-request="'+esc(record.name)+'"'+(record.requestPending?' disabled>Request sent':'>Add friend')+'</button>':'';
+      const actions=message+add;
       $('#content').innerHTML='<div class="space-layout"><aside class="space-about"><section class="space-card">'+
         (record.settings.portrait?'<img class="profile-portrait" src="'+esc(record.settings.portrait)+'" alt="Profile photo">':profileAvatar(record.name))+
         socialLinksMarkup(record.settings.socialLinks)+'<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span>'+(record.bot?'<p class="bot-profile-badge">Chat bot</p>':'')+'<p>'+esc(record.bio || '')+
         '</p><div class="profile-basics">'+esc([record.age,record.sex,record.location].filter(Boolean).join(' · '))+'</div><div class="space-actions">'+
-        '<button class="secondary" data-live-message="'+esc(record.name)+'">Message</button>'+
-        (!record.friend && record.canRequest?'<button type="button" class="secondary" data-live-request="'+esc(record.name)+'"'+(record.requestPending?' disabled>Request sent':' >Add friend')+'</button>':'')+
+        (record.private?'':actions)+
         '<button class="text-action" data-profile-block="'+esc(record.name)+'" data-blocked="'+record.blocked+'">'+(record.blocked?'Unblock':'Block')+'</button>'+
         '<button class="text-action" data-profile-report="'+esc(record.name)+'">Report</button></div></section>'+gallery+'</aside><section class="space-posts">'+
-        (record.private?'<section class="space-card private-notice"><h3>Private profile</h3><p>This person shares their space with friends.</p></section>':wall)+rows.map(normalize).map(sharedCard).join('')+'<details class=space-card><summary>Photos</summary>'+albumMarkup(record)+'</details></section></div>';
+        (record.private?privateNotice('<div class="space-actions">'+actions+'</div>'):wall+rows.map(normalize).map(sharedCard).join('')+'<details class="space-card"><summary>Photos</summary>'+albumMarkup(record)+'</details>')+'</section></div>';
       document.querySelectorAll('.timeline-photo-list').forEach(container=>loadTimelinePhotos(container));
       mountAudience($('#friend-wall-form'));
       loadArticlePreviews();
@@ -430,7 +473,7 @@
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button)return;
     const d=button.dataset;
-    if(!Object.keys(d).some(key=>['openAlbums','sharedPin','sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','sharedAccept','sharedDecline','sharedNotification','sharedOffline','liveMessage','liveRequest','liveRemove'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
+    if(!Object.keys(d).some(key=>['openAlbums','sharedPin','sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','profilePhoto','sharedAccept','sharedDecline','sharedNotification','sharedOffline','liveMessage','liveRequest','liveRemove'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
     event.preventDefault();event.stopImmediatePropagation();
     try {
       if(d.sharedLike){like(d.sharedLike);return;}
@@ -450,6 +493,11 @@
         mountPostDetails($('#shared-edit-form'),post);mountAudience($('#shared-edit-form'),{post:{mode:'profile'},...post.audience},!!post.image);return;
       } else if(d.openAlbums!==undefined){spaceTab='photos';profile(me);return;}
       else if(d.sharedPin){await api('/posts/'+encodeURIComponent(d.sharedPin)+'/pin','PUT',{pinned:d.pinned!=='true'});}
+      else if(d.profilePhoto!==undefined){
+        const image=button.querySelector('img');
+        if(image)modal('<h2>Messenger profile picture</h2><img class="profile-photo-detail" src="'+esc(image.getAttribute('src'))+'" alt="'+esc(image.alt)+'">');
+        return;
+      }
       else if(d.sharedPhoto){const post=postsById.get(d.sharedPhoto);if(post?.image)modal('<h2>Photo</h2><p>'+esc(post.text||'')+'</p><img class="profile-photo-detail" src="'+esc(post.image)+'" alt="Shared photo">');return;}
       else if(d.liveMessage){privateChat(d.liveMessage);return;}
       else if(d.liveRequest){
