@@ -141,8 +141,8 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
  <div id="menu">
   <div>Messenger<div class="dd"><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom" title="Let friends see which chat room you are in">&#10003; Show the room I'm in</div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
-  <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mProf">View Profile of Selected</div><div id="mMyProf">Edit My Profile...</div><div id="mGroup" style="display:none"></div><div id="mMove" style="display:none"></div><hr><div id="mRem">Remove Selected Contact</div><div id="mBlock">Block Selected Contact</div><div id="mBlocked">Blocked List...</div></div></div>
-  <div>Actions<div class="dd"><div id="mIm">Send a PM to Selected</div><div id="mBuzz">Buzz Selected</div><div id="mInv">Invite to Room</div><hr><div id="mRooms">Browse Chat Rooms...</div></div></div>
+  <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mMyProf">Edit My Profile...</div><div id="mGroup" style="display:none"></div><div id="mMove" style="display:none"></div><hr><div id="mBlocked">Blocked List...</div></div></div>
+  
   <div>Help<div class="dd"><div id="mHelp">Getting Started</div><div id="mAbout">About</div></div></div>
  </div>
  <div id="signin">
@@ -170,7 +170,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  </div>
  <div id="main">
   <div id="me"><div class="av" id="myav" title="Change display image"></div><div class="info"><div class="nm" id="myname"></div>
-   <div class=stw><span class="sdot available" id=stdot></span><select id="stsel"><option value="available">Available</option><option value="busy">Busy</option><option value="away">Away</option><option value="brb">Be Right Back</option><option value="invisible">Invisible</option><option disabled>──────────</option><option value="showroom">&#128172; Show the room I'm in</option></select></div>
+   <div class=stw><span class="sdot available" id=stdot></span><select id="stsel"><option value="available">Available</option><option value="busy">Do Not Disturb</option><option value="away">Away</option><option value="brb">Be Right Back</option><option value="invisible">Invisible</option><option disabled>──────────</option><option value="showroom">&#128172; Show the room I'm in</option></select></div>
    <div class=mind><span id="mydevice"></span><input type="text" id="smsg" maxlength="60" placeholder="What's on your mind?"><i data-i=pencil data-s=16></i></div></div></div>
   <div id="avpick"></div>
   <div id="search"><div class=srch><i data-i=search data-s=18></i><input type="text" id="q" placeholder="Search contacts..."></div></div>
@@ -182,13 +182,13 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div id="foot"><a id="footBrand" data-home-link href="/social-next/" target="_blank" rel="noopener noreferrer" title="Open Razzle Social" style="display:contents;color:inherit;text-decoration:none;cursor:pointer"><span class=lgs2 style="cursor:pointer"></span><span class="brandname appname" style="cursor:pointer"></span></a></div>
 </div>
 <div id="brw" class="win"><div class=tbar><span class=lgs></span><span>Browse Chat Rooms</span><span class=sp></span><span class="wb x" id=brX><i data-i=close data-s=16></i></span></div>
- <div class=yonline style="font:bold 12px Tahoma;color:#2a7a2a;padding:4px 8px"></div><div class=tabs><div class=on data-t=mine>My Rooms</div><div data-t=top>Top Rooms</div><div data-t=all>Browse Rooms</div></div>
+ <div class=yonline style="font:bold 12px Tahoma;color:#2a7a2a;padding:4px 8px"></div><div class=tabs><div data-t=mine>My Rooms</div><div data-t=top>Top Rooms</div><div class="on" data-t=all>Browse Rooms</div></div>
  <div class=srch><i data-i=search data-s=18></i><input id=brq placeholder="Search rooms..."></div>
  <div id=brl></div>
- <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"><div class="adph adph-b"></div></template></div>
+ <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"></template></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/device.js"></script><script src="/yd.js"></script><script src="/browse.js"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=2"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script>
+<script src="/device.js"></script><script src="/yd.js"></script><script src="/browse.js"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=2"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css">
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',''];
@@ -200,7 +200,7 @@ const $=id=>document.getElementById(id)||window.ydFind(id);
 const escT=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const avHtml=(a,cls='',name)=>YAv.html(name||'x',a,cls);
 function setMyAv(){const sd=$('stdot');if(sd)sd.className='sdot '+(ME.status||'available');const st=ME.status=='invisible'?'invisible':ME.status;$('myav').outerHTML=avHtml(ME.avatar,'ring r-'+st,ME.name).replace('class="av ','id="myav" title="Change my avatar" class="av ');$('myav').onclick=pickAv}
-const STL={available:'Available',busy:'Busy',away:'Away',brb:'Be Right Back',invisible:'Invisible',offline:'Offline',idle:'Idle'};
+const STL={available:'Available',busy:'Do Not Disturb',away:'Away',brb:'Be Right Back',invisible:'Invisible',offline:'Offline',idle:'Idle'};
 const api=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{}),credentials:'same-origin'}).then(async r=>({status:r.status,...await r.json().catch(()=>({error:'Server error'}))}));
 let S=null,ME=null,contacts={},blockedCards={},groups=['Friends'],blockedL=[],sel=null,closedG=new Set(JSON.parse(localStorage.ycClosed||'[]'));
 let sound=localStorage.ycSound!=='off';window.addEventListener('ycsound',()=>{sound=localStorage.ycSound!=='off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')});
@@ -319,7 +319,7 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=[...Object.values
  $('tree').innerHTML=gs.map(g=>{const l=cs.filter(c=>(g=='Online')==!!c.online).sort((a,b)=>(b.online-a.online)||a.name.localeCompare(b.name));const on=l.filter(c=>c.online).length;
   return `<div class="grp${closedG.has(g)?' closed':''}" data-g="${escT(g)}">${escT(g)} (${l.length})</div>`+(closedG.has(g)?'':l.map(c=>{const blocked=isBlockedContact(c.name);const st=c.online?(c.idle?'idle':c.status):'offline';
    return `<div class="ct${blocked?' is-blocked':''}${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${blocked?'Blocked':STL[st]}"><span class=avw>${avHtml(c.avatar,'sm',c.name)}${blocked?'<span class=blocked-avatar-mark role=img aria-label=Blocked><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m5 5 14 14"/></svg></span>':''}<span class="sdot ${st}"></span></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${blocked?'<span class=blocked-contact-label>Blocked</span> · ':RazzleDevice.icon(c.device,c.online)}${c.online&&c.room?`<a href="#" data-jr="${escT(c.room)}" title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>${c.msg&&!c.showRoom?' &middot; '+RCSmileys.replace(c.msg):''}`:c.msg?RCSmileys.replace(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
-  +(MW?`<div class="grp${closedG.has('Watching')?' closed':''}" data-g="Watching">Watching (${watchL.length})</div>`+(closedG.has('Watching')?'':watchL.map(w=>`<div class="ct wct${w.online?'':' off'}" data-w="${escT(w.name)}" title="${escT(w.name)}${w.room?' - in '+escT(w.room):''}${w.ip?' - '+escT(w.ip)+(w.loc?' \u00b7 '+escT(w.loc):''):''}"><span class=avw>${avHtml('a1','sm',w.name)}<span class="sdot ${w.online?escT(w.status||'available'):'offline'}"></span></span><div class=t><div class=n>${escT(w.name)}</div><div class=sm>${w.online?(w.room?'In room: '+escT(w.room)+' &middot; ':'')+(w.msg?RCSmileys.replace(w.msg):STL[w.status]||'Online'):'Offline'}${w.ip?`<div class=sm style="opacity:.75">${escT(w.ip)}${w.loc?' &middot; '+escT(w.loc):''}</div>`:''}</div></div></div>`).join('')):'')
+  +(MW?`<div class="grp${closedG.has('Watching')?' closed':''}" data-g="Watching"><span class="watch-shield" title="Master only" aria-label="Master only">${YI.svg('shield',15)}</span> Watching (${watchL.length})</div>`+(closedG.has('Watching')?'':watchL.map(w=>`<div class="ct wct${w.online?'':' off'}" data-w="${escT(w.name)}" title="${escT(w.name)}${w.room?' - in '+escT(w.room):''}${w.ip?' - '+escT(w.ip)+(w.loc?' \u00b7 '+escT(w.loc):''):''}"><span class=avw>${avHtml('a1','sm',w.name)}<span class="sdot ${w.online?escT(w.status||'available'):'offline'}"></span></span><div class=t><div class=n>${escT(w.name)}</div><div class=sm>${w.online?(w.room?'In room: '+escT(w.room)+' &middot; ':'')+(w.msg?RCSmileys.replace(w.msg):STL[w.status]||'Online'):'Offline'}${w.ip?`<div class=sm style="opacity:.75">${escT(w.ip)}${w.loc?' &middot; '+escT(w.loc):''}</div>`:''}</div></div></div>`).join('')):'')
   +(cs.length||q||MW?'':'<div style="padding:10px;color:var(--muted)">No contacts yet. Click <b>Add a Contact</b> to send a buddy request.</div>');
  document.querySelectorAll('.grp').forEach(e=>e.onclick=()=>{const g=e.dataset.g;closedG.has(g)?closedG.delete(g):closedG.add(g);localStorage.ycClosed=JSON.stringify([...closedG]);render()});
  document.querySelectorAll('.wct').forEach(e=>e.oncontextmenu=async ev=>{ev.preventDefault();if(confirm('Stop watching '+e.dataset.w+'?')){await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:e.dataset.w,remove:true})});loadWatch()}});
@@ -340,34 +340,33 @@ const openContactMenu=createMessengerContactMenu({
  isSelf:name=>name.toLowerCase()===ME?.name.toLowerCase(),
  canInvite:name=>invOk(name),
  actions:{
-  profile:()=>$('mProf').click(),message:()=>$('mIm').click(),invite:()=>$('mInv').click(),
-  remove:()=>$('mRem').click(),block:()=>$('mBlock').click(),
+  profile:n=>YProf.show(n,{me:ME?.name}),message:openIm,invite,
+  remove:removeContact,block:blockContact,
   unblock:async name=>{const result=await emit('m:block',{name,on:false});if(result.error)toast(result.error);}
  }
 });
 function showReq(request){messengerInbox.add(request);SND.im();toast(escT(request.name)+' sent you a contact request.');}
-const addC=()=>modal('Add a Contact','Screen name:<input type=text id=an maxlength=20>Message (optional):<input type=text id=am maxlength=120 placeholder="Hi, it\'s me!">',async()=>{const r=await emit('m:add',{name:$('an').value.trim(),msg:$('am').value});if(!r.error)toast(r.text);return r},'Send Request');
+const addC=(name='')=>{if(!ME)return alert('Sign in to find contacts.');RazzleContactSearch.open({name:typeof name==='string'?name:'',emit,view:n=>YProf.show(n,{me:ME.name}),block:blockContact});};
 $('bAdd').onclick=$('mAdd').onclick=addC;
 const need=()=>{if(!sel){alert('Select a contact first.');return null}return sel};
-$('mRem').onclick=()=>{const n=need();if(n&&confirm('Remove '+n+' from your contacts?'))emit('m:remove',{name:n})};
-$('mBlock').onclick=()=>{const n=need();if(n&&confirm('Block '+n+'? They will be removed from your contacts and cannot message you.'))emit('m:block',{name:n}).then(r=>{if(r.error)toast(r.error)})};
+function removeContact(n){if(confirm('Remove '+n+' from your contacts?'))return emit('m:remove',{name:n});}
+async function blockContact(n){if(!confirm('Block '+n+'? They will be removed from your contacts and cannot message you.'))return;const r=await emit('m:block',{name:n});if(r.error)toast(escT(r.error));return r;}
 $('mBlocked').onclick=()=>modal('Blocked List',blockedL.length?blockedL.map(n=>`<label><input type=checkbox value="${escT(n)}"> ${escT(n)}</label>`).join('')+'<small>Tick names to unblock.</small>':'Nobody is blocked.',async()=>{for(const c of $('mdB').querySelectorAll('input:checked')){await emit('m:block',{name:c.value,on:false});blockedL=blockedL.filter(x=>x!=c.value)}},'Unblock');
 $('mGroup').onclick=()=>modal('Add a Group','Group name:<input type=text id=gn maxlength=24>',async()=>{const r=await emit('m:group',{group:$('gn').value});if(r.group&&!groups.includes(r.group)){groups.push(r.group);render()}return r});
 $('mMove').onclick=()=>{const n=need();if(!n)return;modal('Move '+n,`Move to group:<select id=gm>${groups.map(g=>`<option>${escT(g)}</option>`).join('')}</select>`,async()=>{const r=await emit('m:group',{name:n,group:$('gm').value});if(r.group){contacts[n.toLowerCase()].group=r.group;render()}return r})};
-$('mIm').onclick=()=>{const n=need();n&&openIm(n)};$('mBuzz').onclick=()=>{const n=need();n&&buzz(n)};
 const mobileBrowse=()=>!YD && matchMedia('(max-width: 760px)').matches;
 function openBrowseDestination(path){
  if(!mobileBrowse()){window.open(path,'yapprooms');return;}
  try{window.top.location.assign(path);}catch{location.assign(path);}
 }
-$('mRooms').onclick=$('bRooms').onclick=()=>{const b=$('brw')||brEl;
+$('bRooms').onclick=()=>{const b=$('brw')||brEl;
 if(mobileBrowse()){brTab='all';b.querySelectorAll('.tabs [data-t]').forEach(tab=>tab.classList.toggle('on',tab.dataset.t===brTab));}b.classList.add('on');b.style.zIndex=++zTop;if(YD){if(b._pw){try{b._pw.focus()}catch(e){}}else ydPop(b,'ybrowse',760,640,'Browse Chat Rooms',()=>{b.classList.remove('on');document.body.appendChild(b)})}loadBr()};const brEl=$('brw');
-let brTab='mine',brRooms=[];drag($('brw'));$('brX').onclick=()=>{brEl.classList.remove('on');brEl._pw&&brEl._pw.close()};
+let brTab='all',brRooms=[];drag($('brw'));$('brX').onclick=()=>{brEl.classList.remove('on');brEl._pw&&brEl._pw.close()};
 // tabs live in the Browse window, which the desktop app pops out into its own window: toggle siblings, not this document
 $('brw').querySelectorAll('.tabs div').forEach(t=>t.onclick=()=>{brTab=t.dataset.t;t.parentNode.querySelectorAll('div').forEach(x=>x.classList.toggle('on',x==t));drawBr()});
 $('brq').oninput=drawBr;$('brR').onclick=loadBr;$('brC').onclick=()=>openBrowseDestination('/rooms.html?create=1');
-async function loadBr(){try{brRooms=YBrowse.favs(await fetch('/api/rooms').then(r=>r.json()),true)}catch{brRooms=[]}drawBr()}
-setInterval(()=>{if($('brw').classList.contains('on'))loadBr()},5000);
+async function loadBr(){try{const response=await fetch('/api/rooms');if(!response.ok)return;const rooms=YBrowse.favs(await response.json(),true);if(JSON.stringify(rooms)===JSON.stringify(brRooms)&&$('brl').children.length)return;brRooms=rooms;}catch{return;}drawBr()}
+setInterval(()=>{if(brEl.classList.contains('on'))loadBr()},5000);
 function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLowerCase():'';
  const mt=r=>!q||r.name.toLowerCase().includes(q)||(r.topic||'').toLowerCase().includes(q);
  const row=r=>`<div class=rrow>${YBrowse.star(r)}${r.icon?`<span class=rtileic>${r.icon}</span>`:YI.room(r.name,40)}<div class=t><div class=rn>${escT(r.name)}${YProf.badge(r.rating)}${r.mine?' <small>('+r.mine+')</small>':''}</div><div class=tp>${escT(r.topic||'')}</div></div><div class=uc title="people / on cam">${YI.svg('users',18)}${r.count}${r.cams?' &middot; &#128247;'+r.cams:''}</div><button class="btn join" data-r="${escT(r.name)}">Join</button></div>`;
@@ -375,7 +374,9 @@ function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLo
  if(brTab=='top'){const t=YBrowse.top(brRooms.filter(mt));h=hd('Top 10 busiest rooms (live)')+t.map(row).join('')}
  else if(brTab=='mine')h=YBrowse.mine(brRooms,me).filter(mt).map(row).join('');
  else h=YBrowse.tree(brRooms.filter(mt),me,row,q);
+ const roomScroll=$('brl').scrollTop;
  $('brl').innerHTML=h||`<div style="padding:22px;text-align:center;color:var(--muted)">${brTab=='mine'?'Rooms you own or admin, and rooms you star (&#9734;), show up here. Click <b>Create Room</b> to make one.':brTab=='top'?'Nobody is chatting right now.':'No rooms match.'}</div>`;
+ YBrowse.bindTree($('brl'));$('brl').scrollTop=roomScroll;
  $('brl').querySelectorAll('[data-fav]').forEach(e=>e.onclick=async()=>{const r=brRooms.find(x=>x.name==e.dataset.fav);if(await YBrowse.toggle(r.name,!r.fav,true))loadBr();else toast('Could not save favorite.')});
  if(brTab=='all'&&!brRooms.some(r=>r.rating=='R'))$('brl').insertAdjacentHTML('beforeend','<div style="padding:10px;text-align:center"><a href="#" id=br18 style="color:#e67e22">Show R-rated rooms (18+)...</a></div>');
  $('br18')&&($('br18').onclick=async e=>{e.preventDefault();if(!YProf.confirm18())return;const r=await fetch('/api/adult',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})});if(!r.ok)return alert('Could not save that.');loadBr()});
@@ -384,8 +385,7 @@ function drawBr(){const q=$('brq').value.trim().toLowerCase(),me=ME?ME.name.toLo
  const own=(brRooms.find(r=>r.owner&&me&&r.owner.toLowerCase()==me)||{}).name;$('brC').style.display=own&&!(ME&&ME.m)?'none':'';
  if(own&&brTab=='mine')$('brl').querySelectorAll('.rrow').forEach(rw=>{const j=rw.querySelector('[data-r]');if(j&&j.dataset.r==own){j.insertAdjacentHTML('beforebegin',`<button class="btn" data-edit="${escT(own)}" title="Change your room name, topic and settings">Edit</button>`)}});
  $('brl').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openBrowseDestination('/rooms.html?edit='+encodeURIComponent(b.dataset.edit)))}
-$('mProf').onclick=()=>{const n=need();n&&YProf.show(n,{me:ME&&ME.name})};$('mMyProf').onclick=()=>YProf.edit();$('mSet').onclick=()=>YSet.open();
-$('mInv').onclick=()=>{const n=need();n&&invite(n)};
+$('mMyProf').onclick=()=>YProf.edit();$('mSet').onclick=()=>YSet.open();
 $('mHelp').onclick=()=>alert('Add a Contact sends a buddy request. Once they accept, double-click their name to PM.\nUse the PM window buttons for BUZZ!, voice calls and webcam.\nChange your status and message at the top. Right-click a contact for more options.');
 $('mAbout').onclick=async()=>{const v=await fetch('/api/version').then(r=>r.json()).then(j=>j.messenger||'').catch(()=>'');alert(APP_NAME.join('')+' Messenger'+(v?' '+v:'')+' (Beta) - an original nostalgia project.')};
 const invOk=n=>{const c=contacts[String(n).toLowerCase()];return !c||(c.online&&c.status=='available'&&!c.idle)};
@@ -407,7 +407,7 @@ function line(w,from,m,old){
  const style=`${color}font-family:'${font}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
  const time=new Date(m.t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
  const delivery=m.deliveryState||(m.offline?'Delivered when they sign in':'');
- w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg transcript-message"><div class=bb><time>${escT(time)}</time> <strong>${escT(from)}:</strong> <span class=message-text style="${style}">${YGif.render(m.text)||RCSmileys.replace(m.text)}</span>${delivery?'<small class=delivery-state>'+escT(delivery)+'</small>':''}</div></div>`);scroll(w)}
+ w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg transcript-message">${avHtml(from.toLowerCase()===ME?.name.toLowerCase()?ME.avatar:contacts[from.toLowerCase()]?.avatar,'sm',from)}<div class=bb><time>${escT(time)}</time> <strong>${escT(from)}:</strong> <span class=message-text style="${style}">${YGif.render(m.text)||RCSmileys.replace(m.text)}</span>${delivery?'<small class=delivery-state>'+escT(delivery)+'</small>':''}</div></div>`);scroll(w)}
 function applyImTimestamps(w){
  const enabled=localStorage.ycImTimestamps!=='off';
  w.classList.toggle('hide-im-times',!enabled);
@@ -423,31 +423,31 @@ function setImv(w,env){[...w.classList].filter(c=>c.startsWith('imv-')).forEach(
 async function reportUser(who){const why=prompt('Report '+who+' to the site moderators.\nWhat happened?','');if(why===null)return;const r=await fetch('/api/report',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({who,why})}).then(r=>r.json()).catch(()=>({error:'Network error'}));alert(r.error||'Thanks. Your report was sent to the site moderators.')}
 function openIm(n){const w0=openIm0(n),k=n.toLowerCase();if(window.pmHeld&&pmHeld[k]){const h=pmHeld[k];delete pmHeld[k];h.forEach(m=>line(w0,m.from,m));const ids=h.map(m=>m.offlineId).filter(Boolean);for(let i=0;i<ids.length;i+=200)emit('m:offline-read',ids.slice(i,i+200));messengerInbox.refresh()}return w0}
 function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTop;if(ims[k]._pw)try{ims[k]._pw.focus()}catch(e){}return ims[k]}const name=(contacts[k]||{}).name||n;
- const w=document.createElement('div');w.className='im win';const i=Object.keys(ims).length;w.style.left=(330+i*28)+'px';w.style.top=(30+i*28)+'px';w.style.zIndex=++zTop;w.dataset.n=name;
+ const w=document.createElement('div');w.className='im win';const i=Object.keys(ims).length;w.style.left=Math.max(8,Math.min(330+i*20,innerWidth-650))+'px';w.style.top=Math.max(8,Math.min(30+i*20,innerHeight-485))+'px';w.style.zIndex=++zTop;w.dataset.n=name;
  w.innerHTML=`<div class=tbar><span class=lgs>${YI.logo(24)}</span>${escT(name)} &ndash; Private Message<span class=sp></span><span class="wb x"><i data-i=close data-s=16></i></span></div>
  <div class=mbar><div>Conversation<div class=dd><div data-m=close>Close</div></div></div><div>Edit<div class=dd><div data-m=clearin>Clear Message Box</div></div></div><div>View<div class=dd><div data-m=fmt>Text Style Bar</div><div data-m=timestamps role="menuitemcheckbox">Show timestamps</div></div></div><div>Actions<div class=dd><div data-m=buzz>Send BUZZ!</div><div data-m=voice>Voice Call</div><div data-m=video>Webcam Call</div></div></div><div>Help<div class=dd><div data-m=help>Keyboard Tips</div></div></div></div>
  <div class=ihead><span class=pav></span><div><div class=nm style=cursor:pointer title='View profile' data-m=prof>${escT(name)}</div><div class=st></div></div><span class=sp></span>
- <button class=ib data-a=video title="Webcam call">${YI.svg('video',22)}</button><button class=ib data-a=voice title="Voice call">${YI.svg('phone',22)}</button><button class=ib data-a=buzz title="BUZZ! (Ctrl+G)">${YI.svg('bell',22)}</button><button class=ib data-a=more title="More">${YI.svg('dots',22)}</button>
+ <button class=ib data-a=video title="Webcam call">${YI.svg('video',22)}</button><button class=ib data-a=voice title="Voice call">${YI.svg('phone',22)}</button><button class=ib data-a=buzz title="Buzz (Ctrl+G)">${YI.svg('bell',18)} <span>Buzz</span></button><button class=ib data-a=more title="More">${YI.svg('dots',22)}</button>
  <div class=imenu><div data-m=prof>View Profile</div><div data-m=fmt>Text style (bold, color, font)</div><div data-a=block>Block</div><div data-a=rep>Report</div><div data-m=close>Close window</div></div></div>
  <div class=tools><button class=tb data-a=voice title="Start a voice call"><span>&#127908;</span>Call</button><button class=tb data-a=video title="Start a webcam call"><span>&#128247;</span>Webcam</button>
  <button class=tb data-a=buzz title="BUZZ! (Ctrl+G)"><span>&#128243;</span>Buzz</button><button class=tb data-a=aud title="Send an Audible"><span>&#128264;</span>Audibles</button><button class=tb data-a=imv title="IMVironment: theme this conversation for both of you"><span>&#127774;</span>IMVironment</button><button class=tb data-a=rep title="Report this user"><span>&#9873;</span>Report</button></div>
  <div class=call><div class=callbar><div class=cleft><span class=cstatus></span><div class=cs></div></div><div class=cbtns><button type=button class="rzb camt" aria-pressed=false hidden></button><button type=button class="rzb danger hang">Hang Up</button></div></div><div class=cstage hidden><span class=cpeer></span><video class=them autoplay playsinline></video><video class=me autoplay playsinline muted></video></div></div>
  <div class=peer></div><div class=log></div><div class=typ></div>
- <div class=fmt><span class=smb title=Smileys>${RCSmileys.html(':)')}</span><button data-s=b><b>B</b></button><button data-s=i><i>I</i></button><button data-s=u><u>U</u></button>${COLORS.map(c=>`<span class=sw data-c="${c}" style="background:${c}"></span>`).join('')}
+ <div class="fmt open"><span class=smb title=Emoji role=button tabindex=0 aria-label="Choose an emoji">${RCSmileys.html(':)')}</span><button data-s=b><b>B</b></button><button data-s=i><i>I</i></button><button data-s=u><u>U</u></button>${COLORS.map(c=>`<span class=sw data-c="${c}" style="background:${c}"></span>`).join('')}
  <select class=font>${['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'].map(f=>`<option>${f}</option>`).join('')}</select><div class=smp></div></div>
  <div class=inbox><button class=ib data-a=aa title="Text style">${YI.svg('font',22)}</button><button class=ib data-a=sm title="Smileys">${YI.svg('smile',22)}</button><button class=ib disabled title="Images coming soon">${YI.svg('image',22)}</button><button class=ib disabled title="Files coming soon">${YI.svg('clip',22)}</button><button type=button class="ib gifb" title="Send a GIF">GIF</button><textarea maxlength=1000 placeholder="Type a message... (Enter to send)"></textarea></div><form></form><template data-ad-placement="private-message"><div class="adph adph-c"></div></template>`;
  YI.fill(w);w.querySelector('.inbox').appendChild(w.querySelector('.smp'));
- applyImTimestamps(w);document.body.appendChild(w);ims[k]=w;if(YD)ydPop(w,'yim_'+k.replace(/\W/g,'_'),440,560,name+' - Private Message',()=>{if(ims[k]!==w)return;try{endCall(w,true)}catch(e){}delete ims[k]});peerInfo(w,name);drag(w);w.onpointerdown=()=>w.style.zIndex=++zTop;
+ applyImTimestamps(w);document.body.appendChild(w);ims[k]=w;if(YD)ydPop(w,'yim_'+k,640,475,name+' - Private Message',()=>{if(ims[k]!==w)return;try{endCall(w,true)}catch(e){}delete ims[k]});peerInfo(w,name);drag(w);w.onpointerdown=()=>w.style.zIndex=++zTop;
  const st=w._st={b:false,i:false,u:false,color:'#000000',f:'Arial'},ta=w.querySelector('textarea');
  w.querySelector('.x').onclick=()=>{endCall(w,true);const pw=w._pw;delete ims[k];w.remove();pw&&pw.close()};
  w.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{st[b.dataset.s]=!st[b.dataset.s];b.classList.toggle('on',st[b.dataset.s]);ta.style.fontWeight=st.b?'bold':'';ta.style.fontStyle=st.i?'italic':'';ta.style.textDecoration=st.u?'underline':''});
- w.querySelectorAll('.sw').forEach(s=>s.onclick=()=>{st.color=s.dataset.c;ta.style.color=st.color;w.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==s))});w.querySelector('.sw').classList.add('on');
+ w.querySelectorAll('.sw').forEach(s=>s.onclick=()=>{st.color=s.dataset.c;ta.style.color=st.color==='#000000'?'':st.color;w.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==s))});w.querySelector('.sw').classList.add('on');
  w.querySelector('.font').onchange=e=>{st.f=e.target.value;ta.style.fontFamily=st.f};
  const smp=w.querySelector('.smp');smp.innerHTML=RCSmileys.ordered.map(m=>`<span data-k="${m.esc}">${m.html}</span>`).join('');
- w.querySelector('.smb').onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};smp.querySelectorAll('span[data-k]').forEach(e=>e.onclick=()=>{ta.value+=' '+dec(e.dataset.k)+' ';smp.classList.remove('open');ta.focus()});
+ const emojiButton=w.querySelector('.smb');emojiButton.onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};emojiButton.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();emojiButton.click();}};smp.querySelectorAll('span[data-k]').forEach(e=>e.onclick=()=>{ta.value+=' '+dec(e.dataset.k)+' ';smp.classList.remove('open');ta.focus()});
  const send=gif=>{
   const t=(gif||ta.value).trim();if(!t)return;if(!gif)ta.value='';
-  sendMessengerMessage({socket:()=>S,log:w.querySelector('.log'),text:t,payload:{to:name,text:t,...st},onSent:r=>{
+  sendMessengerMessage({socket:()=>S,log:w.querySelector('.log'),text:t,payload:{to:name,text:t,...st},avatar:avHtml(ME.avatar,'sm',ME.name),onRejected:reason=>w.ownerDocument.defaultView.alert(reason),onSent:r=>{
    w.querySelector('.yseen')?.remove();line(w,ME.name,{...r,deliveryState:r.offline?'Sent · offline':'Sent'});
   }});
  };

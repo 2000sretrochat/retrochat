@@ -14,7 +14,8 @@ async function publishBotPost(db){
     where not u.banned and not coalesce(u.deactivated,false)
     and not exists(select 1 from social_restrictions r where r.user_id=b.user_id and r.service='social')
     and not exists(select 1 from social_posts s where s.id=p.id)
-    and not exists(select 1 from social_posts s where s.id=any($1::uuid[]) and s.created>now()-interval '90 minutes')
+    and not exists(select 1 from social_posts s where s.id=any($1::uuid[]) and s.created>now()-interval '55 minutes')
+    and not exists(select 1 from social_posts s where s.author_id=b.user_id and s.created>now()-interval '4 hours')
     order by p.sequence limit 1 on conflict(id) do nothing`,
     [pending.map(p=>p.id),pending.map(p=>p.bot),pending.map(p=>p.body),pending.map(p=>p.link)]);
 }

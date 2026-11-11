@@ -1,9 +1,12 @@
 'use strict';
-function sendMessengerMessage({socket,log,text,payload,onSent}) {
+function sendMessengerMessage({socket,log,text,payload,onSent,avatar,onRejected}) {
   const message={...payload,clientId:crypto.randomUUID()};
   const row=document.createElement('div'), body=document.createElement('span');
   const status=document.createElement('small'), retry=document.createElement('button');
-  row.className='msg me';body.textContent=text;
+  row.className='msg transcript-message';
+  body.className='bb message-text';
+  body.textContent=text;
+  if(avatar)row.insertAdjacentHTML('afterbegin',avatar);
   status.setAttribute('role','status');retry.type='button';retry.textContent='Retry';
   row.append(body,' ',status,' ',retry);log.append(row);
   const attempt=()=>{
@@ -12,7 +15,12 @@ function sendMessengerMessage({socket,log,text,payload,onSent}) {
     const client=socket();
     if(!client?.connected){failed('Offline. Reconnect to retry.');return;}
     client.timeout(8000).emit('m:im',message,(error,result)=>{
-      if(error || !result?.ok){failed(result?.error || 'Send unconfirmed.');return;}
+      if(error){failed('Send unconfirmed.');return;}
+      if(!result?.ok){
+        status.textContent='Not sent';
+        onRejected?.(result?.error || 'Your message could not be sent.');
+        return;
+      }
       row.remove();onSent(result);
     });
   };

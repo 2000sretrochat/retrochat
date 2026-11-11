@@ -10,7 +10,15 @@ window.YBrowse=(function(){
  const icon=(r,sz)=>r&&r.icon?`<span class=ricon style="display:inline-flex;align-items:center;justify-content:center;width:${sz||18}px;height:${sz||18}px;font-size:${Math.round((sz||18)*.8)}px;line-height:1;flex:none">${r.icon}</span>`:'';
  // nested Yahoo-style tree: category -> subfolders (r.path) -> rooms; open folders survive refreshes
  const OK='ycOpen';let open;try{open=new Set(JSON.parse(sessionStorage.getItem(OK)||'[]'))}catch{open=new Set()}
- document.addEventListener('toggle',e=>{const d=e.target;if(!d.dataset||d.dataset.yk==null)return;d.open?open.add(d.dataset.yk):open.delete(d.dataset.yk);try{sessionStorage.setItem(OK,JSON.stringify([...open]))}catch{}},true);
+ function bindTree(root){
+  root.querySelectorAll('details[data-yk]').forEach(folder=>{
+   folder.querySelector('summary').addEventListener('click',event=>{
+    event.preventDefault();folder.open=!folder.open;
+    if(folder.open)open.add(folder.dataset.yk);else open.delete(folder.dataset.yk);
+    try{sessionStorage.setItem(OK,JSON.stringify([...open]))}catch{}
+   });
+  });
+ }
  function tree(rs,meLc,row,q,sep){const E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));sep=sep||'';
   const cnt=l=>l.reduce((a,r)=>a+(r.count||0),0),sty='cursor:pointer;padding:4px 8px;font-weight:700;list-style-position:inside';
   const fold=(k,t,l,inner,d)=>`<details data-yk="${E(k)}"${q||open.has(k)?' open':''} style="margin-left:${d?14:0}px"><summary style="${sty};${d?'font-weight:600':'background:var(--soft,#eaf3fd)'}">${E(t)} <small style="font-weight:400;color:#888">(${l.length} room${l.length==1?'':'s'}, ${cnt(l)} online)</small></summary>${inner}</details>`;
@@ -34,4 +42,4 @@ window.YBrowse=(function(){
  // "N people online" (includes bots)
  let onl=null;const fillOn=()=>{if(onl!=null)document.querySelectorAll('.yonline').forEach(e=>{const t=onl+' '+(onl==1?'person':'people')+' online';if(e.textContent!=t)e.textContent=t})};
  const getOn=()=>fetch('/api/online').then(r=>r.json()).then(j=>{onl=j.n;fillOn()}).catch(()=>{});getOn();setInterval(getOn,30e3);setInterval(fillOn,1500);
- return{favs,toggle,groups,mine,icon,top,star,tree}})();
+ return{favs,toggle,groups,mine,icon,top,star,tree,bindTree}})();

@@ -1,7 +1,9 @@
 const test = require('node:test'), assert = require('node:assert/strict'), vm = require('node:vm'), fs = require('node:fs'), path = require('node:path');
 const users = [{ id: 1, name: 'Alice', status: 'available', status_msg: '', avatar: 'a1', show_room: true }, { id: 2, name: 'Bob', status: 'available', status_msg: '', avatar: 'a2', show_room: true }];
-function setup() {
+function setup(queryOverride = () => undefined) {
   const database = { status: () => ({ ready: true }), async q(sql, args = []) {
+    const overridden = queryOverride(sql, args);
+    if (overridden !== undefined) return overridden;
     if (sql.includes('from social_restrictions')) {
       assert.equal(sql, 'select 1 from social_restrictions where user_id=$1 and service=$2');
       assert.equal(args[1], 'messenger');
@@ -95,6 +97,30 @@ test('repeating the same Messenger send ID delivers one message', async () => {
   assert.equal(bob.events.filter(event=>event[0]==='m:im').length,1);
   await send(reconnected,'m:im',{...message,clientId:'e49d4c07-3a65-4205-a020-2fae045487ab'});
   assert.equal(bob.events.filter(event=>event[0]==='m:im').length,2);
+});
+
+test('Messenger explains contacts-only privacy, Do Not Disturb, and unavailable recipients without delivery', async () => {
+  let privateOnly = true;
+  let unavailable = false;
+  let writes = 0;
+  const { socket, send } = setup((sql, args) => {
+    if (sql.startsWith('select pm_buddies')) return [{ pm_buddies: privateOnly }];
+    if (sql.startsWith('select 1 from contacts') && args[0] === 2) return [];
+    if (sql.startsWith('select 1 from social_bot_members')) return unavailable ? [{}] : [];
+    if (/insert into (im_archive|offline)/.test(sql)) writes++;
+  });
+  const sender = await socket(1), recipient = await socket(2);
+  await send(sender, 'm:init');
+  await send(recipient, 'm:init');
+  const message = { to: 'Bob', text: 'Hello' };
+  assert.match((await send(sender, 'm:im', message)).error, /only accepts private messages/);
+  privateOnly = false;
+  await send(recipient, 'm:status', { status: 'busy' });
+  assert.match((await send(sender, 'm:im', message)).error, /Do Not Disturb/);
+  unavailable = true;
+  assert.equal((await send(sender, 'm:im', message)).error, 'Bob is unavailable for private messages.');
+  assert.equal(recipient.events.filter(event => event[0] === 'm:im').length, 0);
+  assert.equal(writes, 0);
 });
 
 test('declining a contact request updates the recipient only', async () => {

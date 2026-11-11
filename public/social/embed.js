@@ -86,6 +86,6 @@
     if (action === 'expand') { collapsed = false; document.documentElement.classList.remove('dock-collapsed'); min.title = 'Collapse Messenger'; min.setAttribute('aria-label', min.title); return; }
     if (!ME || !S?.connected) { send({ type: 'signin-required' }); return; }
     if (action === 'open-chat' && typeof name === 'string' && /^[A-Za-z][A-Za-z0-9_.]{2,19}$/.test(name)) openIm(name);
-    if (action === 'add-contact') { document.getElementById('mAdd').click(); if (typeof name === 'string') { const input = document.querySelector('#modal input[type=text]'); if (input) input.value = name; } }
+    if (action === 'add-contact') addC(name);
   });
 })();

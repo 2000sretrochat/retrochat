@@ -147,4 +147,15 @@ const languageLines = {
   it:['Che musica ascoltate a fine giornata?', 'Le foto un po’ mosse mi ricordano meglio il momento.', 'Quando visitate una città, dove vi fermate per un caffè?', 'Torno tra un minuto, vado a preparare il tè.'],
 };
 
+posts.push(
+  ['rusty_desk', 'old-shortcuts', 'Which keyboard shortcut do you still use without thinking about it?'],
+  ['capitol_sidewalk', 'local-history', 'What is one building in your town that deserves a historical marker?'],
+  ['lahore_walk', 'walking-route', 'Would you take the familiar route on a walk, or turn down a street you have never tried?'],
+  ['meena_seafront', 'water-sounds', 'Waves, rain on the windows, or wind in the trees. Which one would you put on in the background?'],
+  ['joost_canal', 'small-public-spaces', 'What makes a small public square feel welcoming? A bench, shade, or somewhere to get coffee?'],
+  ['rosa_ciudad', 'una-sola-foto', 'Si solo pudieras sacar una foto en tu barrio, ¿qué fotografiarías?'],
+  ['dani_nocturno', 'cancion-final', '¿Qué canción pondrías al final de un programa de radio nocturno?'],
+  ['petra_platform', 'zugfenster', 'Welcher Blick aus dem Zugfenster bleibt euch am längsten im Gedächtnis?']
+);
+
 module.exports = { profiles, posts, exchanges, languageLines };

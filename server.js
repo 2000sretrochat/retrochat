@@ -215,7 +215,7 @@ const rememberBotLine=(room,text)=>{
 const postBotUpdate=()=>{if(db.status().ready && botsOn)publishBotPost(db).catch(error=>console.error('[social-bots] post:',error.message));};
 setTimeout(()=>{
   postBotUpdate();
-  setInterval(postBotUpdate,95*60e3).unref();
+  setInterval(postBotUpdate,60*60e3).unref();
 },10*60e3).unref();
 function botTick(room) {
   const busy=socks(room).length>0;
@@ -239,13 +239,35 @@ function botTick(room) {
     },10000+Math.random()*24000).unref?.();
   }
 }
-// a bot may greet a person who says hi or mentions it; trivia answers are recognized from normal chat
+const lastDirectedReply = new Map();
+function directedRoomReply(bot, text) {
+  if (bot.lang !== 'en') return null;
+  if (/\b(song|songs|music|playlist|karaoke)\b/.test(text)) {
+    return bot.music ? 'What kind of music are you in the mood for?' : 'What song would you put on first?';
+  }
+  if (/\b(movie|movies|film|films)\b/.test(text)) return 'Would you pick an old favorite or something you haven’t seen yet?';
+  if (/\b(game|games|gaming)\b/.test(text)) return 'What are you playing lately?';
+  if (/\b(photo|photos|camera|photography)\b/.test(text)) return 'What do you like to photograph most?';
+  if (/\b(room|rooms|chatroom)\b/.test(text)) return 'Browse Chat Rooms groups rooms by topic. What kind of room are you looking for?';
+  return null;
+}
+
+// Direct mentions can receive a short topic reply. Trivia still recognizes normal chat.
 async function botHear(room, who, text) { const bs = botsIn(room).filter(b => !b.silent); if (!bs.length) return; const t = String(text).toLowerCase();
   const handle = t.match(/@([a-z0-9_]+)/)?.[1]; const target = handle ? BOTMOD.byAlias(handle) : null; const host = target && bs.includes(target) ? target : null;
   const clean = t.replace(/@[a-z0-9_]+[,:]?\s*/g, '').trim();
   if (TRIVIA_GAME.active(room) || (host && host.trivia)) { if (await TRIVIA_GAME.hear(room, who, text, host && host.trivia ? host : null)) return; }
   if (host && host.interactive) { const r = interactiveBotReply(host, room, who, clean); if (r) { botSay(room, host, r); return; } }
-  if (host) return void setTimeout(() => botsIn(room).includes(host) && botSay(room, host, BOTMOD.greet(host, who)), 2000 + Math.random() * 4000).unref?.();
+  if (host) {
+    const now = Date.now();
+    if (now - (lastDirectedReply.get(host.id) || 0) < 18000) return;
+    lastDirectedReply.set(host.id, now);
+    const reply = directedRoomReply(host, clean) || BOTMOD.greet(host, who);
+    setTimeout(() => {
+      if (socks(room).some(socket => socket.data.name === who) && botsIn(room).includes(host)) botSay(room, host, reply);
+    }, 2000 + Math.random() * 4000).unref?.();
+    return;
+  }
   const named = bs.find(b => t.includes(b.name.toLowerCase())); const hi = /\b(hi|hey|hello|hola|sup|yo|wassup|anyone)\b/.test(t);
   if (!named && !(hi && Math.random() < 0.6)) return; const b = named || bs[Math.floor(Math.random() * bs.length)];
   setTimeout(() => botsIn(room).includes(b) && botSay(room, b, BOTMOD.greet(b, who)), 3000 + Math.random() * 6000).unref?.(); }

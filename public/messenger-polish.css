@@ -1,0 +1,181 @@
+/* Messenger dialogs, contact directory and conversation layout. */
+html body .yprof.contact-profile {
+  width: min(560px, calc(100vw - 16px)) !important;
+}
+.contact-profile .ph .pav {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+}
+.contact-profile .profile-gallery {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.contact-profile .profile-gallery button {
+  grid-column: span 2;
+  min-width: 0;
+}
+.contact-profile .profile-gallery button:nth-child(4),
+.contact-profile .profile-gallery button:nth-child(5) {
+  grid-column: span 3;
+}
+.contact-profile .profile-gallery button:first-child:nth-last-child(2),
+.contact-profile .profile-gallery button:first-child:nth-last-child(2) + button {
+  grid-column: span 3;
+}
+.contact-profile .profile-gallery img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+.contact-profile .profile-gallery button:only-child img {
+  max-height: 220px;
+  object-fit: contain;
+}
+.contact-profile .profile-gallery button:only-child { grid-column: span 6; }
+.watch-shield { display: inline-flex; vertical-align: middle; color: #5587b8; }
+
+html body .yprof.contact-directory {
+  width: min(560px, calc(100vw - 16px)) !important;
+  max-width: calc(100vw - 16px) !important;
+  max-height: none !important;
+  top: 12px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+.contact-directory .pb { padding: 12px; }
+.contact-directory input { width: 100%; box-sizing: border-box; }
+.directory-person {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.directory-person strong { flex: 1 1 105px; overflow-wrap: anywhere; }
+.directory-person button { padding: 4px 8px !important; }
+.directory-pages { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.directory-pages[hidden] { display: none; }
+
+html body .yprof.razzle-settings-dialog {
+  max-height: none !important;
+  overflow: visible !important;
+}
+html body .razzle-settings-dialog > .pb { overflow: visible !important; }
+.razzle-settings-dialog section[hidden] { display: none !important; }
+.razzle-settings-dialog section > label { display: block; margin: 6px 0; }
+.settings-sections { display: flex; align-items: center; gap: 8px; }
+.settings-sections select { flex: 1; min-width: 0; }
+.archive-help { color: var(--muted); margin: 6px 0; }
+#ysAq { min-width: 0; }
+#ysAr { overflow-wrap: anywhere; }
+html body .yprof.device-settings { width: min(560px, calc(100vw - 16px)) !important; }
+.device-settings > .pb {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, .95fr);
+  align-items: start;
+  gap: 16px;
+}
+.device-options select { max-width: 100%; }
+.device-settings .media-test-area { padding: 0; margin: 0; border: 0; }
+.device-settings .media-test-area video {
+  width: min(100%, 192px);
+  height: auto;
+  max-height: none;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+html.yd.ydpop body .yprof.razzle-settings-dialog,
+html.yd.ydpop body .yprof.contact-directory {
+  width: 100vw !important;
+  max-width: none !important;
+  min-height: 100vh !important;
+  height: auto !important;
+  top: 0 !important;
+  left: 0 !important;
+  transform: none !important;
+}
+@media (max-width: 465px) {
+  .device-settings > .pb { grid-template-columns: 1fr; gap: 6px; }
+  .device-settings .media-test-area video { width: 144px; }
+}
+
+html:has(#mwin) #brw .ft { padding: 8px 12px; }
+html:not(.ydpop):not(.messenger-popout):has(#mwin) #brw {
+  left: clamp(8px, calc(100vw - 736px), 380px);
+}
+html:has(#mwin) #brw .srch { margin: 8px 12px; }
+html:has(#mwin) #brl { margin: 0 12px; }
+html.yd.ydpop #brw.on #brl,
+html.has-overlay #brw.on #brl {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+html:not(.ydpop):not(.messenger-popout) body .im {
+  width: min(640px, calc(100vw - 16px)) !important;
+}
+html:not(.ydpop) body .im .log { height: clamp(100px, calc(100dvh - 275px), 225px); }
+html.yd.ydpop body .im > .tbar { display: none !important; }
+.im .fmt.open { flex-wrap: wrap; }
+.im .ihead button[data-a="buzz"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  padding: 4px 7px !important;
+  white-space: nowrap;
+}
+.im .log .transcript-message {
+  align-items: flex-start;
+  max-width: 100% !important;
+}
+.im .log .transcript-message > .av {
+  display: inline-flex;
+  width: 30px !important;
+  height: 30px !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+}
+.im .log .transcript-message .bb { min-width: 0; }
+.im .log .transcript-message [role="status"] { color: var(--muted); flex: 0 0 auto; }
+.ygifpop { background: var(--card) !important; color: var(--ink) !important; }
+
+html.dark:has(#mwin), html.dark.ydpop {
+  --card: #2b3037;
+  --surface: #242930;
+  --soft: #353d48;
+  --field: #20252c;
+  --line: #48515e;
+  --ink: #eef2f6;
+  --muted: #b7c2cf;
+  --blue: #91c8ff;
+}
+html.dark body #mwin :is(#main,#list,#tree,#tabs,#bottom,#me,#search,#foot),
+html.dark.yd.yd-in body #mwin :is(#main,#list,#tree,#tabs,#bottom,#me,#search,#foot) {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+html.dark.yd.yd-in #mwin #list :is(.grp,.ct .n),
+html.dark body #mwin #list :is(.grp,.ct .n) { color: var(--ink) !important; }
+html.dark.yd.yd-in #mwin #list .ct .sm,
+html.dark body #mwin #list .ct .sm { color: var(--muted) !important; }
+html.dark.yd.yd-in #mwin #list .ct:is(:hover,.sel),
+html.dark body #mwin #list .ct:is(:hover,.sel) { background: var(--soft) !important; }
+html.dark.yd.yd-in #mwin :is(#bAdd,#foot .brandname .a,#foot .brandname .b) {
+  background: var(--card) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+html.dark body #mwin #tabs > div {
+  background: var(--card) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+html.dark .im :is(.ihead,.inbox,.fmt,.mbar) { background: var(--card) !important; color: var(--ink) !important; }

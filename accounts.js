@@ -209,7 +209,7 @@ function sockets(io, hooks) {
 
   io.on('connection', async s => {
     const acct = s.data.acct; if (!acct) {
-      for(const event of ['m:init','m:contacts','m:add','m:respond'])s.on(event,(...args)=>{
+      for(const event of ['m:init','m:contacts','m:add','m:respond','m:find-contacts'])s.on(event,(...args)=>{
         const reply=args[args.length-1];if(typeof reply==='function')reply({error:'Guests cannot add friends or be added. Create a free screen name or sign in.'});
       });return;
     }
@@ -267,6 +267,26 @@ function sockets(io, hooks) {
     s.on('m:showroom', safe(async on => { if (!ready) return; const st = state.get(uid); st.showRoom = !!on; await db.q('update users set show_room=$2 where id=$1', [uid, !!on]); await broadcast(uid, me); return { ok: true, showRoom: st.showRoom }; }));
     s.on('m:idle', safe(async on => { if (!ready) return; const wasIdle = idleNow(uid); s.data.messIdle = !!on; if (wasIdle !== idleNow(uid)) await broadcast(uid, me); }));
     s.on('m:avatar', safe(async a => { if (!ready || !AVATARS.includes(a)) return { error: 'bad avatar' }; state.get(uid).avatar = a; await db.q('update users set avatar=$2 where id=$1', [uid, a]); await broadcast(uid, me); }));
+    let lastContactSearch = 0;
+    s.on('m:find-contacts', safe(async ({ query, page } = {}) => {
+      if (!ready) return { error: 'Sign in to find contacts.' };
+      const term = String(query || '').trim().toLowerCase();
+      if (!/^[a-z0-9_.-]{3,20}$/.test(term)) return { error: 'Enter 3–20 screen name characters.' };
+      const now = Date.now();
+      if (now - lastContactSearch < 200) return { error: 'Please wait a moment and try again.' };
+      lastContactSearch = now;
+      const offset = Math.min(1000, Math.max(0, Math.trunc(Number(page) || 0))) * 4;
+      const rows = await db.q(`
+        select u.name, u.id = $1 as self,
+          exists(select 1 from contacts where owner=$1 and contact=u.id) as contact,
+          exists(select 1 from blocks where owner=$1 and blocked=u.id) as blocked
+        from users u
+        where strpos(u.name_lc,$2)>0 and not u.banned and not coalesce(u.deactivated,false)
+          and not exists(select 1 from blocks where owner=u.id and blocked=$1)
+        order by (u.name_lc=$2) desc, (strpos(u.name_lc,$2)=1) desc, u.name_lc
+        limit 5 offset $3`, [uid, term, offset]);
+      return { people: rows.slice(0, 4), more: rows.length > 4 };
+    }));
     s.on('m:add', safe(async ({ name, msg }) => {
       if (!ready || flood()) return { error: 'Slow down a little.' }; const generic = { ok: true, text: 'If ' + esc(String(name).slice(0, 20)) + ' is a Razzle user, they have been sent your request.' };
       const t = await idOf(name); if (!t) return { error: 'No Razzle account found with that screen name. Check the spelling, or ask them to create one and sign in.' }; if (t.id === uid) { await db.q("insert into contacts(owner,contact,grp) values($1,$1,'Friends') on conflict do nothing", [uid]); contactsChangedFn(uid); return { ok: true, self: true, text: 'Added yourself - your entry shows you exactly the way your contacts see you.' }; } // self-entry: added directly, no request
@@ -286,7 +306,7 @@ function sockets(io, hooks) {
       await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]);
       const [ug] = await db.q('select grp from contacts where owner=$1 and contact=$2', [uid, t.id]), [tg] = await db.q('select grp from contacts where owner=$2 and contact=$1', [uid, t.id]);
       toUser(uid, 'm:contact', { name: t.name, group: ug.grp, ...pres(t.id) }); toUser(t.id, 'm:contact', { name: me, group: tg.grp, ...pres(uid) });
-      toUser(t.id, 'm:toast', { text: esc(me) + ' accepted your contact request.' }); return { ok: true, text: esc(t.name) + ' was added to your contacts.' };
+      toUser(t.id, 'm:toast', { text: esc(me) + ' accepted your contact request.' }); return { ok: true, added: true, text: esc(t.name) + ' was added to your contacts.' };
     }
     s.on('m:respond', safe(async ({ name, accept: yes }) => {
       if (!ready) return; const t = await idOf(name); if (!t) return { error: 'Request not found.' };
@@ -319,7 +339,24 @@ function sockets(io, hooks) {
     }));
     async function sendMessage(m, id) {
       if (!ready || !m) return; if (flood()) return { error: 'Whoa, slow down a little! Wait a few seconds and try again.' };
-      const text = String(m.text || '').trim().slice(0, 1000); if (!text) return; { const fl = require('./flood').check(me, text, s.data && s.data.master); if (fl) return { error: fl }; } const t = await peer(m.to); if (!t) return { error: 'You can only message your contacts.' };
+      const text = String(m.text || '').trim().slice(0, 1000);
+      if (!text) return { error: 'Enter a message first.' };
+      const floodError = require('./flood').check(me, text, s.data.master);
+      if (floodError) return { error: floodError };
+      const t = await idOf(m.to);
+      if (!t || t.id === uid || await blocked(t.id, uid) || await blocked(uid, t.id))
+        return { error: 'This account cannot receive your private messages.' };
+      const [recipient] = await db.q('select pm_buddies,banned,deactivated from users where id=$1', [t.id]);
+      if (recipient?.banned || recipient?.deactivated)
+        return { error: 'This account cannot receive your private messages.' };
+      if ((await db.q('select 1 from social_bot_members where user_id=$1', [t.id])).length)
+        return { error: t.name + ' is unavailable for private messages.' };
+      if (recipient?.pm_buddies && !await mutual(t.id, uid))
+        return { error: t.name + ' only accepts private messages from people on their contact list.' };
+      if (!await mutual(uid, t.id))
+        return { error: 'Add ' + t.name + ' to your contacts before sending a private message.' };
+      if (online.has(t.id) && state.get(t.id)?.status === 'busy')
+        return { error: t.name + ' is in Do Not Disturb. Your message was not sent.' };
       const body = { id, text: esc(text), ...fmt(m), ...(AUDS.includes(m.aud) ? { aud: m.aud } : {}) }, now = Date.now();
       try { const ar = await db.q('select id from users where id = any($1) and archive', [[uid, t.id]]); for (const r of ar) await db.q('insert into im_archive(owner,peer,dir,body) values($1,$2,$3,$4)', [r.id, r.id === uid ? t.name : me, r.id === uid ? 'out' : 'in', body]); } catch { }
       const offline=!online.has(t.id), hidden=!offline&&hiddenUid(t.id); // invisible: delivered live, but the sender is told 'offline' like any offline contact

@@ -39,18 +39,24 @@ function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.crea
   else if(a=='shk')L.ycShake=L.ycShake=='off'?'on':'off';else if(a=='rb')L.ycRoomBuzz=L.ycRoomBuzz=='off'?'on':'off';
   else if(a=='sr'){$('mShowRoom').click();setTimeout(draw,400)}
   else if(a=='all'){show(false);window.YSet&&YSet.open();return}else if(a=='av'){show(false);avPanel();return}draw();place()}}
-async function avPanel(){if(!window.YAV)await new Promise(ok=>{const s=document.createElement('script');s.src='/av.js?v=3';s.onload=s.onerror=ok;document.head.appendChild(s)});if(!window.YAV)return alert('Audio settings are not available right now.');
+let devicePanel, openingDevices;
+function avPanel(){
+ if(devicePanel?.isConnected){devicePanel._pw?.focus();devicePanel.focus();return;}
+ if(!openingDevices)openingDevices=renderAvPanel().finally(()=>{openingDevices=null;});
+ return openingDevices;
+}
+async function renderAvPanel(){if(!window.YAV)await new Promise(ok=>{const s=document.createElement('script');s.src='/av.js?v=3';s.onload=s.onerror=ok;document.head.appendChild(s)});if(!window.YAV)return alert('Audio settings are not available right now.');
  if(!window.RazzleMediaTest)await new Promise(resolve=>{const script=document.createElement('script');script.src='/media-device-test.js';script.onload=script.onerror=resolve;document.head.append(script);});
- document.querySelectorAll('.yprof').forEach(x=>x.remove());const c=YAV.cfg(),ds=await YAV.devices(),E=s=>String(s).replace(/[&<>"]/g,x=>'&#'+x.charCodeAt(0)+';');
+ const c=YAV.cfg(),ds=await YAV.devices(),E=s=>String(s).replace(/[&<>"]/g,x=>'&#'+x.charCodeAt(0)+';');
  const sel=(id,o,v)=>`<select id=${id} style="width:100%;margin:2px 0 8px">${o.map(([k,l])=>`<option value="${E(k)}" ${k==v?'selected':''}>${E(l)}</option>`).join('')}</select>`;
- const w=document.createElement('div');w.className='yprof razzle-settings-dialog';w.innerHTML=`<div class=tbar>Audio &amp; Video Settings<span class=sp></span><button type="button" class="x settings-close" aria-label="Close settings" title="Close"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button></div><div class=pb style="padding:12px">
- <b>Microphone</b>${sel('mavDev',[['','Default microphone'],...ds.map((x,i)=>[x.deviceId,x.label||'Microphone '+(i+1)])],c.dev)}
+ const w=document.createElement('div');w.className='yprof razzle-settings-dialog device-settings';w.tabIndex=-1;devicePanel=w;w.innerHTML=`<div class=tbar>Audio &amp; Video Settings<span class=sp></span><button type="button" class="x settings-close" aria-label="Close settings" title="Close"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button></div><div class=pb style="padding:12px">
+ <div class="device-options"><b>Microphone</b>${sel('mavDev',[['','Default microphone'],...ds.map((x,i)=>[x.deviceId,x.label||'Microphone '+(i+1)])],c.dev)}
  <b>Mic mode</b>${sel('mavMode',[['voice','Voice (noise reduction)'],['music','Music (full quality)']],c.mode)}
  <b>Camera quality</b>${sel('mavCam',[['hd','HD'],['normal','Standard'],['low','Low (saves data)']],c.camQ)}
  <label style="font-weight:600"><input type=checkbox id=mavAgc ${c.agc?'checked':''} style="width:auto;display:inline;margin-right:6px"> Let my computer adjust my mic level automatically</label>
  <p style="margin:10px 0 2px">Mic volume <span id=mavBoostLbl>${c.boost}%</span></p>
  <input type=range id=mavBoost min=0 max=200 step=5 value="${c.boost}" style="width:100%">
- <small style="display:block;margin:2px 0 6px;color:var(--muted,#5b6b85)">0&ndash;200%. 100% is normal. Above 100% raises your mic; a soft limiter prevents harsh clipping.</small>
+ <small style="display:block;margin:2px 0 6px;color:var(--muted,#5b6b85)">0&ndash;200%. 100% is normal. Above 100% raises your mic; a soft limiter prevents harsh clipping.</small></div>
  <section class="media-test-area"><h4>Test your devices</h4><div class="media-test-actions"><button type="button" data-test-camera aria-pressed="false">Test webcam</button><button type="button" data-test-mic aria-pressed="false">Test microphone</button></div><label class="mic-test-label">Microphone level<meter data-mic-level min="0" max="100" value="0" aria-label="Microphone test level"></meter></label><p data-device-test-status role="status">Tests are private. Devices turn on only when you click a test button.</p><video data-camera-preview autoplay muted playsinline hidden></video></section>
  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button id=mavX>Cancel</button><button id=mavOk style="background:#0033A0;color:#fff;border-color:#0033A0">Save</button></div></div>`;
  document.body.appendChild(w);const q=s=>w.querySelector(s),cl=()=>{stopTests();w.remove()};
