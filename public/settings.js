@@ -9,9 +9,9 @@ function init(sock){S=sock;S.on('connect',refresh);S.on('signed-elsewhere',d=>{a
 const hidden=n=>P.hide.includes(String(n||'').replace(/&#39;/g,"'").toLowerCase());
 async function setIgnore(n,on){const r=await emit('ign:set',{name:n,on});if(r.error)alert(r.error);else{P=r;fire()}return r}
 async function setBlock(n,on){const r=await emit('blk:set',{name:n,on});if(r.error)alert(r.error);else{P=r;fire()}return r}
-async function open(tab){await refresh();document.querySelectorAll('.yset').forEach(x=>x.remove());const w=document.createElement('div');w.className='yprof yset';
+async function open(tab){await refresh();document.querySelectorAll('.yset').forEach(x=>x.remove());const w=document.createElement('div');w.className='yprof yset razzle-settings-dialog';
  const list=(a,k,lbl)=>a.length?a.map(n=>`<div style="display:flex;align-items:center;gap:8px;padding:3px 0"><b style="flex:1">${E(n)}</b><button data-k=${k} data-n="${E(n)}">${lbl}</button></div>`).join(''):'<div style="color:var(--muted)">Nobody.</div>';
- w.innerHTML=`<div class=tbar>Settings<span class=sp></span><span class=x title=Close>X</span></div><div class=pb style="min-width:300px">
+ w.innerHTML=`<div class=tbar>Settings<span class=sp></span><button type="button" class="x settings-close" aria-label="Close settings" title="Close"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button></div><div class=pb style="min-width:300px">
  <h4 style="margin:4px 0">Privacy</h4>${P.account?`<label><input type=checkbox id=ysPm ${P.pmBuddies?'checked':''}> Only allow private messages from people on my buddy list</label>`:'<small>Sign in with a screen name to use privacy settings.</small>'}
  <h4 style="margin:12px 0 4px">Blocked list</h4><small style="color:var(--muted)">Blocked people can't see you online, PM you, add you, or view your cam.</small>${P.account?list(P.blocked,'b','Unblock'):'<div><small>Guests can use Ignore.</small></div>'}
  <h4 style="margin:12px 0 4px">Ignore list</h4><small style="color:var(--muted)">You won't see or hear ignored chatters in rooms.${P.account?'':' (Guests: this session only.)'}</small>${list(P.ignored,'i','Unignore')}

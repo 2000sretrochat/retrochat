@@ -161,7 +161,14 @@
   function renderOwner() {
     ownerProfile(me);
     document.querySelectorAll('.space-actions button,.space-posts > .empty button').forEach(button=>{if(/share something/i.test(button.textContent))button.remove();});
-    const viewLabel=document.querySelector('.profile-toolbar > span');if(viewLabel&&publicPreview)viewLabel.textContent=visibility==='private'?'Private view':'Public view';
+    const toolbar=document.querySelector('.profile-toolbar');
+    if(toolbar){
+      toolbar.classList.add('profile-view-toolbar');
+      toolbar.innerHTML='<div class="profile-view-tabs" role="group" aria-label="Profile viewing mode"><button type="button" data-profile-mode="owner" aria-pressed="'+!publicPreview+'">My Profile</button><button type="button" data-profile-mode="visitor" aria-pressed="'+publicPreview+'">Visitor View</button></div><span class="profile-visibility-badge">'+(visibility==='private'?'Private profile':'Public profile')+'</span><button type="button" class="profile-view-settings" aria-label="Appearance and privacy settings" title="'+(publicPreview?'Return to My Profile to change settings':'Appearance and privacy settings')+'" '+(publicPreview?'disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m10 3-.7 2.1-2 .9-2-.5-2 3.4 1.4 1.6v2.9l-1.4 1.6 2 3.5 2-.5 2 .9L10 21h4l.7-2.1 2-.9 2 .5 2-3.5-1.4-1.6v-2.9L20.7 9l-2-3.5-2 .5-2-.9L14 3z"/><circle cx="12" cy="12" r="3"/></svg></button><p class="profile-view-explanation">'+(publicPreview?(visibility==='private'?'Visitor view · Non-friends see your private-profile notice and public photos.':'Visitor view · This is what people outside your friends list can see.'):'My Profile · Edit your profile and manage your posts and photos.')+'</p>';
+      toolbar.querySelectorAll('[data-profile-mode]').forEach(button=>button.onclick=()=>{publicPreview=button.dataset.profileMode==='visitor';profile(me);});
+      toolbar.querySelector('.profile-view-settings').onclick=()=>{if(!publicPreview)appearanceSettings();};
+    }
+    if(publicPreview)document.querySelector('.profile-wall')?.remove();
     document.querySelector('.space-about > .space-card')?.insertAdjacentHTML('beforeend',socialLinksMarkup(session.settings.socialLinks));
     const stream=$('.space-posts');
     stream?.querySelectorAll(':scope > .post').forEach(node=>node.remove());

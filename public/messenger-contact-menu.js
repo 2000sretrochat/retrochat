@@ -29,7 +29,7 @@ function createMessengerContactMenu({ contact, selected, blocked, isSelf, canInv
       if (!isBlocked && canInvite(name)) items.push(['Invite to room', 'invite']);
       items.push([isBlocked ? 'Unblock' : 'Block', isBlocked ? 'unblock' : 'block']);
     }
-    items.push(['Remove contact', 'remove']);
+    if(!blocked(name))items.push(['Remove contact', 'remove']);
 
     menu = document.createElement('div');
     menu.className = 'messenger-contact-menu';

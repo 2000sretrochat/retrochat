@@ -112,7 +112,7 @@ function http(app, express, hooks = {}) { H = hooks;
 
 // ---------- Messenger sockets ----------
 function sockets(io, hooks) {
-  const { clientKind, replacedSessions, CallRoutes } = require('./messenger-sessions');
+  const { clientKind, deviceKind, presenceDevice, replacedSessions, CallRoutes } = require('./messenger-sessions');
   const callRoutes = new CallRoutes();
   const sentMessages = new Map(); // Share retries across Messenger reconnections.
   const online = new Map(); // uid -> Set(socket)
@@ -121,7 +121,7 @@ function sockets(io, hooks) {
     const clients = online.get(uid);
     return state.get(uid)?.status === 'available' && !!clients?.size && [...clients].every(client => client.data.messIdle === true);
   };
-  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = on && (sr || st.showRoom !== false) ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: idleNow(uid), avatar: st ? st.avatar : 'a1' }; };
+  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = on && (sr || st.showRoom !== false) ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: idleNow(uid), device: presenceDevice(online.get(uid) || [],!!on), avatar: st ? st.avatar : 'a1' }; };
   const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || (st.msg !== ROOM_TAG && st.showRoom === false)) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
   setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
   const toUser = (uid, ev, data) => { for (const s of online.get(uid) || []) s.emit(ev, data); };
@@ -145,12 +145,13 @@ function sockets(io, hooks) {
     const rows = await db.q('select u.id,u.name,c.grp from contacts c join users u on u.id=c.contact where c.owner=$1 order by lower(u.name)', [uid]);
     return rows.map(c => ({ name: c.name, group: c.grp, ...pres(c.id) }));
   }
+  async function blockedContacts(uid){return (await db.q('select u.name,u.avatar from blocks b join users u on u.id=b.blocked where b.owner=$1',[uid])).map(row=>({...row,online:false,status:'offline',msg:'',blocked:true}));}
   async function pendingRequests(uid) {
     const rows = await db.q('select u.name,r.msg from requests r join users u on u.id=r.from_id where r.to_id=$1', [uid]);
     return rows.map(r => ({ name: r.name, msg: esc(r.msg) }));
   }
   async function watchers(uid) { return (await db.q('select owner from contacts where contact=$1', [uid])).map(r => r.owner); }
-  async function broadcast(uid, name) { const bl = new Set((await db.q('select blocked from blocks where owner=$1', [uid]).catch(() => [])).map(r => r.blocked)); const audience = await watchers(uid); const p = { name, ...pres(uid) }; for (const w of audience) toUser(w, 'm:presence', bl.has(w) ? { name, online: false, status: 'offline', msg: '', room: null, idle: false, avatar: p.avatar } : p); }
+  async function broadcast(uid, name) { const bl = new Set((await db.q('select blocked from blocks where owner=$1', [uid]).catch(() => [])).map(r => r.blocked)); const audience = await watchers(uid); const p = { name, ...pres(uid) }; for (const w of audience) toUser(w, 'm:presence', bl.has(w) ? { name, online: false, status: 'offline', msg: '', room: null, idle: false, device: null, avatar: p.avatar } : p); }
   const idOf = async n => { const r = await db.q('select id,name from users where name_lc=$1', [String(n || '').toLowerCase().slice(0, 40)]); return r[0]; };
   const mutual = async (a, b) => (await db.q('select 1 from contacts where owner=$1 and contact=$2', [a, b])).length > 0;
   const blocked = async (by, who) => (await db.q('select 1 from blocks where owner=$1 and blocked=$2', [by, who])).length > 0;
@@ -207,7 +208,11 @@ function sockets(io, hooks) {
   let offlineStore = null; const offlineBox = () => offlineStore ||= require('./offline-messages').createOfflineMessages({ db, isOnline: n => isOnlineFn(n), toUser });
 
   io.on('connection', async s => {
-    const acct = s.data.acct; if (!acct) return;
+    const acct = s.data.acct; if (!acct) {
+      for(const event of ['m:init','m:contacts','m:add','m:respond'])s.on(event,(...args)=>{
+        const reply=args[args.length-1];if(typeof reply==='function')reply({error:'Guests cannot add friends or be added. Create a free screen name or sign in.'});
+      });return;
+    }
     const uid = acct.id, me = acct.name; let ready = false;
     const safe = fn => async (...a) => { const cb = typeof a[a.length - 1] === 'function' ? a.pop() : null; try { const restricted = await db.q('select 1 from social_restrictions where user_id=$1 and service=$2', [uid, 'messenger']); if (restricted.length) { cb && cb({ error: 'Messenger access is restricted. Your Social account remains available.' }); return; } const r = await fn(...a); cb && cb(r || { ok: true }); } catch (e) { if (!e.maint) console.error('[m]', e.message); cb && cb({ error: e.maint ? 'Service under maintenance' : 'Something went wrong' }); } };
     let stamps = [];
@@ -222,7 +227,7 @@ function sockets(io, hooks) {
       const cs = await contactList(uid);
       const groups = (await db.q('select name from groups where owner=$1 order by name', [uid])).map(r => r.name);
       const reqs = await pendingRequests(uid);
-      const bl = (await db.q('select u.name from blocks b join users u on u.id=b.blocked where b.owner=$1', [uid])).map(r => r.name);
+      const blockedRows=await blockedContacts(uid),bl=blockedRows.map(r=>r.name);
       const off = options?.offlineInbox ? await db.q(`select o.id,u.name,o.body,extract(epoch from o.created)*1000 as t,
         exists(select 1 from contacts c where c.owner=$1 and c.contact=o.from_id) as contact
         from offline o join users u on u.id=o.from_id where o.to_id=$1 and o.read_at is null
@@ -232,13 +237,16 @@ function sockets(io, hooks) {
         and not exists(select 1 from blocks b where b.owner=$1 and b.blocked=o.from_id)
         returning o.id,u.name,o.body,extract(epoch from o.created)*1000 as t
       ) select * from delivered order by id`, [uid]);
-      if (first || wasIdle !== idleNow(uid)) broadcast(uid, me);
+      await broadcast(uid, me);
       const st = state.get(uid);
-      return { me: { name: u.name, status: st.status, msg: st.msg, avatar: st.avatar, showRoom: st.showRoom !== false, m: !!s.data.master }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.group)])],
-        contacts: cs, requests: reqs, blocked: bl,
+      return { me: { name: u.name, device: deviceKind(s), status: st.status, msg: st.msg, avatar: st.avatar, showRoom: st.showRoom !== false, m: !!s.data.master }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.group)])],
+        contacts: cs, requests: reqs, blocked: bl, blockedContacts:blockedRows,
         offline: off.map(o => ({ from: o.name, t: Math.round(o.t), id: 'offline:'+o.id, ...o.body, offlineId:o.id, contact: o.contact !== false })) };
     }));
-    s.on('m:contacts', safe(async () => ready ? {contacts:await contactList(uid),requests:await pendingRequests(uid)} : {error:'Sign in first.'}));
+    s.on('m:contacts',safe(async()=>{
+      if(!ready)return {error:'Sign in first.'};const blockedRows=await blockedContacts(uid);
+      return {contacts:await contactList(uid),requests:await pendingRequests(uid),blocked:blockedRows.map(r=>r.name),blockedContacts:blockedRows};
+    }));
     s.on('m:offline-read', safe(async ids => {
       if (!ready || !Array.isArray(ids)) return {error:'Invalid messages.'};
       const valid = ids.filter(id => Number.isInteger(id) && id > 0 && id <= 2147483647).slice(0,200);
@@ -355,7 +363,7 @@ function sockets(io, hooks) {
         callId:d.callId, ...(ev==='m:hang'&&d.reason==='no-answer'?{reason:d.reason}:{}) }); }));
     s.on('disconnect', async () => { callRoutes.disconnect(s); const set = online.get(uid); if (!set) return;
       const wasIdle = idleNow(uid); set.delete(s); if (!set.size) { online.delete(uid); state.delete(uid); }
-      if (!set.size || wasIdle !== idleNow(uid)) { try { await broadcast(uid, me); } catch {} } });
+      try { await broadcast(uid, me); } catch {} });
   });
 }
 let isOnlineFn = () => false, isConnectedFn = () => false, setAvFn = async () => {}, presRawFn = null, setStatusFn = async () => {};

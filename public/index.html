@@ -174,7 +174,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 </style>
 <style id="fr-inbox-css">
 </style>
-<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css"></head><body>
+<link rel="stylesheet" href="/chat-account.css"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><link rel="stylesheet" href="/messenger-device.css"><script src="/messenger-device.js"></script><script src="/master-console-layout.js"></script><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css"></head><body>
 <div class="auth-site-header" hidden><header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
@@ -227,7 +227,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div id="main">
   <div id="me"><div class="av" id="myav" title="Change display image"></div><div class="info"><div class="nm" id="myname"></div>
    <div class=stw><span class="sdot available" id=stdot></span><select id="stsel"><option value="available">Available</option><option value="busy">Busy</option><option value="away">Away</option><option value="brb">Be Right Back</option><option value="invisible">Invisible</option><option disabled>──────────</option><option value="showroom">&#128172; Show the room I'm in</option></select></div>
-   <div class=mind><input type="text" id="smsg" maxlength="60" placeholder="What's on your mind?"><i data-i=pencil data-s=16></i></div></div></div>
+   <div class=mind><span id="mydevice"></span><input type="text" id="smsg" maxlength="60" placeholder="What's on your mind?"><i data-i=pencil data-s=16></i></div></div></div>
   <div id="avpick"></div>
   <div id="search"><div class=srch><i data-i=search data-s=18></i><input type="text" id="q" placeholder="Search contacts..."></div></div>
   <div id="offlinePanel" hidden></div>
@@ -279,7 +279,7 @@ const avHtml=(a,cls='',name)=>YAv.html(name||'x',a,cls);
 function setMyAv(){const sd=$('stdot');if(sd)sd.className='sdot '+(ME.status||'available');const st=ME.status=='invisible'?'invisible':ME.status;$('myav').outerHTML=avHtml(ME.avatar,'ring r-'+st,ME.name).replace('class="av ','id="myav" title="Change my avatar" class="av ');$('myav').onclick=pickAv}
 const STL={available:'Available',busy:'Busy',away:'Away',brb:'Be Right Back',invisible:'Invisible',offline:'Offline',idle:'Idle'};
 const api=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{}),credentials:'same-origin'}).then(async r=>({status:r.status,...await r.json().catch(()=>({error:'Server error'}))}));
-let S=null,ME=null,contacts={},groups=['Friends'],blockedL=[],sel=null,closedG=new Set(JSON.parse(localStorage.ycClosed||'[]'));
+let S=null,ME=null,contacts={},blockedCards={},groups=['Friends'],blockedL=[],sel=null,closedG=new Set(JSON.parse(localStorage.ycClosed||'[]'));
 let sound=localStorage.ycSound!=='off';window.addEventListener('ycsound',()=>{sound=localStorage.ycSound!=='off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')});
 // ---------- sounds (generated with WebAudio; original) ----------
 let AC=null;function tone(seq){if(!sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")void AC.resume().catch(()=>{});let t=AC.currentTime;
@@ -332,9 +332,12 @@ function holdMessage(message){
   if(message.id && messages.some(item=>item.id===message.id))return;
   messages.push(message);messengerInbox.refresh();
 }
+const isBlockedContact=name=>blockedL.some(n=>n.toLowerCase()===name.toLowerCase());
+const contactCard=name=>contacts[name.toLowerCase()]||blockedCards[name.toLowerCase()];
+function syncBlocked(result){if(Array.isArray(result.blocked))blockedL=result.blocked;if(Array.isArray(result.blockedContacts))blockedCards=Object.fromEntries(result.blockedContacts.map(c=>[c.name.toLowerCase(),c]));}
 async function refreshContacts(){
   const result=await emit("m:contacts");if(result.error)return;
-  contacts=Object.fromEntries(result.contacts.map(contact=>[contact.name.toLowerCase(),contact]));
+  syncBlocked(result);contacts=Object.fromEntries(result.contacts.map(contact=>[contact.name.toLowerCase(),contact]));
   for(const contact of result.contacts)if(!groups.includes(contact.group))groups.push(contact.group);
   messengerInbox.reset(result.requests);render();
 }
@@ -347,9 +350,9 @@ function start(){
   location.replace(roomSignInDestination);
   return;
  }
- $('signin').style.display='none';$('main').style.display='flex';S=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
- S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);lastAct=Date.now();idle=false;ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
-  $('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
+ $('signin').style.display='none';$('main').style.display='flex';S=io({auth:RazzleDevice.auth(),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S);
+ S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);lastAct=Date.now();idle=false;ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;syncBlocked(r);contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
+  $('mydevice').innerHTML=RazzleDevice.icon(ME.device);$('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
   $('reqs').innerHTML='';messengerInbox.reset(r.requests);render();consumeAddParam();
   for(const message of r.offline)holdMessage({...message,receivedOffline:true});
  });
@@ -360,7 +363,7 @@ function start(){
   const w=ims[k];w&&peerInfo(w,p.name)});
  S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();$('stsel').value=x.status;$('smsg').value=dec(x.msg);roomMode(x.msg=='[room]')});
  S.on('m:contacts-changed',refreshContacts);
- S.on('m:block-state',({name,on})=>{blockedL=blockedL.filter(n=>n.toLowerCase()!==name.toLowerCase());if(on)blockedL.push(name);});
+ S.on('m:block-state',({name,on})=>{blockedL=blockedL.filter(n=>n.toLowerCase()!==name.toLowerCase());if(on){blockedL.push(name);blockedCards[name.toLowerCase()]={...contactCard(name),name,online:false,status:'offline',msg:'',blocked:true};}else delete blockedCards[name.toLowerCase()];render();});
 S.on('m:offline-read',ids=>{
   const read=new Set(ids);
   for(const [name,messages] of Object.entries(window.pmHeld||{})){
@@ -370,7 +373,7 @@ S.on('m:offline-read',ids=>{
   messengerInbox.refresh();
  });
  S.on('m:request',showReq);S.on('m:contact',c=>{contacts[c.name.toLowerCase()]=c;if(!groups.includes(c.group))groups.push(c.group);render();messengerInbox.remove(c.name)});
- S.on('m:broadcast',({text})=>{SND.im();alert('System message:\n\n'+text)});S.on('m:signedout',()=>location.reload());S.on('m:gone',({name})=>{delete contacts[name.toLowerCase()];render()});S.on('m:toast',({text})=>{SND.im();toast(text)});
+ S.on('m:broadcast',({text})=>{SND.im();alert('System message:\n\n'+text)});S.on('m:signedout',()=>location.reload());S.on('m:gone',({name})=>{if(contacts[name.toLowerCase()])blockedCards[name.toLowerCase()]={...contacts[name.toLowerCase()],online:false,status:'offline',msg:'',blocked:true};delete contacts[name.toLowerCase()];render()});S.on('m:toast',({text})=>{SND.im();toast(text)});
  S.on('m:imv',d=>{const w=ims[String(d.with).toLowerCase()];if(w){setImv(w,d.env);sys(w,escT(d.by)+(d.env=='none'?' turned off the IMVironment.':' changed the IMVironment to '+YAud.IMVS[d.env]+'.'))}});
  S.on('m:seen',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;let e=w.querySelector('.yseen');if(!e){e=document.createElement('div');e.className='yseen';e.style.cssText='font:10px Tahoma;color:#888;text-align:right;padding:0 6px';w.querySelector('.typ').before(e)}e.textContent='Seen '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})});
  S.on("m:im",message=>{
@@ -403,23 +406,27 @@ let lastAct=Date.now(),idle=false;['mousemove','keydown','pointerdown'].forEach(
 setInterval(()=>{if(S&&!idle&&Date.now()-lastAct>10*60e3){idle=true;S.emit('m:idle',true)}},30e3);
 // ---------- contact list ----------
 $('q').oninput=render;
-function render(){const q=$('q').value.trim().toLowerCase(),cs=Object.values(contacts).filter(c=>!q||c.name.toLowerCase().includes(q)||dec(c.msg).toLowerCase().includes(q));
+function render(){const q=$('q').value.trim().toLowerCase(),cs=[...Object.values(contacts),...blockedL.filter(name=>!contacts[name.toLowerCase()]).map(name=>blockedCards[name.toLowerCase()]||{name,online:false,status:'offline',msg:''})].filter(c=>!q||c.name.toLowerCase().includes(q)||dec(c.msg).toLowerCase().includes(q));
  const gs=['Online','Offline'];
  $('tree').innerHTML=gs.map(g=>{const l=cs.filter(c=>(g=='Online')==!!c.online).sort((a,b)=>(b.online-a.online)||a.name.localeCompare(b.name));const on=l.filter(c=>c.online).length;
-  return `<div class="grp${closedG.has(g)?' closed':''}" data-g="${escT(g)}">${escT(g)} (${l.length})</div>`+(closedG.has(g)?'':l.map(c=>{const st=c.online?(c.idle?'idle':c.status):'offline';
-   return `<div class="ct${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${STL[st]}"><span class=avw>${avHtml(c.avatar,'sm',c.name)}<span class="sdot ${st}"></span></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${c.online&&c.room?`<a href="#" data-jr="${escT(c.room)}" title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>${c.msg&&!c.showRoom?' &middot; '+RCSmileys.replace(c.msg):''}`:c.msg?RCSmileys.replace(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
+  return `<div class="grp${closedG.has(g)?' closed':''}" data-g="${escT(g)}">${escT(g)} (${l.length})</div>`+(closedG.has(g)?'':l.map(c=>{const blocked=isBlockedContact(c.name);const st=c.online?(c.idle?'idle':c.status):'offline';
+   return `<div class="ct${blocked?' is-blocked':''}${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${blocked?'Blocked':STL[st]}"><span class=avw>${avHtml(c.avatar,'sm',c.name)}${blocked?'<span class=blocked-avatar-mark role=img aria-label=Blocked><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m5 5 14 14"/></svg></span>':''}<span class="sdot ${st}"></span></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${blocked?'<span class=blocked-contact-label>Blocked</span> · ':RazzleDevice.icon(c.device,c.online)}${c.online&&c.room?`<a href="#" data-jr="${escT(c.room)}" title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>${c.msg&&!c.showRoom?' &middot; '+RCSmileys.replace(c.msg):''}`:c.msg?RCSmileys.replace(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
   +(MW?`<div class="grp${closedG.has('Watching')?' closed':''}" data-g="Watching">Watching (${watchL.length})</div>`+(closedG.has('Watching')?'':watchL.map(w=>`<div class="ct wct${w.online?'':' off'}" data-w="${escT(w.name)}" title="${escT(w.name)}${w.room?' - in '+escT(w.room):''}${w.ip?' - '+escT(w.ip)+(w.loc?' \u00b7 '+escT(w.loc):''):''}"><span class=avw>${avHtml('a1','sm',w.name)}<span class="sdot ${w.online?escT(w.status||'available'):'offline'}"></span></span><div class=t><div class=n>${escT(w.name)}</div><div class=sm>${w.online?(w.room?'In room: '+escT(w.room)+' &middot; ':'')+(w.msg?RCSmileys.replace(w.msg):STL[w.status]||'Online'):'Offline'}${w.ip?`<div class=sm style="opacity:.75">${escT(w.ip)}${w.loc?' &middot; '+escT(w.loc):''}</div>`:''}</div></div></div>`).join('')):'')
   +(cs.length||q||MW?'':'<div style="padding:10px;color:var(--muted)">No contacts yet. Click <b>Add a Contact</b> to send a buddy request.</div>');
  document.querySelectorAll('.grp').forEach(e=>e.onclick=()=>{const g=e.dataset.g;closedG.has(g)?closedG.delete(g):closedG.add(g);localStorage.ycClosed=JSON.stringify([...closedG]);render()});
  document.querySelectorAll('.wct').forEach(e=>e.oncontextmenu=async ev=>{ev.preventDefault();if(confirm('Stop watching '+e.dataset.w+'?')){await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:e.dataset.w,remove:true})});loadWatch()}});
- document.querySelectorAll('.ct:not(.wct)').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;render()};e.ondblclick=()=>{if(ME&&e.dataset.n.toLowerCase()==ME.name.toLowerCase())return window.YProf&&YProf.show(e.dataset.n,{me:ME.name});openIm(e.dataset.n).querySelector('textarea').focus()};
+ document.querySelectorAll('.ct:not(.wct)').forEach(e=>{e.onclick=()=>{sel=e.dataset.n;document.querySelectorAll('#tree .ct').forEach(row=>row.classList.toggle('sel',row.dataset.n===sel));};e.ondblclick=()=>{
+    if(isBlockedContact(e.dataset.n))return openContactMenu({type:'keydown',preventDefault(){},stopPropagation(){}},e);
+    if(ME&&e.dataset.n.toLowerCase()===ME.name.toLowerCase())return toast('This is your own contact entry. Right-click to view your profile.');
+    openIm(e.dataset.n).querySelector('textarea')?.focus();
+  };
   e.querySelectorAll('[data-jr]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();window.open('/rooms.html?room='+encodeURIComponent(a.dataset.jr),'yapprooms')});
   e.tabIndex=0;
   e.oncontextmenu=ev=>openContactMenu(ev,e);
   e.onkeydown=ev=>{if(ev.key==='ContextMenu'||(ev.shiftKey&&ev.key==='F10'))openContactMenu(ev,e);};
  })}
 const openContactMenu=createMessengerContactMenu({
- contact:name=>contacts[name.toLowerCase()],
+ contact:name=>contactCard(name),
  selected:(name,row)=>{sel=name;$('tree').querySelector('.ct.sel')?.classList.remove('sel');row.classList.add('sel');},
  blocked:name=>blockedL.some(item=>item.toLowerCase()===name.toLowerCase()),
  isSelf:name=>name.toLowerCase()===ME?.name.toLowerCase(),

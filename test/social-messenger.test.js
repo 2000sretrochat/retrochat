@@ -55,9 +55,10 @@ test('account call handlers deliver signals to one chosen recipient window', asy
   assert.equal(bobSocial.events.filter(e => e[0] === 'm:sig').length, 0);
   alice.disconnect(); assert.ok(bob.events.some(e => e[0] === 'm:hang'));
 });
-test('an unauthenticated Social client gets no account handlers', async () => {
-  const { socket } = setup(), anonymous = await socket(null, 'social');
-  assert.deepEqual(Object.keys(anonymous.handlers), []);
+test('an unauthenticated Social client cannot initialize or manage accounts', async () => {
+  const { socket,send } = setup(), anonymous = await socket(null, 'social');
+  for(const event of ['m:init','m:contacts','m:add','m:respond'])assert.match((await send(anonymous,event,{})).error,/Guests cannot add friends/);
+  assert.equal(anonymous.handlers['m:im'],undefined);
 });
 
 test('a Social friendship change reaches both open Messenger clients', async () => {
@@ -68,6 +69,16 @@ test('a Social friendship change reaches both open Messenger clients', async () 
   assert.equal(alice.events.filter(event=>event[0]==='m:contacts-changed').length,1);
   assert.equal(bob.events.filter(event=>event[0]==='m:contacts-changed').length,1);
   assert.ok(Array.isArray((await send(alice,'m:contacts')).contacts));
+});
+
+test('device presence updates on desktop join/leave and stays hidden when invisible',async()=>{
+  const {socket,send}=setup(),viewer=await socket(2),phone=await socket(1,'social'),desktop=await socket(1);
+  phone.handshake.auth.device='mobile';desktop.handshake.auth.device='desktop';
+  await send(viewer,'m:init');await send(phone,'m:init');
+  const device=()=>viewer.events.filter(e=>e[0]==='m:presence'&&e[1].name==='Alice').at(-1)?.[1].device;
+  assert.equal(device(),'mobile');await send(desktop,'m:init');assert.equal(device(),null);
+  desktop.connected=false;await desktop.handlers.disconnect();assert.equal(device(),'mobile');
+  await send(phone,'m:status',{status:'invisible'});assert.equal(device(),null);
 });
 
 test('repeating the same Messenger send ID delivers one message', async () => {

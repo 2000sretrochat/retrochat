@@ -508,7 +508,7 @@ const leave=()=>{
  location.href='/rooms.html';
 };
 $('mCreate').onclick=createRoom;$('mAv').onclick=()=>YAv.editor(S,{name:me});
-YAv.listen(S,(n,av)=>{const k=n.toLowerCase();ros.forEach(r=>{if(r.name.toLowerCase()==k)r.av=av});renderRoster()});$('mMess').onclick=()=>window.open('/','yappmessenger');
+YAv.listen(S,(n,av)=>{const k=n.toLowerCase();ros.forEach(r=>{if(r.name.toLowerCase()==k)r.av=av});renderRoster()});$('mMess').onclick=()=>window.open(acct?'/':'/?guest=1','yappmessenger');
 // Owner-only items are shown ONLY to the owner of this room (hidden, not greyed, for everyone else).
 // Masters keep Rename Room in member rooms (moderation: offensive room names); the server re-checks every action.
 function ownerMenus(){const own=!!(owner&&acct&&owner.toLowerCase()==String(acct).toLowerCase()),ms=!!window.MASTER&&!!owner;

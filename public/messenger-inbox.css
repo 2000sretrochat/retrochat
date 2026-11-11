@@ -64,3 +64,5 @@ html:not(.dark) .im .log .transcript-message .bb{color:#111}
 @media (max-width:379px){#menu .messenger-master{width:36px;padding:0!important;justify-content:center}#menu .messenger-master .mm-l{display:none}}
 @media (pointer:coarse){#menu .messenger-master{height:44px;min-width:44px}}
 html.dark #menu .messenger-master{color:#E8EEF7!important}html.dark #menu .messenger-master:hover{background:#1d2a44!important;border-color:#3a4d6e!important}
+
+#menu .messenger-master .master-report-badge{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#FF9900;color:#00205B;font:700 10px Arial,sans-serif;border:1px solid #fff}#menu .messenger-master .master-report-badge[hidden]{display:none!important}

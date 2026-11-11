@@ -9,7 +9,7 @@ window.openMasterConsole = function () {
     const width = Math.min(1000, screen.availWidth || 1000);
     const height = Math.min(720, screen.availHeight || 720);
     messengerMasterPopup = window.open('/master', 'razzleMasterConsole',
-      'popup=yes,width=' + width + ',height=' + height + ',resizable=yes,scrollbars=yes');
+      window.RazzleMasterWindow ? window.RazzleMasterWindow.features() : 'popup=yes,width=' + width + ',height=' + height + ',resizable=yes,scrollbars=yes');
     if (messengerMasterPopup) {
       messengerMasterPopup.focus();
       return;

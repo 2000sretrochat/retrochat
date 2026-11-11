@@ -2,6 +2,18 @@
 // UI clients are a session category only; authentication and contact checks
 // remain in accounts.js. One Social dock and one normal messenger may coexist.
 const clientKind = s => s.handshake?.auth?.client === 'social' ? 'social' : 'messenger';
+const deviceKind = s => {
+  const agent=s.handshake?.headers?.['user-agent'] || '';
+  if(/Electron\//i.test(agent)||s.handshake?.auth?.device==='desktop')return 'desktop';
+  if(/Android|iPhone|iPad|iPod/i.test(agent)||s.handshake?.auth?.device==='mobile')return 'mobile';
+  return 'browser';
+};
+const presenceDevice = (sessions,visible=true) => {
+  if(!visible)return null;
+  const kinds=[...sessions].filter(s=>s.data?.mess&&s.connected!==false).map(deviceKind);
+  if(!kinds.length||kinds.includes('desktop'))return null;
+  return kinds.includes('mobile')?'mobile':'browser';
+};
 const replacedSessions = (s, sessions) => [...sessions].filter(x => x !== s && x.data.mess && (x.data.messClient || 'messenger') === clientKind(s));
 class CallRoutes {
   constructor(now = Date.now) { this.calls = new Map(); this.now = now; }
@@ -47,4 +59,4 @@ class CallRoutes {
     }
   }
 }
-module.exports = { clientKind, replacedSessions, CallRoutes };
+module.exports = { clientKind, deviceKind, presenceDevice, replacedSessions, CallRoutes };

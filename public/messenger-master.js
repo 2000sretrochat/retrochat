@@ -22,5 +22,6 @@ window.createMessengerMasterButton = function ({ open } = {}) {
     const mo = new MutationObserver(() => { if (menu.querySelector('.messenger-bell')) { place(); mo.disconnect(); } });
     mo.observe(menu, { childList: true });
   }
+  if(window.RazzleMasterReports)window.RazzleMasterReports.watch(btn);
   return btn;
 };

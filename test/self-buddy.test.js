@@ -20,10 +20,11 @@ test('Social friend count and friends list ignore the self entry', () => {
   assert.match(api, /contacts where owner=u\.id and contact<>owner\) as friends/);
   assert.match(api, /where c\.owner=\$1 and c\.contact<>c\.owner/);
 });
-test('Messenger: double-clicking your own entry opens your profile; no door sound for yourself', () => {
+test('Messenger: self-entry does not open a profile on double-click; no door sound for yourself', () => {
   for (const f of ['public/index.html', 'public/social/messenger.html']) {
     const h = R(f);
-    assert.match(h, /e\.ondblclick=\(\)=>\{if\(ME&&e\.dataset\.n\.toLowerCase\(\)==ME\.name\.toLowerCase\(\)\)return window\.YProf/);
+    assert.match(h, /This is your own contact entry\. Right-click to view your profile/);
+    assert.doesNotMatch(h,/e\.ondblclick=[^;]*YProf\.show/);
     assert.match(h, /if\(ME&&k==ME\.name\.toLowerCase\(\)\)\{/);
   }
 });
