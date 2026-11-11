@@ -31,7 +31,7 @@
   text-decoration:underline;
   text-underline-offset:4px;
 }
-.profile-visibility-badge {font-size:12px!important;color:#526a80!important;white-space:nowrap}
+
 .profile-view-settings {
   display:grid;
   place-items:center;

@@ -178,6 +178,7 @@
   function renderOwner() {
     if(!publicPreview)profileMode='owner';
     ownerProfile(me);
+    $('.owner-privacy-note')?.remove();
     publicPreview=profileMode!=='owner';
     document.querySelectorAll('.space-actions button,.space-posts > .empty button').forEach(button=>{if(/share something/i.test(button.textContent))button.remove();});
     const toolbar=document.querySelector('.profile-toolbar');
@@ -186,7 +187,7 @@
       const modes=[['owner','My Profile'],['friend','Friend View'],['public','Public View']];
       toolbar.innerHTML='<div class="profile-view-tabs" role="group" aria-label="Profile viewing mode">'+
         modes.map(([mode,label])=>'<button type="button" data-profile-mode="'+mode+'" aria-pressed="'+(mode===profileMode)+'">'+label+'</button>').join('')+
-        '</div><span class="profile-visibility-badge">'+(visibility==='private'?'Private profile':'Public profile')+'</span><button type="button" class="profile-view-settings" aria-label="Appearance and privacy settings" title="'+(publicPreview?'Return to My Profile to change settings':'Appearance and privacy settings')+'" '+(publicPreview?'disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m10 3-.7 2.1-2 .9-2-.5-2 3.4 1.4 1.6v2.9l-1.4 1.6 2 3.5 2-.5 2 .9L10 21h4l.7-2.1 2-.9 2 .5 2-3.5-1.4-1.6v-2.9L20.7 9l-2-3.5-2 .5-2-.9L14 3z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+        '</div><button type="button" class="profile-view-settings" aria-label="Appearance and privacy settings" title="'+(publicPreview?'Return to My Profile to change settings':'Appearance and privacy settings')+'" '+(publicPreview?'disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m10 3-.7 2.1-2 .9-2-.5-2 3.4 1.4 1.6v2.9l-1.4 1.6 2 3.5 2-.5 2 .9L10 21h4l.7-2.1 2-.9 2 .5 2-3.5-1.4-1.6v-2.9L20.7 9l-2-3.5-2 .5-2-.9L14 3z"/><circle cx="12" cy="12" r="3"/></svg></button>';
       toolbar.querySelectorAll('[data-profile-mode]').forEach(button=>button.onclick=()=>{
         profileMode=button.dataset.profileMode;
         publicPreview=profileMode!=='owner';
