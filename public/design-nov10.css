@@ -157,6 +157,8 @@
 .yctx.rz-ctx .rz-csep{border-top:1px solid #C6D5E7;border-radius:0 0 3px 3px!important;margin-top:4px}
 @media (pointer:coarse){.yctx.rz-ctx div{min-height:44px}}
 .pmwin.rz-popped{position:fixed!important;inset:0!important;width:auto!important;height:auto!important;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;border:0!important;border-radius:0!important;box-shadow:none!important}
+html.yd.ydpop .pmwin.rz-popped{grid-template-rows:minmax(0,1fr) auto}
+html.yd.ydpop .pmwin.rz-popped>.tbar{display:none!important}
 .pmwin.rz-popped .pl{height:auto!important;min-height:0;margin:0!important;padding:10px!important;overflow-y:auto;border-radius:0!important}
 .pmwin.rz-popped form{display:flex;align-items:center;gap:8px;margin:0!important;padding:8px;border-top:1px solid #C6D5E7}
 .pmwin.rz-popped form input{min-height:36px;box-sizing:border-box}

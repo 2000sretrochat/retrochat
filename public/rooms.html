@@ -669,7 +669,24 @@ const pms={};
 function openPm(n){if(pms[n]){pms[n].querySelector('input').focus();return pms[n]}const w=document.createElement('div');w.className='pmwin';const k=Object.keys(pms).length;w.style.left=(320+k*30)+'px';w.style.top=(140+k*30)+'px';
  w.innerHTML=`<div class=tbar>&#128172; ${escT(n)} -- Private Message<span class=sp></span><span class=x>X</span></div><div class=pl></div><form><button type=button class=gifb title='Send a GIF' style='font:bold 10px Tahoma;padding:1px 4px'>GIF</button><input type=text maxlength=300><button>Send</button></form><template data-ad-placement="private-message"><div class="adph adph-c"></div></template>`;
  document.body.appendChild(w);pms[n]=w;drag(w);w.querySelector('.x').onclick=()=>{w.remove();delete pms[n]};
- w.querySelector('form').onsubmit=e=>{e.preventDefault();const i=w.querySelector('input'),t=i.value.trim();if(!t)return;S.emit('pm',{to:n,text:t},r=>{if(r.error)pmLine(n,'<i style=color:#c00>'+escT(r.error)+'</i>');else pmLine(n,`<b style="color:var(--brand)">${escT(me)}:</b> ${YGif.render(r.text)||smile(r.text)}`)});i.value=''};
+ w.querySelector('form').onsubmit=e=>{
+  e.preventDefault();
+  const input=w.querySelector('input'),text=input.value.trim();
+  if(!text)return;
+  const row=pmLine(n,'<b>'+escT(me)+':</b> <span class=room-pm-text></span> <small role=status>Sending…</small>');
+  const content=row.querySelector('.room-pm-text'),status=row.querySelector('small');
+  content.textContent=text;input.value='';
+  if(!S.connected){status.textContent='Not sent. Reconnect and try again.';input.value=text;return;}
+  S.timeout(8000).emit('pm',{to:n,text},(error,result)=>{
+   if(error||!result?.ok){
+    status.textContent=error?'Send unconfirmed.':(result?.error||'Message not sent.');
+    if(!error&&!input.value)input.value=text;
+    return;
+   }
+   const sentText=result.text??escT(text);
+   content.innerHTML=YGif.render(sentText)||smile(sentText);status.remove();
+  });
+ };
  w.querySelector('.gifb').onclick=e=>{e.stopPropagation();YGif.picker(e.currentTarget,tok=>{w.querySelector('input').value=tok;w.querySelector('form').requestSubmit()})};
  w.querySelector('input').focus();return w}
 // Separate PM windows: on desktop (browser or the Messenger app) a PM opened by the user moves into its own window.
@@ -689,7 +706,7 @@ function canAdd(n){const m=ros.find(x=>x.name==n);return n!=me&&!(m&&m.guest&&!m
 async function addFriend(n){if(!acct)return alert('Sign in with a screen name to add friends.');if(!n||n==me)return alert('Select someone in the member list first.');if(!canAdd(n))return alert(n+' is a guest. Guests need a free screen name before they can be added.');
  const r=await fetch('/api/friends/add',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})}).then(x=>x.json()).catch(()=>({error:'Network error. Please try again.'}));
  const t=document.createElement('textarea');t.innerHTML=r.error||r.text||'';alert(r.error?t.value:r.accepted?n+' was added to your friends.':'Friend request sent to '+n+'.')}
-function pmLine(n,html){const w=pms[n]||openPm(n),l=w.querySelector('.pl'),d=document.createElement('div');d.innerHTML=html;l.appendChild(d);l.scrollTop=l.scrollHeight}
+function pmLine(n,html){const w=pms[n]||openPm(n),l=w.querySelector('.pl'),d=document.createElement('div');d.innerHTML=html;l.appendChild(d);l.scrollTop=l.scrollHeight;return d}
 S.on('pm',({from,text})=>{if(ignored.has(from))return;pmLine(from,`<b style="color:#c0392b">${escT(from)}:</b> ${YGif.render(text)||smile(text)}`)});
 // audio volume / mute / ignore
 function applyAudio(a,id){const r=ros.find(x=>x.id==id);a.muted=$('mute').checked||(r&&(ignored.has(r.name)||r.mm));a.volume=+$('vol').value}
