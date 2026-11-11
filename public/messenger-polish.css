@@ -1,36 +1,75 @@
 /* Messenger dialogs, contact directory and conversation layout. */
 html body .yprof.contact-profile {
-  width: min(400px, calc(100vw - 16px)) !important;
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 16px)) !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+html body .yprof.contact-profile.viewing-photo {
+  width: min(500px, calc(100vw - 16px)) !important;
+  height: min(480px, calc(100dvh - min(56px, 8vh) - 8px));
 }
 html.yd.ydpop body .yprof.contact-profile {
   inset: 0 !important;
   width: 100vw !important;
+  height: 100dvh !important;
   max-width: none !important;
   max-height: none !important;
   transform: none !important;
 }
-.contact-profile .ph .pav {
-  width: 42px;
-  height: 42px;
-  object-fit: cover;
+.contact-profile .tbar { flex: 0 0 auto; }
+.contact-profile .pb { display: flex; flex-direction: column; min-height: 0; padding: 8px 12px 10px; }
+.contact-profile .ph .pav { width: 42px; height: 42px; object-fit: cover; }
+.contact-profile .profile-photos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: clamp(36px, 18dvh, 98px);
+  gap: 5px;
+  margin: 6px 0;
 }
-.contact-profile .profile-photos { margin: 8px 0; }
-.contact-profile .profile-hero {
+.contact-profile .profile-thumb { position: relative; padding: 2px !important; min-height: 0; }
+.contact-profile .profile-thumb img, .contact-profile .profile-photo-large {
   display: block;
   width: 100%;
-  height: min(225px, 53dvh);
-  object-fit: cover;
-  border-radius: 5px;
+  height: 100%;
+  object-fit: contain;
 }
-.contact-profile .profile-photo-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 4px;
-  color: var(--muted);
+.contact-profile .profile-thumb span {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #173b60;
+  color: white;
+  font-size: 11px;
 }
-.contact-profile .profile-photo-nav button { padding: 0 10px !important; }
-.contact-profile .pbtn { margin-top: 6px; }
+.contact-profile .pbio, .contact-profile .pt td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contact-profile .pbio { margin: 4px 0; }
+.contact-profile .pt { margin-top: 0; table-layout: fixed; }
+.contact-profile .pt th, .contact-profile .pt td { padding-block: 1px; }
+.contact-profile .pbtn { margin-top: 5px; }
+.contact-profile.viewing-photo .pb { flex: 1; }
+.contact-profile.viewing-photo .pb > :not(.profile-photo-viewer) { display: none !important; }
+.contact-profile .profile-photo-viewer {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  min-height: 0;
+  flex: 1;
+}
+.contact-profile .profile-photo-back { justify-self: start; }
+.contact-profile .profile-photo-large { min-height: 0; background: var(--card, #f1f5f8); }
+.contact-profile .profile-photo-nav { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.contact-profile .profile-photo-nav button { min-width: 32px; padding: 0 10px !important; }
+@media (max-height: 400px) {
+  .contact-profile .profile-photos { grid-auto-rows: clamp(24px, 13dvh, 52px); }
+}
 .watch-shield { display: inline-flex; vertical-align: middle; color: #5587b8; }
 
 html body .yprof.contact-directory {

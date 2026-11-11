@@ -427,7 +427,7 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
   overflow: hidden;
 }
 #quick-post > .avatar { width: 36px; height: 36px; flex: 0 0 36px; }
-#social-sidebar .identity { gap: 10px; padding: 10px 8px; }
+#social-sidebar .identity { gap: 10px; padding: 10px 8px; margin-bottom: 8px; }
 #social-sidebar .identity strong { font-size: 16px; overflow-wrap: anywhere; }
 #social-sidebar .identity small { font-size: 12px; margin-top: 3px; }
 
@@ -609,5 +609,16 @@ button.primary,a.primary,.home-hero button,.welcome-hero .welcome-join,.room-inv
 .post-settings{margin-left:auto}
 .post-settings summary{cursor:pointer}
 .post-settings button{display:block;margin-top:5px}
-.social-profile-gallery{display:flex;flex-wrap:wrap;gap:5px}
-.social-profile-gallery img{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #12213f}
+.social-profile-gallery { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.social-profile-gallery > :is(button,figure) { min-width:0; width:100%; margin:0; }
+.social-profile-gallery img { display:block; width:100%; height:auto; aspect-ratio:1; object-fit:contain; border-radius:6px; border:1px solid #12213f; background:#fff; }
+.social-profile-gallery figcaption { overflow-wrap:anywhere; }
+
+.visitor-profile .space-about > .space-card:first-child :is(p,.profile-basics):empty { display:none; }
+.visitor-profile .space-about .space-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin-top:12px; }
+.visitor-profile .space-about .space-actions button { width:auto; margin:0; }
+.visitor-profile .space-about .space-actions .text-action { padding:4px 0; }
+.visitor-profile #friend-wall-form { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.visitor-profile #friend-wall-form textarea { flex:1 0 100%; width:100%; min-height:68px; box-sizing:border-box; padding:8px; font:inherit; resize:vertical; }
+.visitor-profile #friend-wall-form > .primary { margin:0; }
+.visitor-profile .visitor-empty p { margin-bottom:0; }

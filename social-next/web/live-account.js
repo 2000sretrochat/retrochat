@@ -242,19 +242,21 @@
       remember(record);
       $('#content').classList.remove('custom-space');$('#content').removeAttribute('style');
       $('#heading').textContent=record.displayName;$('#subheading').textContent='@'+record.name.toLowerCase();
-      const wall=record.friend&&!record.private?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message"></textarea><button class="primary">Post</button></form></section>':'';
+      const wall=record.friend&&!record.private?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message" placeholder="Say something to '+esc(record.displayName)+'"></textarea><button class="primary">Post</button></form></section>':'';
       const gallery=messengerGallery(record.gallery);
       const message='<button type="button" class="secondary" data-live-message="'+esc(record.name)+'">Message</button>';
       const add=!record.friend && record.canRequest?'<button type="button" class="secondary" data-live-request="'+esc(record.name)+'"'+(record.requestPending?' disabled>Request sent':'>Add friend')+'</button>':'';
       const actions=message+add;
-      $('#content').innerHTML='<div class="space-layout"><aside class="space-about"><section class="space-card">'+
+      const posts=rows.map(normalize).map(sharedCard).join('') || '<section class="space-card visitor-empty"><h3>Posts</h3><p>No posts yet.</p></section>';
+      const photos=rows.length?'<details class="space-card"><summary>Photos</summary>'+albumMarkup(record)+'</details>':'';
+      $('#content').innerHTML='<div class="space-layout visitor-profile"><aside class="space-about"><section class="space-card">'+
         (record.settings.portrait?'<img class="profile-portrait" src="'+esc(record.settings.portrait)+'" alt="Profile photo">':profileAvatar(record.name))+
         socialLinksMarkup(record.settings.socialLinks)+'<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span>'+(record.bot?'<p class="bot-profile-badge">Chat bot</p>':'')+'<p>'+esc(record.bio || '')+
         '</p><div class="profile-basics">'+esc([record.age,record.sex,record.location].filter(Boolean).join(' · '))+'</div><div class="space-actions">'+
         (record.private?'':actions)+
         '<button class="text-action" data-profile-block="'+esc(record.name)+'" data-blocked="'+record.blocked+'">'+(record.blocked?'Unblock':'Block')+'</button>'+
         '<button class="text-action" data-profile-report="'+esc(record.name)+'">Report</button></div></section>'+gallery+'</aside><section class="space-posts">'+
-        (record.private?privateNotice('<div class="space-actions">'+actions+'</div>'):wall+rows.map(normalize).map(sharedCard).join('')+'<details class="space-card"><summary>Photos</summary>'+albumMarkup(record)+'</details>')+'</section></div>';
+        (record.private?privateNotice('<div class="space-actions">'+actions+'</div>'):wall+posts+photos)+'</section></div>';
       document.querySelectorAll('.timeline-photo-list').forEach(container=>loadTimelinePhotos(container));
       mountAudience($('#friend-wall-form'));
       loadArticlePreviews();

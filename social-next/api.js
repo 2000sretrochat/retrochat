@@ -129,6 +129,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
     coalesce(s.value->>'portrait','') as portrait,
     (select count(*)::int from social_likes where post_id=p.id) as likes,
     exists(select 1 from social_likes where post_id=p.id and user_id=$1) as liked`;
+  router.use('/api/profile-gallery', express.json({limit:'4mb'}));
   router.use('/api', express.json({limit:'3mb'}), (req,res,next) => {
     if (req.method !== 'GET') {
       if (!req.is('application/json')) return res.status(415).json({error:'JSON required.'});
@@ -203,7 +204,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
   }));
   router.put('/api/profile-gallery',run(async(req,res) => {
     const {photos, defaultId, revision, publishAll} = req.body || {};
-    if (!Array.isArray(photos) || photos.length > 5) fail('Add up to five profile photos.');
+    if (!Array.isArray(photos) || photos.length > 6) fail('Add up to six profile photos.');
     const gallery = photos.map(item => {
       if (typeof item?.id !== 'string' || !uuid.test(item.id) || !['public','friends','private'].includes(item.mode)) fail('Invalid profile photo.');
       const image = photo(item.image,450000);

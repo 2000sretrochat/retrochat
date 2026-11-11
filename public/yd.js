@@ -175,7 +175,7 @@ html.yd #pmBadge{top:8px!important;right:12px!important}
 })();
 // v13.6: in-window dialogs (avatar, settings, profile) open as their own native windows in the desktop app.
 (function(){if(!window.YD)return;let n=0;
- const sz=el=>el.matches('.contact-profile')?[400,el.querySelector('.profile-hero')?430:300]:el.matches('.device-settings,.contact-directory')?[560,520]:el.classList.contains('razzle-settings-dialog')?[500,440]:el.classList.contains('yae')?[520,680]:el.classList.contains('yset')?[520,640]:[420,600];
+ const sz=el=>el.matches('.contact-profile')?[480,el.querySelector('.profile-photos')?450:330]:el.matches('.device-settings,.contact-directory')?[560,520]:el.classList.contains('razzle-settings-dialog')?[500,440]:el.classList.contains('yae')?[520,680]:el.classList.contains('yset')?[520,640]:[420,600];
  const pop=el=>{if(el._pw||el._ydp)return;el._ydp=1;const [w,h]=sz(el);const t=(el.querySelector('.hd span,.hd,.tbar,h2,h3')||{}).textContent||'Razzle';
   let closing=false;
   const pw=window.ydPop(el,'ydlg'+(++n),w,h,t.trim().replace(/[×x]$/,'').trim()||'Razzle',()=>{closing=true;if(el.isConnected)el.remove()});

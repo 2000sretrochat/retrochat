@@ -23,11 +23,9 @@ async function renderProfile(name,opts,request){let p;const record=socialApi('/p
  const social=await record,photos=social?.gallery||[];if(pendingProfile!==request)return;
  const avSrc=(/^bot:[a-z0-9_-]+$/.test(p.avatar||'')?('/bot-av/'+p.avatar.slice(4)):(`/av/${encodeURIComponent(p.name)}?v=${encodeURIComponent(p.avatar||'0')}`)); const av=`<img class=pav src="${E(avSrc)}" alt="">`;
  const pictures=photos.length?photos:(/^(?:c[0-9a-z]+|bot:[a-z0-9_-]+)$/.test(p.avatar||'')?[{image:avSrc}]:[]);
- let pictureIndex=Math.max(0,pictures.findIndex(photo=>photo.id && photo.id===social?.galleryDefault));
- const pictureMarkup=pictures.length?`<figure class="profile-photos">
- <img class="profile-hero" src="${E(pictures[pictureIndex].image)}" alt="Profile photo ${pictureIndex+1} of ${pictures.length}">
- ${pictures.length>1?`<figcaption class="profile-photo-nav"><button type="button" data-photo-step="-1" aria-label="Previous photo">‹</button><span aria-live="polite">${pictureIndex+1} / ${pictures.length}</span><button type="button" data-photo-step="1" aria-label="Next photo">›</button></figcaption>`:''}
- </figure>`:'';
+ const pictureMarkup=pictures.length?`<div class="profile-photos" aria-label="Profile photos">
+ ${pictures.map((photo,i)=>`<button type="button" class="profile-thumb" data-photo-index="${i}" aria-label="Enlarge photo ${i+1} of ${pictures.length}"><img src="${E(photo.image)}" alt=""><span>${i+1}</span></button>`).join('')}
+ </div>`:'';
  if(p.guest)return win(p.name+' - Profile',`<div class=ph>${av}<div><div class=pn>${E(p.name)}</div><div class=pg>${p.online?'online now':'offline'}</div></div></div><p class=pm>This member has a minimal profile.</p>`,true);
  const row=(k,v)=>v?`<tr><th>${k}</th><td>${E(v)}</td></tr>`:'';const since=p.memberSince?new Date(p.memberSince).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}):'';
  const botTag='';
@@ -45,12 +43,27 @@ async function renderProfile(name,opts,request){let p;const record=socialApi('/p
   try{const result=await socialApi('/friends/'+encodeURIComponent(p.name),{action:'request'},'POST');add.textContent=result.accepted?'Friends':'Request sent';}
   catch(error){add.disabled=false;alert(error.message);}
  };
- w.querySelectorAll('[data-photo-step]').forEach(button=>button.onclick=()=>{
-  pictureIndex=(pictureIndex+Number(button.dataset.photoStep)+pictures.length)%pictures.length;
-  const image=w.querySelector('.profile-hero');
-  image.src=pictures[pictureIndex].image;
-  image.alt='Profile photo '+(pictureIndex+1)+' of '+pictures.length;
-  w.querySelector('.profile-photo-nav span').textContent=(pictureIndex+1)+' / '+pictures.length;
+ const details=w.querySelector('.pb');
+ details.querySelectorAll('.pbio,.pt td').forEach(node=>node.title=node.textContent);
+ details.querySelectorAll('[data-photo-index]').forEach(button=>button.onclick=()=>{
+  let index=Number(button.dataset.photoIndex);
+  const viewer=document.createElement('section');
+  viewer.className='profile-photo-viewer';viewer.setAttribute('aria-label','Profile photo viewer');
+  viewer.innerHTML='<button type="button" class="profile-photo-back">‹ All photos</button><img class="profile-photo-large" alt=""><div class="profile-photo-nav"><button type="button" data-photo-step="-1" aria-label="Previous photo">‹</button><span aria-live="polite"></span><button type="button" data-photo-step="1" aria-label="Next photo">›</button></div>';
+  function showPhoto(step=0){
+   index=(index+step+pictures.length)%pictures.length;
+   const image=viewer.querySelector('img');image.src=pictures[index].image;image.alt='Profile photo '+(index+1)+' of '+pictures.length;
+   viewer.querySelector('.profile-photo-nav span').textContent=(index+1)+'/'+pictures.length;
+  }
+  const back=viewer.querySelector('.profile-photo-back');
+  back.onclick=()=>{viewer.remove();w.classList.remove('viewing-photo');button.focus();};
+  viewer.querySelectorAll('[data-photo-step]').forEach(arrow=>{arrow.disabled=pictures.length<2;arrow.onclick=()=>showPhoto(Number(arrow.dataset.photoStep));});
+  viewer.onkeydown=event=>{
+   if(!['ArrowLeft','ArrowRight','Escape'].includes(event.key))return;
+   event.preventDefault();event.stopPropagation();
+   if(event.key==='Escape')back.click();else showPhoto(event.key==='ArrowLeft'?-1:1);
+  };
+  details.append(viewer);w.classList.add('viewing-photo');showPhoto();back.focus();
  });
  const b=w.querySelector('#pEdit');if(b)b.onclick=()=>edit(p);return w;}
 function edit(p){return openProfile("edit",request=>renderEditor(p,request));}
@@ -70,11 +83,11 @@ async function renderPhotos(name,request) {
  const profile=await socialApi('/profile/'+encodeURIComponent(name));if(pendingProfile!==request)return;
  const photos=(profile.gallery || []).map(photo=>({...photo}));
  let defaultId=profile.galleryDefault;
- const w=win('Messenger Profile Pictures','<p>Add up to 5 photos. All photos saved here are public. Choose your Messenger default; your Social default stays separate.</p><div class=profile-gallery-editor></div><label class=profile-photo-drop tabindex=0>Drop photos here or choose files<input type=file multiple accept="image/jpeg,image/png,image/webp"></label><p class=perr role=status></p><div class=pbtn><button class=btn data-back>Cancel</button><button class="btn pri" data-save>Save photos</button></div>');
+ const w=win('Messenger Profile Pictures','<p>Add up to 6 photos. All photos saved here are public. Choose your Messenger default; your Social default stays separate.</p><div class=profile-gallery-editor></div><label class=profile-photo-drop tabindex=0>Drop photos here or choose files<input type=file multiple accept="image/jpeg,image/png,image/webp"></label><p class=perr role=status></p><div class=pbtn><button class=btn data-back>Cancel</button><button class="btn pri" data-save>Save photos</button></div>');
  const list=w.querySelector('.profile-gallery-editor'),input=w.querySelector('input[type=file]'),error=w.querySelector('.perr'),save=w.querySelector('[data-save]');
  function draw(){
   list.innerHTML=photos.map((photo,i)=>`<div class=gallery-row><img src="${E(photo.icon||photo.image)}" alt="Photo ${i+1}"><label><input type=radio name=primary value="${i}" ${photo.id===defaultId?'checked':''}> Default</label><span class=gallery-public>Public</span><button type=button data-crop="${i}">Crop icon</button><button type=button data-remove="${i}">Remove</button></div>`).join('');
-  input.disabled=photos.length>=5;
+  input.disabled=photos.length>=6;
  }
  list.onchange=event=>{
   const target=event.target;
@@ -107,8 +120,8 @@ async function renderPhotos(name,request) {
  }
  async function addFiles(files){
   if(busy)return;busy=true;
-  if(files.length>5-photos.length){error.textContent='Add up to 5 photos. Remove a photo to make room.';busy=false;return;}
-  for(const file of files){if(!file||photos.length>=5)break;
+  if(files.length>6-photos.length){error.textContent='Add up to 6 photos. Remove a photo to make room.';busy=false;return;}
+  for(const file of files){if(!file||photos.length>=6)break;
   error.textContent='';save.disabled=input.disabled=true;
   let url='';
   try{
