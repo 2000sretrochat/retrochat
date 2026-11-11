@@ -31,7 +31,7 @@ const L=[
 [':-P','tongue','dot','tongue','','wag'],[':-x','love struck','heart','smallo','','pulse'],[':O','surprise','big','o','','pulse'],[':*','kiss','dot','kiss','kisses','pulse'],
 ['|-)','sleepy','closed','flat','zzz','bob'],['\\:D/','dancing','dot','grin','','spin2'],['O:)','angel','dot','smile','halo','bob'],['0-+','april','dot','smile','',''],['🤮','sick','queasy','puke','green','retch'],
 ];
-const ORDER=L.map(r=>r[0]);L.sort((a,b)=>b[0].length-a[0].length);
+const ORDER=L.map(r=>r[0]).filter(code=>code!=='🤮');L.sort((a,b)=>b[0].length-a[0].length);
 const OV=(x)=>`<ellipse cx="${x}" cy="8.6" rx="1.3" ry="2"/><circle cx="${x-.4}" cy="7.8" r=".45" fill="#fff"/>`;
 const eye={queasy:'<path d="M5 8l4 1.8-4 1M17 8l-4 1.8 4 1" fill="none" stroke="#234321" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>',dot:OV(7.5)+OV(14.5),wink:'<g class="wo">'+OV(7.5)+'</g><path class="wc" d="M5.6 9.2q1.9-1.6 3.8 0" stroke="#000" fill="none" stroke-width="1.4" stroke-linecap="round"/>'+OV(14.5),
 lash:'<g>'+OV(7.5)+OV(14.5)+'<path d="M5.6 7.2L3.6 5.2M6.6 6.5L5.6 4M7.9 6.3L7.9 3.7M16.4 7.2l2-2M15.4 6.5l1-2.5M14.1 6.3v-2.6" stroke="#000" stroke-width=".9" stroke-linecap="round"/></g>',

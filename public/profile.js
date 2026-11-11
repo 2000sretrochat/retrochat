@@ -22,12 +22,18 @@ async function renderProfile(name,opts,request){let p;const record=socialApi('/p
  try{const r=await fetch('/api/profile/'+encodeURIComponent(name));p=await r.json();if(!r.ok)throw p}catch(e){return alert((e&&e.error)||'Could not load that profile.')}
  const social=await record,photos=social?.gallery||[];if(pendingProfile!==request)return;
  const avSrc=(/^bot:[a-z0-9_-]+$/.test(p.avatar||'')?('/bot-av/'+p.avatar.slice(4)):(`/av/${encodeURIComponent(p.name)}?v=${encodeURIComponent(p.avatar||'0')}`)); const av=`<img class=pav src="${E(avSrc)}" alt="">`;
+ const pictures=photos.length?photos:(/^(?:c[0-9a-z]+|bot:[a-z0-9_-]+)$/.test(p.avatar||'')?[{image:avSrc}]:[]);
+ let pictureIndex=Math.max(0,pictures.findIndex(photo=>photo.id && photo.id===social?.galleryDefault));
+ const pictureMarkup=pictures.length?`<figure class="profile-photos">
+ <img class="profile-hero" src="${E(pictures[pictureIndex].image)}" alt="Profile photo ${pictureIndex+1} of ${pictures.length}">
+ ${pictures.length>1?`<figcaption class="profile-photo-nav"><button type="button" data-photo-step="-1" aria-label="Previous photo">‹</button><span aria-live="polite">${pictureIndex+1} / ${pictures.length}</span><button type="button" data-photo-step="1" aria-label="Next photo">›</button></figcaption>`:''}
+ </figure>`:'';
  if(p.guest)return win(p.name+' - Profile',`<div class=ph>${av}<div><div class=pn>${E(p.name)}</div><div class=pg>${p.online?'online now':'offline'}</div></div></div><p class=pm>This member has a minimal profile.</p>`,true);
  const row=(k,v)=>v?`<tr><th>${k}</th><td>${E(v)}</td></tr>`:'';const since=p.memberSince?new Date(p.memberSince).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}):'';
  const botTag='';
  const w=win(p.name+' – Profile',`<div class=ph>${av}<div><div class=pn>${E(p.displayName||p.name)}${botTag}</div><div class=pg>@${E(p.name)} &middot; ${p.online?'<span class="sdot available"></span> online':'offline'}</div></div></div>
+ ${pictureMarkup}
  ${social?.private||p.private?'<p class=pm>Private profile</p>':(p.bio?`<p class=pbio>${E(p.bio)}</p>`:'')+`<table class=pt>${row('Age',p.age)}${p.location?`<tr><th>Location</th><td>${window.YFlag?YFlag(p.location)+' ':''}${E(p.location)}</td></tr>`:''}${row('Interests',p.interests)}${p.bot?row('Room',p.room):''}${row('Member since',since)}</table>`}
- ${photos.length?'<div class=profile-gallery>'+photos.map((photo,i)=>'<button type=button data-photo="'+i+'" aria-label="View photo '+(i+1)+'"><img src="'+E(photo.image)+'" alt=""></button>').join('')+'</div>':''}
  <div class=profile-social-actions><a class=profile-social-link href="${socialPath(p.name)}" target=_blank rel=noopener>View Razzle Social profile</a>
  ${social?.canRequest && !social.owner && !social.friend?`<button type=button data-profile-add ${social.requestPending?'disabled>Request sent':'>Add friend'}</button>`:''}</div>
  ${!p.bot&&opts.me&&opts.me.toLowerCase()==p.name.toLowerCase()?'<div class=pbtn><button class="btn pri" id=pEdit>Edit Profile</button></div>':''}`,true);
@@ -39,10 +45,12 @@ async function renderProfile(name,opts,request){let p;const record=socialApi('/p
   try{const result=await socialApi('/friends/'+encodeURIComponent(p.name),{action:'request'},'POST');add.textContent=result.accepted?'Friends':'Request sent';}
   catch(error){add.disabled=false;alert(error.message);}
  };
- w.querySelectorAll('[data-photo]').forEach(button=>button.onclick=()=>{
-  let preview=w.querySelector('.profile-photo-preview');
-  if(!preview){preview=document.createElement('img');preview.className='profile-photo-preview';w.querySelector('.profile-gallery').after(preview);}
-  preview.alt=button.getAttribute('aria-label');preview.src=photos[Number(button.dataset.photo)].image;
+ w.querySelectorAll('[data-photo-step]').forEach(button=>button.onclick=()=>{
+  pictureIndex=(pictureIndex+Number(button.dataset.photoStep)+pictures.length)%pictures.length;
+  const image=w.querySelector('.profile-hero');
+  image.src=pictures[pictureIndex].image;
+  image.alt='Profile photo '+(pictureIndex+1)+' of '+pictures.length;
+  w.querySelector('.profile-photo-nav span').textContent=(pictureIndex+1)+' / '+pictures.length;
  });
  const b=w.querySelector('#pEdit');if(b)b.onclick=()=>edit(p);return w;}
 function edit(p){return openProfile("edit",request=>renderEditor(p,request));}

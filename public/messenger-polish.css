@@ -1,39 +1,36 @@
 /* Messenger dialogs, contact directory and conversation layout. */
 html body .yprof.contact-profile {
-  width: min(560px, calc(100vw - 16px)) !important;
+  width: min(400px, calc(100vw - 16px)) !important;
+}
+html.yd.ydpop body .yprof.contact-profile {
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: none !important;
+  max-height: none !important;
+  transform: none !important;
 }
 .contact-profile .ph .pav {
-  width: 88px;
-  height: 88px;
+  width: 42px;
+  height: 42px;
   object-fit: cover;
 }
-.contact-profile .profile-gallery {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-}
-.contact-profile .profile-gallery button {
-  grid-column: span 2;
-  min-width: 0;
-}
-.contact-profile .profile-gallery button:nth-child(4),
-.contact-profile .profile-gallery button:nth-child(5) {
-  grid-column: span 3;
-}
-.contact-profile .profile-gallery button:first-child:nth-last-child(2),
-.contact-profile .profile-gallery button:first-child:nth-last-child(2) + button {
-  grid-column: span 3;
-}
-.contact-profile .profile-gallery img {
+.contact-profile .profile-photos { margin: 8px 0; }
+.contact-profile .profile-hero {
+  display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 4 / 3;
+  height: min(225px, 53dvh);
+  object-fit: cover;
+  border-radius: 5px;
 }
-.contact-profile .profile-gallery button:only-child img {
-  max-height: 220px;
-  object-fit: contain;
+.contact-profile .profile-photo-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--muted);
 }
-.contact-profile .profile-gallery button:only-child { grid-column: span 6; }
+.contact-profile .profile-photo-nav button { padding: 0 10px !important; }
+.contact-profile .pbtn { margin-top: 6px; }
 .watch-shield { display: inline-flex; vertical-align: middle; color: #5587b8; }
 
 html body .yprof.contact-directory {
@@ -134,15 +131,16 @@ html.yd.ydpop body .im > .tbar { display: none !important; }
   align-items: flex-start;
   max-width: 100% !important;
 }
-.im .log .transcript-message > .av {
-  display: inline-flex;
+.im .log .transcript-message > .pm-sender-avatar {
+  display: inline-flex !important;
   width: 30px !important;
   height: 30px !important;
   align-items: center;
   justify-content: center;
   flex: 0 0 30px;
 }
-.im .log .transcript-message .bb { min-width: 0; }
+.im .log .transcript-message .bb { flex: 1 1 0; width: auto; min-width: 0; }
+.im .log .pm-sender-avatar { align-self: flex-start; margin: 0 2px 0 0; }
 .im .log .transcript-message [role="status"] { color: var(--muted); flex: 0 0 auto; }
 .ygifpop { background: var(--card) !important; color: var(--ink) !important; }
 

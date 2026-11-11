@@ -500,14 +500,24 @@ function line(w,from,m,old){
  const style=`${color}font-family:'${font}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
  const time=new Date(m.t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
  const delivery=m.deliveryState||(m.offline?'Delivered when they sign in':'');
- w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg transcript-message">${avHtml(from.toLowerCase()===ME?.name.toLowerCase()?ME.avatar:contacts[from.toLowerCase()]?.avatar,'sm',from)}<div class=bb><time>${escT(time)}</time> <strong>${escT(from)}:</strong> <span class=message-text style="${style}">${YGif.render(m.text)||RCSmileys.replace(m.text)}</span>${delivery?'<small class=delivery-state>'+escT(delivery)+'</small>':''}</div></div>`);scroll(w)}
+ w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg transcript-message">${avHtml(from.toLowerCase()===ME?.name.toLowerCase()?ME.avatar:contacts[from.toLowerCase()]?.avatar,'sm pm-sender-avatar',from)}<div class=bb><time>${escT(time)}</time> <strong>${escT(from)}:</strong> <span class=message-text style="${style}">${YGif.render(m.text)||RCSmileys.replace(m.text)}</span>${delivery?'<small class=delivery-state>'+escT(delivery)+'</small>':''}</div></div>`);scroll(w)}
+function applyImFormatting(w){
+ const visible=localStorage.ycImFormatting!=='off';
+ w.querySelector('.fmt').classList.toggle('open',visible);
+ w.querySelectorAll('[data-m=fmt]').forEach(item=>item.setAttribute('aria-checked',String(visible)));
+ w.querySelector('[data-a=aa]').setAttribute('aria-pressed',String(visible));
+}
+function toggleImFormatting(){
+ localStorage.ycImFormatting=localStorage.ycImFormatting==='off'?'on':'off';
+ Object.values(ims).forEach(applyImFormatting);
+}
 function applyImTimestamps(w){
  const enabled=localStorage.ycImTimestamps!=='off';
  w.classList.toggle('hide-im-times',!enabled);
  const item=w.querySelector('[data-m=timestamps]');item.setAttribute('aria-checked',String(enabled));
  item.textContent=(enabled?'✓ ':'')+'Show timestamps';
 }
-addEventListener('storage',e=>{if(e.key==='ycImTimestamps')Object.values(ims).forEach(applyImTimestamps);});
+addEventListener('storage',e=>{if(e.key==='ycImTimestamps')Object.values(ims).forEach(applyImTimestamps);if(e.key==='ycImFormatting')Object.values(ims).forEach(applyImFormatting);});
 function peerInfo(w,n){const c=contacts[n.toLowerCase()],st=c?(c.online?(c.idle?'idle':c.status):'offline'):'offline';
  const ih=w.querySelector('.ihead');if(ih){ih.querySelector('.pav').innerHTML=avHtml(c?c.avatar:'','',c?c.name:n);ih.querySelector('.st').innerHTML=`<span class="sdot ${st}"></span>${STL[st]}${c&&c.msg&&!(c.showRoom&&c.room)?' &middot; '+RCSmileys.replace(c.msg):''}${c&&c.online&&c.room?` &middot; <a href="#" class=imjr title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>`:''}`;const j=ih.querySelector('.imjr');if(j)j.onclick=ev=>{ev.preventDefault();window.open('/rooms.html?room='+encodeURIComponent(c.room),'yapprooms')}}
  w.querySelector('.peer').innerHTML=avHtml(c?c.avatar:'','sm ring r-'+st,c?c.name:n)+`<span class="dot d-${st}"></span><b>${escT(c?c.name:n)}</b> &mdash; ${STL[st]}${c&&c.msg?' &middot; '+RCSmileys.replace(c.msg):''}`}
@@ -518,10 +528,10 @@ function openIm(n){const w0=openIm0(n),k=n.toLowerCase();if(window.pmHeld&&pmHel
 function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTop;if(ims[k]._pw)try{ims[k]._pw.focus()}catch(e){}return ims[k]}const name=(contacts[k]||{}).name||n;
  const w=document.createElement('div');w.className='im win';const i=Object.keys(ims).length;w.style.left=Math.max(8,Math.min(330+i*20,innerWidth-650))+'px';w.style.top=Math.max(8,Math.min(30+i*20,innerHeight-485))+'px';w.style.zIndex=++zTop;w.dataset.n=name;
  w.innerHTML=`<div class=tbar><span class=lgs>${razzleMark(24)}</span>${escT(name)} &ndash; Private Message<span class=sp></span><span class="wb x"><i data-i=close data-s=16></i></span></div>
- <div class=mbar><div>Conversation<div class=dd><div data-m=close>Close</div></div></div><div>Edit<div class=dd><div data-m=clearin>Clear Message Box</div></div></div><div>View<div class=dd><div data-m=fmt>Text Style Bar</div><div data-m=timestamps role="menuitemcheckbox">Show timestamps</div></div></div><div>Actions<div class=dd><div data-m=buzz>Send BUZZ!</div><div data-m=voice>Voice Call</div><div data-m=video>Webcam Call</div></div></div><div>Help<div class=dd><div data-m=help>Keyboard Tips</div></div></div></div>
+ <div class=mbar><div>Conversation<div class=dd><div data-m=close>Close</div></div></div><div>Edit<div class=dd><div data-m=clearin>Clear Message Box</div></div></div><div>View<div class=dd><div data-m=fmt role="menuitemcheckbox">Show font customization</div><div data-m=timestamps role="menuitemcheckbox">Show timestamps</div></div></div><div>Actions<div class=dd><div data-m=buzz>Send BUZZ!</div><div data-m=voice>Voice Call</div><div data-m=video>Webcam Call</div></div></div><div>Help<div class=dd><div data-m=help>Keyboard Tips</div></div></div></div>
  <div class=ihead><span class=pav></span><div><div class=nm style=cursor:pointer title='View profile' data-m=prof>${escT(name)}</div><div class=st></div></div><span class=sp></span>
  <button class=ib data-a=video title="Webcam call">${YI.svg('video',22)}</button><button class=ib data-a=voice title="Voice call">${YI.svg('phone',22)}</button><button class=ib data-a=buzz title="Buzz (Ctrl+G)">${YI.svg('bell',18)} <span>Buzz</span></button><button class=ib data-a=more title="More">${YI.svg('dots',22)}</button>
- <div class=imenu><div data-m=prof>View Profile</div><div data-m=fmt>Text style (bold, color, font)</div><div data-a=block>Block</div><div data-a=rep>Report</div><div data-m=close>Close window</div></div></div>
+ <div class=imenu><div data-m=prof>View Profile</div><div data-m=fmt role="menuitemcheckbox">Show font customization</div><div data-a=block>Block</div><div data-a=rep>Report</div><div data-m=close>Close window</div></div></div>
  <div class=tools><button class=tb data-a=voice title="Start a voice call"><span>&#127908;</span>Call</button><button class=tb data-a=video title="Start a webcam call"><span>&#128247;</span>Webcam</button>
  <button class=tb data-a=buzz title="BUZZ! (Ctrl+G)"><span>&#128243;</span>Buzz</button><button class=tb data-a=aud title="Send an Audible"><span>&#128264;</span>Audibles</button><button class=tb data-a=imv title="IMVironment: theme this conversation for both of you"><span>&#127774;</span>IMVironment</button><button class=tb data-a=rep title="Report this user"><span>&#9873;</span>Report</button></div>
  <div class=call><div class=callbar><div class=cleft><span class=cstatus></span><div class=cs></div></div><div class=cbtns><button type=button class="rzb camt" aria-pressed=false hidden></button><button type=button class="rzb danger hang">Hang Up</button></div></div><div class=cstage hidden><span class=cpeer></span><video class=them autoplay playsinline></video><video class=me autoplay playsinline muted></video></div></div>
@@ -530,7 +540,7 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  <select class=font>${['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'].map(f=>`<option>${f}</option>`).join('')}</select><div class=smp></div></div>
  <div class=inbox><button class=ib data-a=aa title="Text style">${YI.svg('font',22)}</button><button class=ib data-a=sm title="Smileys">${YI.svg('smile',22)}</button><button class=ib disabled title="Images coming soon">${YI.svg('image',22)}</button><button class=ib disabled title="Files coming soon">${YI.svg('clip',22)}</button><button type=button class="ib gifb" title="Send a GIF">GIF</button><textarea maxlength=1000 placeholder="Type a message... (Enter to send)"></textarea></div><form></form><template data-ad-placement="private-message"><div class="adph adph-c"></div></template>`;
  YI.fill(w);w.querySelector('.inbox').appendChild(w.querySelector('.smp'));
- applyImTimestamps(w);document.body.appendChild(w);ims[k]=w;if(YD)ydPop(w,'yim_'+k,640,475,name+' - Private Message',()=>{if(ims[k]!==w)return;try{endCall(w,true)}catch(e){}delete ims[k]});peerInfo(w,name);drag(w);w.onpointerdown=()=>w.style.zIndex=++zTop;
+ applyImTimestamps(w);applyImFormatting(w);document.body.appendChild(w);ims[k]=w;if(YD)ydPop(w,'yim_'+k,640,475,name+' - Private Message',()=>{if(ims[k]!==w)return;try{endCall(w,true)}catch(e){}delete ims[k]});peerInfo(w,name);drag(w);w.onpointerdown=()=>w.style.zIndex=++zTop;
  const st=w._st={b:false,i:false,u:false,color:'#000000',f:'Arial'},ta=w.querySelector('textarea');
  w.querySelector('.x').onclick=()=>{endCall(w,true);const pw=w._pw;delete ims[k];w.remove();pw&&pw.close()};
  w.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{st[b.dataset.s]=!st[b.dataset.s];b.classList.toggle('on',st[b.dataset.s]);ta.style.fontWeight=st.b?'bold':'';ta.style.fontStyle=st.i?'italic':'';ta.style.textDecoration=st.u?'underline':''});
@@ -540,7 +550,7 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  const emojiButton=w.querySelector('.smb');emojiButton.onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};emojiButton.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();emojiButton.click();}};smp.querySelectorAll('span[data-k]').forEach(e=>e.onclick=()=>{ta.value+=' '+dec(e.dataset.k)+' ';smp.classList.remove('open');ta.focus()});
  const send=gif=>{
   const t=(gif||ta.value).trim();if(!t)return;if(!gif)ta.value='';
-  sendMessengerMessage({socket:()=>S,log:w.querySelector('.log'),text:t,payload:{to:name,text:t,...st},avatar:avHtml(ME.avatar,'sm',ME.name),onRejected:reason=>w.ownerDocument.defaultView.alert(reason),onSent:r=>{
+  sendMessengerMessage({socket:()=>S,log:w.querySelector('.log'),text:t,payload:{to:name,text:t,...st},avatar:avHtml(ME.avatar,'sm pm-sender-avatar',ME.name),onRejected:reason=>w.ownerDocument.defaultView.alert(reason),onSent:r=>{
    w.querySelector('.yseen')?.remove();line(w,ME.name,{...r,deliveryState:r.offline?'Sent · offline':'Sent'});
   }});
  };
@@ -558,11 +568,11 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  emit('m:imv-get',{with:name}).then(r=>setImv(w,r.env));
  ta.addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();if(!e.repeat&&!e.isComposing)send()}else if(e.ctrlKey&&e.key.toLowerCase()=='g'){e.preventDefault();buzz(name)}else if(e.key.length==1&&Date.now()-lt>2500){lt=Date.now();S.emit('m:typing',{to:name})}});
  w.querySelectorAll('[data-a=buzz]').forEach(b=>b.onclick=()=>buzz(name));const im=w.querySelector('.imenu');
- w.querySelector('[data-a=more]').onclick=e=>{e.stopPropagation();im.classList.toggle('open')};w.querySelector('[data-a=aa]').onclick=()=>w.querySelector('.fmt').classList.toggle('open');
+ w.querySelector('[data-a=more]').onclick=e=>{e.stopPropagation();im.classList.toggle('open')};w.querySelector('[data-a=aa]').onclick=toggleImFormatting;
  w.querySelector('[data-a=sm]').onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};w.addEventListener('click',e=>{if(!e.target.closest('[data-a=more]'))im.classList.remove('open');if(!e.target.closest('.mbar'))w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'))});
  w.querySelectorAll('.mbar>div').forEach(m=>m.onclick=e=>{if(e.target.closest('.dd'))return;const o=m.classList.contains('open');w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'));if(!o)m.classList.add('open')});
  w.querySelectorAll('[data-m]').forEach(d=>d.onclick=()=>{const a=d.dataset.m;w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'));
-  if(a=='prof')YProf.show(name,{me:ME&&ME.name});else if(a=='close')w.querySelector('.tbar .x').click();else if(a=='clearin')ta.value='';else if(a=='fmt')w.querySelector('.fmt').classList.toggle('open');else if(a==='timestamps'){localStorage.ycImTimestamps=localStorage.ycImTimestamps==='off'?'on':'off';Object.values(ims).forEach(applyImTimestamps);}else if(a=='buzz')buzz(name);else if(a=='voice')startCall(w,name,'audio');else if(a=='video')startCall(w,name,'video');else if(a=='help')alert('Enter sends. Shift+Enter adds a new line. Ctrl+G sends a BUZZ.')});
+  if(a=='prof')YProf.show(name,{me:ME&&ME.name});else if(a=='close')w.querySelector('.tbar .x').click();else if(a=='clearin')ta.value='';else if(a=='fmt')toggleImFormatting();else if(a==='timestamps'){localStorage.ycImTimestamps=localStorage.ycImTimestamps==='off'?'on':'off';Object.values(ims).forEach(applyImTimestamps);}else if(a=='buzz')buzz(name);else if(a=='voice')startCall(w,name,'audio');else if(a=='video')startCall(w,name,'video');else if(a=='help')alert('Enter sends. Shift+Enter adds a new line. Ctrl+G sends a BUZZ.')});
  w.querySelectorAll('[data-a=voice]').forEach(b=>b.onclick=()=>startCall(w,name,'audio'));w.querySelectorAll('[data-a=video]').forEach(b=>b.onclick=()=>startCall(w,name,'video'));w.querySelector('.hang').onclick=()=>endCall(w,true);w.querySelector('.camt').onclick=()=>toggleCamera(w);
  return w}
 async function buzz(n){const w=openIm(n);const r=await emit('m:buzz',{to:n});if(r.error)return sys(w,r.error);w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class=bz>${ts()}${escT(ME.name)}: BUZZ!!!</div>`);scroll(w)}
