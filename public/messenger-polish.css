@@ -1,7 +1,7 @@
 /* Messenger dialogs, contact directory and conversation layout. */
 html body .yprof.contact-profile {
   box-sizing: border-box;
-  width: min(420px, calc(100vw - 16px)) !important;
+  width: min(500px, calc(100vw - 16px)) !important;
   display: flex;
   flex-direction: column;
   overflow: hidden !important;
@@ -52,6 +52,10 @@ html.yd.ydpop body .yprof.contact-profile {
 }
 .contact-profile .pbio { margin: 4px 0; }
 .contact-profile .pt { margin-top: 0; table-layout: fixed; }
+.contact-profile .pt .profile-interests-value { white-space: normal; overflow-wrap: anywhere; }
+.contact-profile .profile-interests-more { padding: 0 4px !important; font-size: inherit; }
+.contact-profile .profile-interests-more.short-list { display:none; }
+.contact-profile .profile-interests-viewer p { margin: 8px 0; line-height: 1.6; overflow-wrap: anywhere; }
 .contact-profile .pt th, .contact-profile .pt td { padding-block: 1px; }
 .contact-profile .pbtn { margin-top: 5px; }
 .contact-profile.viewing-photo .pb { flex: 1; }
@@ -68,7 +72,11 @@ html.yd.ydpop body .yprof.contact-profile {
 .contact-profile .profile-photo-nav { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .contact-profile .profile-photo-nav button { min-width: 32px; padding: 0 10px !important; }
 @media (max-height: 400px) {
-  .contact-profile .profile-photos { grid-auto-rows: clamp(24px, 13dvh, 52px); }
+  .contact-profile .profile-photos { grid-auto-rows: 32px; }
+  .contact-profile .profile-interests-preview { display:none; }
+  .contact-profile .profile-interests-more.short-list { display:inline-block; }
+  .contact-profile .pt th, .contact-profile .pt td { line-height:1.2; padding-block:0; }
+  .contact-profile .pbio { margin:2px 0; }
 }
 .watch-shield { display: inline-flex; vertical-align: middle; color: #5587b8; }
 

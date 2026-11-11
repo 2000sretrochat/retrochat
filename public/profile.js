@@ -28,10 +28,11 @@ async function renderProfile(name,opts,request){let p;const record=socialApi('/p
  </div>`:'';
  if(p.guest)return win(p.name+' - Profile',`<div class=ph>${av}<div><div class=pn>${E(p.name)}</div><div class=pg>${p.online?'online now':'offline'}</div></div></div><p class=pm>This member has a minimal profile.</p>`,true);
  const row=(k,v)=>v?`<tr><th>${k}</th><td>${E(v)}</td></tr>`:'';const since=p.memberSince?new Date(p.memberSince).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}):'';
+ const interests=String(p.interests||'').trim();
  const botTag='';
  const w=win(p.name+' – Profile',`<div class=ph>${av}<div><div class=pn>${E(p.displayName||p.name)}${botTag}</div><div class=pg>@${E(p.name)} &middot; ${p.online?'<span class="sdot available"></span> online':'offline'}</div></div></div>
  ${pictureMarkup}
- ${social?.private||p.private?'<p class=pm>Private profile</p>':(p.bio?`<p class=pbio>${E(p.bio)}</p>`:'')+`<table class=pt>${row('Age',p.age)}${p.location?`<tr><th>Location</th><td>${window.YFlag?YFlag(p.location)+' ':''}${E(p.location)}</td></tr>`:''}${row('Interests',p.interests)}${p.bot?row('Room',p.room):''}${row('Member since',since)}</table>`}
+ ${social?.private||p.private?'<p class=pm>Private profile</p>':(p.bio?`<p class=pbio>${E(p.bio)}</p>`:'')+`<table class=pt>${row('Age',p.age)}${p.location?`<tr><th>Location</th><td>${window.YFlag?YFlag(p.location)+' ':''}${E(p.location)}</td></tr>`:''}${(interests?'<tr><th>Interests</th><td class=profile-interests-value><span class=profile-interests-preview>'+E(interests)+'</span> <button type=button class="profile-interests-more'+(interests.length>115?'':' short-list')+'">See all</button></td></tr>':'')}${p.bot?row('Room',p.room):''}${row('Member since',since)}</table>`}
  <div class=profile-social-actions><a class=profile-social-link href="${socialPath(p.name)}" target=_blank rel=noopener>View Razzle Social profile</a>
  ${social?.canRequest && !social.owner && !social.friend?`<button type=button data-profile-add ${social.requestPending?'disabled>Request sent':'>Add friend'}</button>`:''}</div>
  ${!p.bot&&opts.me&&opts.me.toLowerCase()==p.name.toLowerCase()?'<div class=pbtn><button class="btn pri" id=pEdit>Edit Profile</button></div>':''}`,true);
@@ -44,7 +45,24 @@ async function renderProfile(name,opts,request){let p;const record=socialApi('/p
   catch(error){add.disabled=false;alert(error.message);}
  };
  const details=w.querySelector('.pb');
- details.querySelectorAll('.pbio,.pt td').forEach(node=>node.title=node.textContent);
+ details.querySelectorAll('.pbio,.pt td:not(.profile-interests-value)').forEach(node=>node.title=node.textContent);
+ const more=details.querySelector('.profile-interests-more');
+ if(more){
+  const preview=details.querySelector('.profile-interests-preview');
+  if(interests.length>115)preview.textContent=interests.slice(0,115).replace(/\s+\S*$/,'')+'…';
+  more.onclick=()=>{
+   const viewer=document.createElement('section');viewer.className='profile-photo-viewer profile-interests-viewer';
+   viewer.innerHTML='<button type=button class=profile-photo-back>‹ Back to profile</button><p></p><div class=profile-photo-nav><button type=button aria-label="Previous interests">‹</button><span aria-live=polite></span><button type=button aria-label="Next interests">›</button></div>';
+   const pages=interests.match(/.{1,180}(?:\s|$)|.{1,180}/gs),buttons=viewer.querySelectorAll('.profile-photo-nav button');
+   let index=0;
+   function draw(){viewer.querySelector('p').textContent=pages[index];viewer.querySelector('.profile-photo-nav span').textContent=(index+1)+'/'+pages.length;buttons[0].disabled=index===0;buttons[1].disabled=index===pages.length-1;}
+   buttons[0].onclick=()=>{index--;draw();};buttons[1].onclick=()=>{index++;draw();};
+   const back=viewer.querySelector('.profile-photo-back');
+   back.onclick=()=>{viewer.remove();w.classList.remove('viewing-photo');more.focus();};
+   viewer.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();back.click();}};
+   details.append(viewer);w.classList.add('viewing-photo');draw();back.focus();
+  };
+ }
  details.querySelectorAll('[data-photo-index]').forEach(button=>button.onclick=()=>{
   let index=Number(button.dataset.photoIndex);
   const viewer=document.createElement('section');
