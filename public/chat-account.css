@@ -142,3 +142,44 @@
  .room-signin .auth-site-main { grid-template-columns: minmax(0, 460px); justify-content: center; }
  .room-signin .auth-chat-art { display: none; }
 }
+
+.auth-install-dock:empty { display:none; }
+.auth-install-dock { padding:0 12px 16px; }
+.room-signin .auth-heading .logo .b { color:#21476e!important; }
+@media (max-width: 799px) {
+ html.room-signin body { margin:0!important; width:100%!important; min-width:0!important; }
+ html.room-signin #social-chat-header {
+   min-height:60px; padding:8px 12px; gap:6px 10px;
+ }
+ html.room-signin .social-chat-brand { font-size:clamp(18px, 5vw, 24px); gap:5px; }
+ html.room-signin .social-chat-brand img { width:34px; height:32px; }
+ html.room-signin .social-chat-brand span { margin-left:-4px; }
+ html.room-signin #social-chat-header > .auth-browse-link {
+   padding:6px 8px; font-size:12px; min-height:36px;
+   display:inline-flex; align-items:center; white-space:nowrap;
+ }
+ html.room-signin .auth-site-layout {
+   width:100%!important; min-width:0!important; min-height:0;
+   grid-template-columns:minmax(0,1fr)!important;
+   padding:0; gap:0;
+ }
+ html.room-signin .auth-site-sidebar { display:none!important; }
+ html.room-signin .auth-site-main {
+   width:100%; min-width:0; padding:12px 14px 0;
+   grid-template-columns:minmax(0,440px); gap:0;
+ }
+ html.room-signin .auth-site-main #mwin {
+   position:relative!important; inset:auto!important;
+   width:100%!important; min-width:0!important; max-width:100%!important;
+   height:auto!important; min-height:0!important; max-height:none!important;
+   margin:0!important; border:0!important; border-radius:0!important;
+ }
+ html.room-signin .auth-site-main #signin {
+   padding:12px 0!important; gap:10px!important;
+   width:100%; overflow:visible!important;
+ }
+ html.room-signin #signin .logo { font-size:clamp(23px,6vw,30px)!important; }
+ html.room-signin .auth-heading .lgbig img { width:36px; height:36px; }
+ html.room-signin #signin input:not([type=checkbox]) { font-size:16px!important; min-height:44px; }
+ html.room-signin #chat-signin-footer { flex-wrap:wrap; gap:8px 14px; }
+}
