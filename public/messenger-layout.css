@@ -56,7 +56,26 @@ html.standalone-messenger.has-overlay:not(.yd) #mwin {
 }
 #mShowRoom label {display:flex;align-items:center;gap:5px;cursor:pointer}
 #mShowRoomCheck {margin:0}
-#clearStatus {border:0;background:transparent;color:var(--muted);font-size:17px;cursor:pointer;padding:0 4px}
+#mwin .mind #clearStatus {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  margin-inline-end: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted, #596c82);
+  font: 400 12px/1 var(--sys, sans-serif);
+  cursor: pointer;
+}
+#mwin .mind #clearStatus[hidden] { display: none; }
+#mwin .mind #clearStatus:is(:hover, :focus-visible) {
+  background: #70849a22;
+  color: var(--ink, #153653);
+}
 @media (max-width: 760px) {
   html:not(.yd) #yfoot {padding:12px 16px max(12px, env(safe-area-inset-bottom))!important}
   html:not(.yd):not(.room-signin) #mwin {position:relative!important;inset:auto!important;margin:12px auto;max-width:calc(100% - 24px)!important}
