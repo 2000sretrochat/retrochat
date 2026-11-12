@@ -15,8 +15,8 @@
     st.textContent = `
 .rzn-wrap{align-self:stretch;display:flex;position:relative;width:100%}
 html.yd .rzn-wrap{max-width:320px;align-self:center}
-.rzn-wrap #iName{flex:1;min-width:0;max-width:none!important;border-top-right-radius:0!important;border-bottom-right-radius:0!important}
-.rzn-btn{flex:none;width:28px;padding:0!important;margin:0!important;border-left:0;border-top-left-radius:0!important;border-bottom-left-radius:0!important}
+.rzn-wrap #iName{flex:1;min-width:0;max-width:none!important}
+.rzn-wrap .rzn-btn{position:absolute;inset:1px 1px 1px auto;width:31px;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
 .rzn-list{display:none;position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--card,#fff);color:var(--ink,#000);border:1px solid #7f9db9;box-shadow:2px 2px 5px rgba(0,0,0,.25);padding:2px 0;max-height:220px;overflow:auto;font-weight:normal}
 .rzn-list.open{display:block}
 .rzn-list div{padding:4px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -34,9 +34,11 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
 .rzn-done{display:flex;justify-content:flex-end;margin-top:10px}.rzn-done button{flex:none;margin:0}
 /* design handoff Nov 10 (item 7): 36px screen-name control, 32px rows, Edit pinned under a divider, stacked checks */
 .rzn-wrap{height:36px}
-.rzn-wrap #iName{height:36px!important;min-height:36px!important;padding:0 8px!important;box-sizing:border-box}
-.rzn-btn{width:32px;height:36px!important;min-height:36px!important;display:inline-grid!important;place-items:center;color:#00205B!important}
-.rzn-btn svg{width:16px;height:16px}
+.rzn-wrap #iName{height:36px!important;min-height:36px!important;padding:0 34px 0 8px!important;box-sizing:border-box}
+.rzn-wrap .rzn-btn{height:auto!important;min-height:0!important;display:inline-grid!important;place-items:center;color:#536e8a!important}
+.rzn-wrap .rzn-btn:hover{color:#00205b!important}
+.rzn-wrap .rzn-btn:focus-visible{outline:2px solid #397cba;outline-offset:-2px}
+.rzn-btn svg{width:18px;height:18px}
 .rzn-list{border:1px solid #9DB3CC;border-radius:4px;box-shadow:0 3px 6px #00205b1a;padding:4px;max-height:none;overflow:visible;margin-top:2px;font:13px/1.4 Tahoma,'Segoe UI',sans-serif}
 .rzn-list.open{display:flex;flex-direction:column}
 .rzn-opts{max-height:192px;overflow:auto}
