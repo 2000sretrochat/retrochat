@@ -610,7 +610,7 @@ function modAct(s, room, { action, who, mins } = {}, cb) {
 // per-IP socket cap + per-socket event rate limit (masters get a higher ceiling)
 const IPCONN = new Map(), MAXCONN = +process.env.MAX_SOCKETS_PER_IP || 30, KEYTRY = new Map();
 io.use((s, next) => { const ip = geo.clientIp(s.handshake.headers, s.handshake.address); const n = IPCONN.get(ip) || 0; if (n >= MAXCONN) return next(new Error('Too many connections')); IPCONN.set(ip, n + 1); s.once('disconnect', () => { const m = (IPCONN.get(ip) || 1) - 1; m > 0 ? IPCONN.set(ip, m) : IPCONN.delete(ip); }); next(); });
-const roomAlertCooldowns = new Set();
+const roomAlertCooldowns = new Set(), ROOM_ALERTS = require('./room-alerts');
 async function notifyRoomActivity(kind, room, source) {
   const webcam = kind === 'webcam', actor = source.data.acct;
   const live = () => source.data.room === room && source.data.cam && !source.data.inc &&
@@ -629,13 +629,15 @@ async function notifyRoomActivity(kind, room, source) {
   const excluded = webcam ? new Set((await db.q(
     'select blocked as id from blocks where owner=$1 union select owner as id from blocks where blocked=$1 union select owner as id from ignores where name_lc=$2',
     [actor.id, actor.name.toLowerCase()])).map(row => String(row.id))) : null;
-  const followers = webcam ? null : new Set((await db.q('select owner from favorites where room=$1', [room])).map(row => row.owner));
+  // live-cam alerts go only to the broadcaster's friends or the room's followers (room alerts: followers only)
+  const followers = new Set((await db.q('select owner from favorites where room=$1', [room])).map(row => row.owner));
+  const friends = webcam ? new Set((await db.q(ROOM_ALERTS.FRIENDS_SQL, [actor.id])).map(row => String(row.owner))) : null;
   if (!ROOMS[room] || (webcam ? !live() : !seen(room).length)) return;
   const alert = { id: require('node:crypto').randomUUID(), kind, room, ...(webcam ? { name: source.data.name } : {}) };
   for (const socket of recipients) {
     if (!eligible(socket)) continue;
     const { id, name } = socket.data.acct;
-    if (webcam ? excluded.has(String(id)) || source.data.camBlock?.has(name.toLowerCase()) : !followers.has(name.toLowerCase())) continue;
+    if (!ROOM_ALERTS.shouldAlert(kind, { id, name }, { followers, friends, excluded, camBlock: source.data.camBlock })) continue;
     socket.emit('room-alert', alert);
   }
 }

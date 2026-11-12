@@ -1,0 +1,31 @@
+name: tests
+
+# Runs the server/web test suite on every push and pull request (free GitHub Actions minutes).
+# Node versions follow package.json "engines": ">=20". desktop.yml (Windows build/release) is separate.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node --test test/*.test.js

@@ -286,7 +286,10 @@ function sockets(io, hooks) {
     s.on('m:offline-dismiss', safe(async ids => ready ? offlineBox().dismiss(uid, ids) : { error: 'Sign in first.' }));
     s.on('m:offline-send', safe(async ({ to, text } = {}) => { if (!ready || flood()) return { error: 'Slow down a little.' }; return offlineBox().send({ id: uid, name: me, master: !!s.data.master }, to, text); }));
     s.on('m:status', safe(async ({ status, msg }) => {
-      if (!ready) return; const st = state.get(uid); if (status === 'brb') status = 'away'; if (STATUSES.includes(status)) { st.status = status; s.data.messIdle = false; } if (typeof msg === 'string') st.msg = msg.trim() === ROOM_TAG ? '' : esc(msg.trim().slice(0, 60));
+      if (!ready) return; const st = state.get(uid); if (status === 'brb') status = 'away'; if (STATUSES.includes(status)) { st.status = status; s.data.messIdle = false; }
+      // Older Messenger pages still send the '[room]' status: treat it as turning on "Display Room I'm In" and keep the typed status message.
+      if (typeof msg === 'string' && msg.trim() === ROOM_TAG) { if (st.showRoom === false) { st.showRoom = true; await db.q('update users set show_room=true where id=$1', [uid]); for (const x of online.get(uid) || []) x.emit('m:room-visibility', true); } }
+      else if (typeof msg === 'string') st.msg = esc(msg.trim().slice(0, 60));
       await db.q('update users set status=$2,status_msg=$3 where id=$1', [uid, st.status, st.msg]); for (const x of online.get(uid)) if (x !== s) x.emit('m:self', { status: st.status, msg: st.msg });
       await broadcast(uid, me); return { ok: true, status: st.status, msg: st.msg };
     }));
