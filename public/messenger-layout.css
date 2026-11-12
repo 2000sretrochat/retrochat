@@ -24,7 +24,9 @@ html.standalone-messenger.has-overlay:not(.yd) #mwin {
 #mwin #menu > div {padding-left:5px!important;padding-right:5px!important;white-space:nowrap}
 #mwin #menu > :is(button,.messenger-bell,.messenger-master) {flex-shrink:0}
 #mwin #mcog {margin-left:auto!important}
-@media(max-width:420px) {
+#mwin {container: messenger / inline-size}
+@container messenger (max-width: 420px) {
+  #mwin #menu > .desktop-menu-group {padding-inline:3px!important}
   #mwin #menu {gap:0!important;padding-left:3px!important;padding-right:3px!important}
   #mwin #menu .messenger-master {width:30px!important;min-width:30px!important;padding:0!important;justify-content:center}
   #mwin #menu .messenger-master .mm-l {display:none}
@@ -37,3 +39,32 @@ html.standalone-messenger.has-overlay:not(.yd) #mwin {
     height:100dvh!important;max-height:none!important;resize:none;
   }
 }
+
+/* Preserve the compact desktop menu chrome with native focusable controls. */
+.desktop-menu-trigger,
+:is(#menu, .mbar) .dd > button {
+  border:0;background:transparent;color:inherit;font:inherit;text-align:left;
+  cursor:default;border-radius:0;box-shadow:none;
+}
+.desktop-menu-trigger {padding:0;white-space:nowrap}
+:is(#menu, .mbar) .dd > button {display:block;width:100%;padding:4px 16px;white-space:nowrap}
+:is(#menu, .mbar) .dd > button:is(:hover,:focus-visible),
+#menu .dd label:focus-within {background:var(--blue);color:#fff}
+.desktop-menu-trigger:focus-visible,
+#stsel:focus-visible,#smsg:focus-visible,#clearStatus:focus-visible {
+  outline:2px solid var(--blue,#004990);outline-offset:1px;
+}
+#mShowRoom label {display:flex;align-items:center;gap:5px;cursor:pointer}
+#mShowRoomCheck {margin:0}
+#clearStatus {border:0;background:transparent;color:var(--muted);font-size:17px;cursor:pointer;padding:0 4px}
+@media (max-width: 760px) {
+  html:not(.yd) #yfoot {padding:12px 16px max(12px, env(safe-area-inset-bottom))!important}
+  html:not(.yd):not(.room-signin) #mwin {position:relative!important;inset:auto!important;margin:12px auto;max-width:calc(100% - 24px)!important}
+  html.standalone-messenger:not(.yd) #mwin {max-width:100%!important;margin:0}
+}
+
+.imenu > button {
+  display:block;width:100%;border:0;background:transparent;color:inherit;
+  font:inherit;text-align:left;white-space:nowrap;padding:7px 14px;cursor:pointer;
+}
+.imenu > button:is(:hover,:focus-visible) {background:#0033a0;color:#fff}

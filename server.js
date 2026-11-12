@@ -339,7 +339,7 @@ app.get('/api/bot-profile/:id', async (req, res) => { res.set('Cache-Control', '
 // Bot avatars: master-uploaded image (DB) > master-chosen asset key > generated initials placeholder.
 const BOT_AV_DIR = require('path').join(__dirname, 'public', 'bot-avatars');
 app.get('/bot-av/:id', async (req, res) => { const b = BOTMOD.byId(req.params.id); if (!b) return res.status(404).end(); res.set('Cache-Control', 'no-cache');
-  if (db.status().ready) { try { const [r] = await db.q('select mime,data from bot_avatars where bot_id=$1', [b.id]); if (r) return res.type(r.mime).send(r.data); } catch { } }
+  if (!b.replacedProfile && db.status().ready) { try { const [r] = await db.q('select mime,data from bot_avatars where bot_id=$1', [b.id]); if (r) return res.type(r.mime).send(r.data); } catch { } }
   const key = String(b.avatar_key || '').replace(/[^a-z0-9_-]/g, ''); const f = key && require('path').join(BOT_AV_DIR, key + '.svg');
   if (f && require('fs').existsSync(f)) return res.type('image/svg+xml').sendFile(f);
   if(b.photoIndex!==undefined){

@@ -8,7 +8,14 @@
     logo.height = 22;
     b.append(logo, 'Install Razzle Chat');
     b.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:9000;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;background:#fff;color:#003876;border:1px solid #9ebfdf;font:700 13px system-ui;box-shadow:0 2px 8px #0004;cursor:pointer';
-    b.onclick = async () => { if (!ev) return; ev.prompt(); await ev.userChoice.catch(() => {}); ev = null; b.remove(); }; document.body.appendChild(b); } return b; };
+    b.onclick = async () => { if (!ev) return; ev.prompt(); await ev.userChoice.catch(() => {}); ev = null; b.remove(); }; const dock = document.querySelector('[data-install-dock]');
+    if (dock) {
+      b.style.position = 'static';
+      b.style.margin = '8px auto 0';
+      b.style.boxShadow = 'none';
+      dock.appendChild(b);
+    } else document.body.appendChild(b);
+    } return b; };
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); ev = e; if (!matchMedia('(display-mode: standalone)').matches) btn(); });
   addEventListener('appinstalled', () => { const b = document.getElementById('pwaInstall'); b && b.remove(); });
 })();

@@ -20,8 +20,8 @@ test('new Social design requires the real account session and keeps each identit
   const base = 'http://127.0.0.1:' + server.address().port;
   const get = (path, cookie) => fetch(base + path, {redirect: 'manual', headers: cookie ? {cookie} : {}});
   const guest = await get('/social-next/');
-  assert.equal(guest.status, 303);
-  assert.equal(guest.headers.get('location'), '/?chat=1&social=1');
+  assert.equal(guest.status, 200);
+  assert.match(await guest.text(), /Your Razzle Social space/);
   assert.equal((await get('/social-next/session.js')).status, 401);
   const page = await get('/social-next/@zainy2', 'test=one');
   assert.equal(page.status, 200);
