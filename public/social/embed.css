@@ -80,3 +80,50 @@ html:not(.dark) #bottom button{background:#004990!important;color:white!importan
 #mwin>.tbar{height:54px!important;min-height:54px!important;padding:8px 10px!important}
 
 #mwin #foot{display:flex!important;flex:none}
+
+/* Keep the mobile dark dock in the same blue family as its title bar. */
+@media (max-width: 640px) and (pointer: coarse) {
+  html.dark body #mwin {
+    --surface:#293b50;
+    --card:#31465d;
+    --soft:#354d66;
+    --field:#223449;
+    --line:#40566e;
+    --ink:#e8eff7;
+    --muted:#bccbd9;
+    background:var(--surface)!important;
+  }
+  html.dark body #mwin > .tbar { background:#233f5d!important; }
+  html.dark body #mwin #menu {
+    background:var(--card)!important;
+    border-color:var(--line)!important;
+    color:var(--ink)!important;
+  }
+  html.dark body #mwin #menu > .desktop-menu-group { color:var(--ink)!important; }
+  html.dark body #mwin #menu > .desktop-menu-group:is(:hover,.open) {
+    background:var(--soft)!important;
+  }
+  html.dark body #mwin #menu :is(.dd,#mcog,.messenger-bell) {
+    color:var(--ink)!important;
+  }
+  html.dark body #mwin #menu .dd {
+    background:var(--card)!important;
+    border-color:var(--line)!important;
+  }
+  html.dark body #mwin #menu .dd div { color:var(--ink)!important; }
+  html.dark body #mwin #menu .dd :is(button,div):is(:hover,:focus-visible) {
+    background:var(--soft)!important;
+  }
+  html.dark body #mwin #search .srch #q,
+  html.dark body #mwin #search .srch #q::placeholder { color:var(--muted)!important; }
+  html.dark body #mwin #me .mind { background:var(--field)!important; }
+  html.dark body #mwin #bottom :is(#bAdd,#bRooms) {
+    background:var(--card)!important;
+    border-color:#5b7490!important;
+    color:var(--ink)!important;
+  }
+  html.dark body #mwin #bottom #bRooms { background:#365d83!important; }
+  html.dark body #mwin :is(.yonline,#foot .brandname .a,#foot .brandname .b) {
+    color:var(--muted)!important;
+  }
+}
