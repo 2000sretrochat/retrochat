@@ -128,6 +128,30 @@ module.exports = function (C) {
     const d = await geo.adminData(acc.isConnected); const ms = new Set((await q('select name from users where is_master')).map(r => r.name));
     d.accounts.forEach(a => { a.master = ms.has(a.name); a.room = sockOf(a.name)?.data.room || null; }); d.guests.forEach(g => g.room = sockOf(g.name)?.data.room || null);
     d.banned = (await q('select name from users where banned')).map(r => r.name); d.deactivated = (await q('select name from users where deactivated')).map(r => r.name); d.ipbans = await q('select ip,reason,at from ip_bans order by at desc'); res.json(d); }));
+  app.get('/api/master/sessions/:id', guard(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1 || id > 2147483647) return res.status(400).json({ error: 'Invalid account.' });
+    const [account] = await q('select name from users where id=$1', [id]);
+    if (!account) return res.status(404).json({ error: 'Account not found.' });
+    const sessions = await q('select ip,loc,kind,at from login_history where user_id=$1 order by id desc', [id]);
+    res.json({ name: account.name, sessions });
+  }));
+  app.post('/api/master/ip-lookup', express.json(), guard(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const ip = String(req.body?.ip || '').trim().replace(/^::ffff:/i, '');
+    if (!require('node:net').isIP(ip)) return res.status(400).json({ error: 'Enter a valid IPv4 or IPv6 address.' });
+    const matches = await q(`
+      select u.name, 'Account' as type, greatest(h.last_seen, case when u.last_ip=$1 then u.last_at end) as last_seen
+      from users u
+      left join (select user_id, max(at) as last_seen from login_history where ip=$1 group by user_id) h on h.user_id=u.id
+      where h.user_id is not null or u.last_ip=$1
+      union all
+      select min(name), 'Guest', max(at) from guest_log where ip=$1 group by lower(name)
+      order by last_seen desc nulls last, name, type
+    `, [ip]);
+    res.json({ ip, matches });
+  }));
   app.get('/api/master/rooms', guard((req, res) => res.json(Object.keys(ROOMS).map(r => ({ name: r, cat: ROOMS[r], topic: TOPICS[r], rating: RATE[r] || 'PG-13', mics: micsOf(r), hq: !!C.HQ[r], timer: C.MTIMER[r] || 0, official: OFFICIAL.has(r), owner: UROOMS.get(r)?.owner || null,
     people: socks(r).map(x => x.data.name), mod: MOD[r] ? { admins: [...MOD[r].admins], mt: [...MOD[r].mt], mm: [...MOD[r].mm], kicked: [...MOD[r].kicked.keys()], dot: [...MOD[r].dot.keys()] } : null })))));
   app.post('/api/master/room', express.json(), guard((req, res) => { const { room, rating, topic, close, mics } = req.body || {};

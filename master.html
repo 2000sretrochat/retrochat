@@ -11,7 +11,7 @@ const api=async(u,b)=>{const r=await fetch('/api/master/'+u,b?{method:'POST',hea
 const toast=t=>{$('msg').textContent=t;$('msg').style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>$('msg').style.display='none',2500)};
 if(new URLSearchParams(location.search).get('embed'))$('hdr').remove();
 api('prefs').then(p=>{$('pInc').checked=p.incognito;$('pAnn').checked=p.announce});$('pInc').onchange=e=>api('prefs',{incognito:e.target.checked}).then(()=>toast(e.target.checked?'Incognito on':'Incognito off'));$('pAnn').onchange=e=>api('prefs',{announce:e.target.checked}).then(()=>toast('Saved'));
-const T={Stats,Users,Rooms,Reports,'IP Bans':Ipb,Broadcast,Watching,Bots,Audit,Settings};let cur='Stats';
+const T={Stats,Users,Rooms,Reports,'IP Lookup':IpLookup,'IP Bans':Ipb,Broadcast,Watching,Bots,Audit,Settings};let cur='Stats';
 $('tabs').innerHTML=Object.keys(T).map(k=>`<button data-t="${k}">${k}</button>`).join('');document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{cur=b.dataset.t;show()});
 function show(){document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t==cur));T[cur]()}
 async function acct(name,action,extra){if(['delete','ban','revoke','grant','deactivate','clear-profile','clear-avatar'].includes(action)&&!confirm(action+' '+name+'?'))return;await api('account',{name,action,...extra});toast('Done: '+action+' '+name);show()}
@@ -19,6 +19,50 @@ async function Stats(){const d=await api('stats');$('main').innerHTML=`<div clas
 $('crb').onclick=async()=>{try{const r=await api('create-reserved',{name:$('crn').value,password:$('crp').value});toast('Created '+r.name);$('crp').value=''}catch{}};$('rsb').onclick=async()=>{const r=await api('reset-link',{name:$('rsn').value});$('rsl').value=r.link||r.error||''};$('rse').onclick=async()=>{try{const r=await api('reset-link',{name:$('rsn').value,email:true});$('rsl').value=r.link||'';toast(r.sent?'Email sent':'Not sent')}catch{}};
 const bk=async()=>{const l=await api('backups');$('bkl').innerHTML=(Array.isArray(l)?l:[]).map(b=>`<div>${b.d} &middot; ${Math.round(b.bytes/1024)} KB &middot; <a href="/api/master/backups/${b.d}" download>Download database backup (.json)</a></div>`).join('')||'No backups yet.'};bk();$('bkn').onclick=async()=>{await api('backups',{});bk()};
 clearTimeout(window._st);window._st=setTimeout(()=>cur=='Stats'&&document.activeElement.tagName!='INPUT'&&Stats(),30000)}
+const sessionKind = kind => ({ signup: 'Sign-up', login: 'Sign-in', room: 'Room entry' })[kind] || kind;
+const sessionTime = at => at ? new Date(at).toLocaleString() : '—';
+
+async function SessionHistory(id) {
+ document.title = 'Session history';
+ $('hdr')?.remove();
+ $('tabs').remove();
+ $('prefs').remove();
+ try {
+  const { name, sessions } = await api('sessions/' + encodeURIComponent(id));
+  $('main').innerHTML = `<h1>Session history for ${E(name)}</h1>
+   <p>All retained records, up to 20 per account.</p>
+   <table><tr><th>When</th><th>Event</th><th>IP address</th><th>Approx. location</th></tr>
+   ${sessions.map(s => `<tr><td>${E(sessionTime(s.at))}</td><td>${E(sessionKind(s.kind))}</td><td>${E(s.ip)}</td><td>${E(s.loc) || '—'}</td></tr>`).join('') || '<tr><td colspan=4>No recorded sessions.</td></tr>'}</table>`;
+ } catch {
+  $('main').textContent = 'Session history could not be loaded.';
+ }
+}
+
+function IpLookup() {
+ $('main').innerHTML = `<form id=ipForm class=box><label>IP address <input id=lookupIp required maxlength=64></label>
+  <button class=b type=submit>Find screen names</button>
+  <p>A shared IP can belong to multiple people. Compare timestamps with the flooding activity.</p></form>
+  <div id=ipMatches aria-live=polite></div>`;
+ const form = $('ipForm');
+ form.onsubmit = async event => {
+  event.preventDefault();
+  const output = $('ipMatches');
+  const submit = form.querySelector('button');
+  submit.disabled = true;
+  output.textContent = 'Looking up screen names…';
+  try {
+   const { matches } = await api('ip-lookup', { ip: $('lookupIp').value });
+   output.innerHTML = `<p>${matches.length} matching account or guest records</p>
+    <table><tr><th>Screen name</th><th>Type</th><th>Last seen on this IP</th></tr>
+    ${matches.map(m => `<tr><td>${E(m.name)}</td><td>${E(m.type)}</td><td>${E(sessionTime(m.last_seen))}</td></tr>`).join('') || '<tr><td colspan=3>No matching screen names.</td></tr>'}</table>`;
+  } catch (error) {
+   output.textContent = error.error || 'IP lookup failed.';
+  } finally {
+   submit.disabled = false;
+  }
+ };
+}
+
 async function Users(){
  const [d,directory]=await Promise.all([api('data'),api('bot-profiles')]);
  if(cur!=='Users')return;
@@ -28,13 +72,24 @@ async function Users(){
  const accounts=d.accounts.filter(a=>!q||a.name.toLowerCase().includes(q.toLowerCase())||String(a.email||'').toLowerCase().includes(q.toLowerCase()));
  const rows=items=>items.map(a=>`<tr><td><b>${E(a.name)}</b>${a.bot?' <small>(bot)</small>':''} ${a.master?'<span class=tag>master</span>':''} ${d.banned.includes(a.name)?'<span class=tag style=background:#f88>banned</span>':''} ${(d.deactivated||[]).includes(a.name)?'<span class=tag style=background:#ccc>deactivated</span>':''}</td>
  <td>${a.online?'<span class=on>online</span>'+(a.room?' in '+E(a.room):''):'offline'}</td><td>${E(a.last_ip)}<br><small>${E(a.last_loc)||'—'}</small></td><td>${E(a.email)||'<i>—</i>'}</td>
+ <td>${(a.hist || []).slice(0, 3).map(h => `<div><small>${E(sessionTime(h.at))} · ${E(sessionKind(h.kind))} · ${E(h.ip) || '—'}</small></div>`).join('') || '<small>No recorded sessions</small>'}
+ <a href="/master?sessions=${a.id}" class=session-history target=_blank rel=noopener>View all sessions</a></td>
  <td>${[['signout','Sign out'],[(d.deactivated||[]).includes(a.name)?'reactivate':'deactivate',(d.deactivated||[]).includes(a.name)?'Reactivate':'Deactivate'],[d.banned.includes(a.name)?'unban':'ban','Ban'+(d.banned.includes(a.name)?' (undo)':'')],['clear-profile','Clear text'],['clear-avatar','Clear photo'],['edit','Edit'],['reset','Reset link'],['reset-email','Email reset'],[a.master?'revoke':'grant',a.master?'Revoke master':'Grant master'],['delete','Delete']].map(([k,l])=>`<button class="b${/delete|ban|deactivate|clear/.test(k)?' r':''}" data-n="${E(a.name)}" data-a="${k}">${l}</button>`).join('')}${a.last_ip?`<button class="b r" data-ip="${E(a.last_ip)}">Ban IP</button>`:''}<button class=b onclick="watch('${E(a.name)}')">Watch</button></td></tr>`).join('');
 
  $('main').innerHTML=`<div class=box><b>Online guests:</b> ${d.guests.map(g=>E(g.name)+' <small>('+E(g.ip)+', '+E(g.loc)+(g.room?', '+E(g.room):'')+')</small> <button class="b r" data-ip="'+E(g.ip)+'">Ban IP</button>').join(' &middot; ')||'none'}</div>
  <div class=box><b>Online now: ${d.accounts.filter(a=>a.online&&!a.bot).length} members</b> · ${d.accounts.filter(a=>a.online&&a.bot).length} bots · ${d.guests.length} guests</div>
  <input id=q placeholder="Filter accounts" value="${E(q)}"> <small>${d.accounts.filter(a=>!a.bot).length} member accounts, ${d.accounts.filter(a=>a.bot).length} bots</small>
- <table><tr><th>Name</th><th>Status</th><th>Last IP / approx. location</th><th>Email</th><th>Actions</th></tr>${rows(accounts.filter(a=>!a.bot))}<tr><th colspan=5>Bots (${accounts.filter(a=>a.bot).length})</th></tr>${rows(accounts.filter(a=>a.bot))}</table>`;
+ <table><tr><th>Name</th><th>Status</th><th>Last IP / approx. location</th><th>Email</th><th>Last 3 sessions</th><th>Actions</th></tr>${rows(accounts.filter(a=>!a.bot))}<tr><th colspan=6>Bots (${accounts.filter(a=>a.bot).length})</th></tr>${rows(accounts.filter(a=>a.bot))}</table>`;
  document.querySelectorAll('[data-ip]').forEach(b=>b.onclick=()=>ipban(b.dataset.ip));
+ document.querySelectorAll('.session-history').forEach(link => link.onclick = event => {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  const popup = window.open(link.href, 'razzleSessionHistory', 'popup=yes,width=800,height=600,resizable=yes,scrollbars=yes');
+  if (popup) {
+   popup.opener = null;
+   popup.focus();
+   event.preventDefault();
+  }
+ });
  $('q').oninput=e=>{window._q=e.target.value;clearTimeout(window._qt);window._qt=setTimeout(Users,300)};
  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const n=b.dataset.n,a=b.dataset.a;
   if(a=='edit'){const nn=prompt('New screen name (blank = keep):','');const em=prompt('Email (blank = keep):','');return acct(n,'edit',{newName:nn||undefined,email:em||undefined})}
@@ -81,5 +136,7 @@ async function Bots(){const d=await api('bot-profiles');const bots=d.bots||[];
   const rm=tr.querySelector('.rm');if(rm)rm.onclick=async()=>{await api('bot-avatar',{id,remove:true});toast('Avatar removed');Bots()}})}
 async function Audit(){const rows=await api('audit');$('main').innerHTML=`<div class=box><b>Master audit log</b> (recent mutations)</div><table><tr><th>When</th><th>By</th><th>Action</th><th>Target</th><th>Detail</th></tr>${(rows||[]).map(r=>`<tr><td>${new Date(r.at).toLocaleString()}</td><td>${E(r.by_name)}</td><td>${E(r.action)}</td><td>${E(r.target)}</td><td>${E(r.detail)}</td></tr>`).join('')||'<tr><td colspan=5>No audit entries yet.</td></tr>'}</table>`}
 
-show();
+const historyAccount = new URLSearchParams(location.search).get('sessions');
+if (historyAccount === null) show();
+else SessionHistory(historyAccount);
 </script></body></html>
