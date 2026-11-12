@@ -311,7 +311,7 @@ function sockets(io, hooks) {
       await db.q("insert into contacts(owner,contact) values($1,$2),($2,$1) on conflict do nothing", [uid, t.id]);
       await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]);
       const [ug] = await db.q('select grp from contacts where owner=$1 and contact=$2', [uid, t.id]), [tg] = await db.q('select grp from contacts where owner=$2 and contact=$1', [uid, t.id]);
-      toUser(uid, 'm:contact', { name: t.name, group: ug.grp, ...pres(t.id) }); toUser(t.id, 'm:contact', { name: me, group: tg.grp, ...pres(uid) });
+      toUser(uid, 'm:contact', { name: t.name, group: ug.grp, ...(hooks.botContact?.(t.name) || pres(t.id)) }); toUser(t.id, 'm:contact', { name: me, group: tg.grp, ...pres(uid) });
       toUser(t.id, 'm:toast', { text: esc(me) + ' accepted your contact request.' }); return { ok: true, added: true, text: esc(t.name) + ' was added to your contacts.' };
     }
     s.on('m:respond', safe(async ({ name, accept: yes }) => {
