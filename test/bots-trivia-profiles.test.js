@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
+const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 const root = path.join(__dirname, '..');
 const BOTMOD = require('../bots');
@@ -37,7 +38,13 @@ test('the room refresh adds distinct accounts with valid rooms and intentionally
   const { profiles, posts } = require('../room-bot-refresh');
   const { PATH } = require('../rooms-dir');
   assert.equal(profiles.length, 44);
-  assert.equal(BOTMOD.BOTS.length, 116);
+  assert.equal(BOTMOD.BOTS.length, 119);
+  const replacements = BOTMOD.BOTS.filter(bot => bot.replacedProfile);
+  assert.deepEqual(replacements.map(bot => bot.name), ['Patch_Pigeon', 'Velvet_Vox', 'Mochi_Modem']);
+  for (const bot of replacements) {
+    assert.ok(fs.existsSync(path.join(__dirname, '../public/bot-avatars', bot.avatar_key + '.svg')));
+    assert.equal(bot.portrait, undefined);
+  }
   assert.equal(new Set(BOTMOD.BOTS.map(bot => bot.name.toLowerCase())).size, BOTMOD.BOTS.length);
   assert.equal(profiles.filter(bot => bot.room === 'En Español').length, 8);
   assert.deepEqual(PATH['Philippines Karaoke'], ['Countries & Cultures', 'Asia']);

@@ -1,22 +1,6 @@
 // Only this dedicated copy of Messenger speaks to the same-origin Social page.
 (() => {
   const docked = parent !== window;
-  const select=document.getElementById('stsel'),statusInput=document.getElementById('smsg');
-  select.querySelector('option[value="showroom"]').textContent="Show Room I'm In";
-  const custom=document.createElement('option');custom.value='custom';custom.textContent='Custom…';select.appendChild(custom);statusInput.maxLength=60;
-  const oldStatus=select.onchange;
-  select.onchange=async()=>{
-    if(select.value==='custom'){
-      const result=await emit('m:status',{msg:''});if(result.error){select.value=ME.status;return;}
-      ME.msg='';roomMode(false);statusInput.focus();return;
-    }
-    return oldStatus();
-  };
-  roomMode=on=>{
-    statusInput.readOnly=!!on;statusInput.value=on?'Not in a room':dec(ME?.msg||'');
-    statusInput.placeholder=on?"Room you're in":'Custom status (up to 60 characters)';select.value=ME?.status||'available';
-    if(on&&S?.connected)emit('m:room-label').then(result=>{if(ME?.msg==='[room]')statusInput.value=result.room?'In: '+result.room:'Not in a room';});
-  };
   const portraits=new Map();
   const paintPortraits=()=>{
     for(const row of document.querySelectorAll('#tree .ct[data-n]')){
@@ -29,7 +13,6 @@
   const baseRender=render;render=()=>{baseRender();paintPortraits();};
   const syncProfiles=async()=>{
     if(!ME)return;
-    if(ME.msg==='[room]')roomMode(true);
     try{const names=[ME.name,...Object.values(contacts).map(person=>person.name)];const response=await fetch('/social-next/api/portraits?names='+encodeURIComponent(names.join(',')));if(!response.ok)return;
       for(const person of await response.json())if(person.portrait)portraits.set(person.name.toLowerCase(),person.portrait);paintPortraits();
     }catch{}

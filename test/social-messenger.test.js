@@ -152,3 +152,17 @@ test('idle waits for all windows and yields to a manually selected status', asyn
   await send(desktop,'m:status',{status:'invisible'});
   assert.deepEqual(await presence(),['offline',false]);
 });
+
+test('both Messenger views use shared status controls without a Social override', () => {
+  const read = file => fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8');
+  for (const file of ['index.html', 'social/messenger.html']) {
+    const html = read(file);
+    const select = html.match(/<select id="stsel"[^>]*>(.*?)<\/select>/)[1];
+    assert.deepEqual([...select.matchAll(/value="([^"]+)"/g)].map(match => match[1]),
+      ['available', 'busy', 'away', 'invisible']);
+    assert.match(html, /id="mShowRoomCheck" type="checkbox"/);
+    assert.match(html, /id="clearStatus" type="button"/);
+    assert.match(html, /RazzleMessengerControls\.bindStatus/);
+  }
+  assert.doesNotMatch(read('social/embed.js'), /roomMode|stsel|smsg/);
+});
