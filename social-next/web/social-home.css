@@ -623,3 +623,15 @@ button.primary,a.primary,.home-hero button,.welcome-hero .welcome-join,.room-inv
 .visitor-profile #friend-wall-form textarea { flex:1 0 100%; width:100%; min-height:68px; box-sizing:border-box; padding:8px; font:inherit; resize:vertical; }
 .visitor-profile #friend-wall-form > .primary { margin:0; }
 .visitor-profile .visitor-empty p { margin-bottom:0; }
+
+.tape-card { margin:12px 0; padding:10px 12px; border:1px solid #92b0cc; background:#edf5fd; color:#153653; }
+.tape-card summary { cursor:pointer; font-weight:600; }
+.tape-card summary small { margin-inline-start:6px; font-weight:400; }
+.tape-icon { display:inline-block; width:25px; height:15px; line-height:15px; text-align:center; background:#194a76; color:#fff; margin-inline-end:4px; }
+.tape-card li { margin-block:10px; }
+.tape-player iframe { display:block; width:100%; height:152px; margin-top:8px; border:0; }
+#tape-form { display:grid; gap:10px; }
+#tape-form label { display:grid; gap:4px; }
+.tape-icon { position:relative; vertical-align:middle; border-radius:2px; }
+.tape-icon::before { content:''; position:absolute; inset:3px 4px auto; height:5px; background:#fff; border-radius:2px; }
+.tape-icon::after { content:''; position:absolute; inset:auto 6px 2px; height:2px; background:#a9c6e3; }

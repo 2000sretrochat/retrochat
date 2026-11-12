@@ -101,6 +101,60 @@
       createdAt:row.created,time:postTime({createdAt:row.created}),topic:'Your space'};
     postsById.set(post.id,post);return post;
   }
+  function tapeCard(post) {
+    const tracks=post.tape?.tracks;
+    if (!tracks?.length) return '';
+    return '<details class="tape-card"><summary><span class="tape-icon" aria-hidden="true"></span> Pass the Tape <small>'+tracks.length+'/5 tracks</small></summary>'+
+      '<ol>'+tracks.map(track=>'<li><strong>'+esc(track.title)+'</strong><small> · '+esc(track.author)+'</small>'+
+        (track.note?'<p>'+esc(track.note)+'</p>':'')+
+        '<div class="tape-player"><button type="button" class="secondary" data-tape-play="'+esc(track.url)+'">Play</button> '+
+        '<a href="'+esc(track.url)+'" target="_blank" rel="noopener noreferrer">Open in '+(track.url.startsWith('https://open.spotify.com/')?'Spotify':'SoundCloud')+'</a></div></li>').join('')+'</ol>'+
+      (!publicPreview && post.author_id!==myId && tracks.length<5 && !tracks.some(track=>String(track.authorId)===String(myId))?
+        '<button type="button" class="secondary" data-tape-add="'+post.id+'">Add your track</button>':'')+'</details>';
+  }
+
+  function tapeComposer(id) {
+    modal('<h2>'+(id?'Add your track':'Pass the Tape')+'</h2><form id="tape-form">'+
+      (id?'':'<label>Tape title<input name="tapeTitle" maxlength="120" required></label>')+
+      '<label>Track title<input name="trackTitle" maxlength="120" required></label>'+
+      '<label>Spotify or SoundCloud track link<input name="trackUrl" type="url" maxlength="500" required></label>'+
+      '<label>Why this song? <textarea name="trackNote" maxlength="280"></textarea></label>'+
+      '<button class="primary">'+(id?'Add track':'Start tape')+'</button></form>');
+    const form=$('#tape-form'), postId=crypto.randomUUID();
+    form.onsubmit=async event=>{
+      event.preventDefault();
+      const submit=form.querySelector('button');
+      submit.disabled=true;
+      const track={title:form.elements.trackTitle.value,url:form.elements.trackUrl.value,note:form.elements.trackNote.value};
+      try {
+        if(id) await api('/tapes/'+id+'/tracks','POST',track);
+        else await api('/posts','POST',{id:postId,body:form.elements.tapeTitle.value,tape:track});
+        $('#dialog').close();
+        await refreshView();
+        toast(id?'Track added.':'Tape started.');
+      } catch(error) { toast(error.message); }
+      finally { submit.disabled=false; }
+    };
+  }
+  document.addEventListener('click',event=>{
+    const control=event.target.closest('[data-tape-play],[data-tape-add]');
+    if(!control)return;
+    if(control.dataset.tapeAdd){tapeComposer(control.dataset.tapeAdd);return;}
+    const url=new URL(control.dataset.tapePlay);
+    const spotify=url.hostname==='open.spotify.com';
+    if(!spotify && url.hostname!=='soundcloud.com')return;
+    const player=document.createElement('iframe');
+    player.title=spotify?'Spotify track player':'SoundCloud track player';
+    player.src=spotify?'https://open.spotify.com/embed'+url.pathname:
+      'https://w.soundcloud.com/player/?url='+encodeURIComponent(url.href)+'&auto_play=true';
+    player.allow='autoplay; encrypted-media';
+    const box=control.parentElement;
+    const prior=box.querySelector('iframe');
+    if(prior){prior.remove();control.textContent='Play';return;}
+    box.append(player);
+    control.textContent='Close player';
+  });
+
   function eventCard(post){
     if(!post.event_at)return '';
     const start=new Date(post.event_at);
@@ -157,7 +211,7 @@
       '<small>'+esc(new Date(comment.created).toLocaleString())+'</small><p>'+esc(comment.body)+'</p>'+
       ((comment.author_id===myId || post.wall_id===myId || session.master)?'<button type="button" class="text-action" data-shared-comment-remove="'+comment.id+'">Delete comment</button>':'')+'</div>').join('');
     return '<article class="post" data-post-id="'+post.id+'"><div class="post-top">'+author(post.name)+
-      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+(post.pinned&&current==='profile'?'<span class=post-pin-marker>📌 Pinned</span>':'')+postDetailsMarkup(post)+'<p>'+esc(post.text)+'</p>'+eventCard(post)+
+      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+(post.pinned&&current==='profile'?'<span class=post-pin-marker>📌 Pinned</span>':'')+postDetailsMarkup(post)+'<p>'+esc(post.text)+'</p>'+eventCard(post)+tapeCard(post)+
       (post.image?'<button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Shared photo"></button>':'')+
       (post.url?'<div class="link-preview">'+postLinkMedia(post.url)+'<a href="'+esc(post.url)+'" target="_blank" rel="noopener noreferrer">'+esc(new URL(post.url).hostname)+'</a></div>':'')+
       '<div class="post-actions"><button type="button" data-shared-like="'+post.id+'" aria-pressed="'+post.liked+'">'+(post.liked?'♥ Liked':'♡ Like')+' '+post.likes+'</button>'+
@@ -410,7 +464,10 @@
   comment=openComment;addProfileComment=openComment;
   const eventButton=document.createElement('button');
   eventButton.id='plan-room-event';eventButton.type='button';eventButton.className='text-action';eventButton.textContent='Plan a room event';
-  $('#quick-post')?.append(eventButton);
+  const tapeButton=document.createElement('button');
+  tapeButton.type='button';tapeButton.className='text-action';tapeButton.textContent='Pass the Tape';
+  tapeButton.onclick=()=>tapeComposer();
+  $('#quick-post')?.append(eventButton,tapeButton);
   eventButton.onclick=async()=>{
     try {
       const rooms=await api('/events/rooms');
@@ -548,7 +605,7 @@
   document.querySelectorAll('.home-demo').forEach(node=>node.remove());
   const linkedPost=new URLSearchParams(location.search).get('post'); // from the Messenger bell: /social-next/?post=<id>
   Promise.all([api('/people').then(rows=>{people=rows;rows.forEach(remember);suggestions();}),refreshView(),refreshNotifications()]).then(()=>{if(linkedPost&&/^[0-9a-f-]{8,64}$/i.test(linkedPost)){show('feed');refreshView().then(()=>document.querySelector('[data-post-id="'+CSS.escape(linkedPost)+'"]')?.scrollIntoView({block:'center'}));}}).catch(error=>toast(error.message));
-  setInterval(()=>{if(document.visibilityState==='visible'){refreshNotifications();if(!$('#dialog').open && current==='feed')refreshView();}},20000);
+  setInterval(()=>{if(document.visibilityState==='visible'){refreshNotifications();if(!$('#dialog').open && current==='feed' && !$('.tape-card[open]'))refreshView();}},20000);
   window.addEventListener('focus',()=>{refreshNotifications();if(!$('#dialog').open)refreshView();});
   window.socialApi=api;window.socialRefresh=refreshView;
   const destination=new URLSearchParams(location.search).get('view');

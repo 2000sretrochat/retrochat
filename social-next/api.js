@@ -18,6 +18,21 @@ function link(value) {
   if (!['http:','https:'].includes(url.protocol) || url.username || url.password || url.href.length > 2000) throw Object.assign(Error('Use an http or https link.'), {status:400});
   return url.href;
 }
+function tapeTrack(value, account) {
+  const title = text(value?.title, 120);
+  const note = text(value?.note, 280);
+  let url;
+  try { url = new URL(value?.url); } catch {}
+  const spotify = url?.hostname === 'open.spotify.com' && /^\/track\/[A-Za-z0-9]+\/?$/.test(url.pathname);
+  const soundcloud = url?.hostname === 'soundcloud.com' &&
+    /^\/[a-z0-9_-]+\/[a-z0-9_-]+\/?$/i.test(url.pathname) &&
+    !/^\/(?:discover|charts|search|upload|settings)\//i.test(url.pathname);
+  if (!title || !url || url.protocol !== 'https:' || url.port || url.username || url.password ||
+      url.pathname.length > 300 || (!spotify && !soundcloud)) {
+    throw Object.assign(Error('Enter a track title and a full Spotify or SoundCloud track link.'), {status:400});
+  }
+  return {title, note, url:url.origin+url.pathname.replace(/\/$/,''), author:account.alias, authorId:account.id};
+}
 const audienceModes = ['profile','public','friends','private','selected'];
 function audience(value, photo = false) {
   const mode = value?.mode;
@@ -121,7 +136,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const ip = geo.clientIp(req.headers,req.socket.remoteAddress);
     return {ip, location:await geo.lookup(ip)};
   }
-  const postFields = master => `p.id,p.author_id,p.wall_id,p.pinned,p.body,p.link,case when ${imageAccess('p','$1',master)} then p.image else '' end as image,
+  const postFields = master => `p.id,p.author_id,p.wall_id,p.pinned,p.body,p.link,p.tape,case when ${imageAccess('p','$1',master)} then p.image else '' end as image,
     case when p.author_id=$1 then p.audience else '{}'::jsonb end as audience,p.feeling,p.place,p.created,p.updated,p.event_room,p.event_at,
     (select count(*)::int from social_event_rsvps r where r.post_id=p.id) as attendees,
     exists(select 1 from social_event_rsvps r where r.post_id=p.id and r.user_id=$1) as attending,
@@ -312,7 +327,9 @@ function registerApi(router, express, db, accounts, io, botChat) {
   router.post('/api/posts',run(async(req,res) => {
     const b=req.body || {}, id=b.id || crypto.randomUUID();
     if (!uuid.test(id)) fail('Invalid post.');
+    const tape = b.tape == null ? null : {tracks:[tapeTrack(b.tape,req.socialAccount)]};
     const body=text(b.body,3000), image=photo(b.image), url=link(b.link);
+    if (tape && (!body || image || url || b.event)) fail('Give your tape a title and one first track.');
     if (!body && !image && !url) fail('Add a thought, photo, or link.');
     let eventRoom=null,eventAt=null;
     if(b.event){
@@ -325,19 +342,37 @@ function registerApi(router, express, db, accounts, io, botChat) {
       [String(b.wall || req.socialAccount.alias).toLowerCase()]);
     if (!wall) fail('Profile unavailable.',404);
     if (wall.id !== req.socialAccount.id) {
-      if(eventRoom)fail('Share events from your own feed.',403);
+      if(tape || eventRoom)fail('Share tapes and events from your own feed.',403);
       const [friend] = await db.q('select 1 from contacts where owner=$1 and contact=$2',[wall.id,req.socialAccount.id]);
       if (!friend) fail('Only friends can post on this wall.',403);
     }
     const policy = {post:audience(b.audience?.post || {mode:'profile'}),photo:audience(b.audience?.photo,true)};
     const info=await originInfo(req);
     await db.q(`with added as (
-      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at,audience)
-      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) on conflict(id) do nothing returning id,wall_id
+      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at,audience,tape)
+      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) on conflict(id) do nothing returning id,wall_id
     ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
       select wall_id,$2,'post',id,id::text from added where wall_id<>$2 on conflict do nothing`,
-      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt,JSON.stringify(policy)]);
+      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt,JSON.stringify(policy),tape && JSON.stringify(tape)]);
     res.status(201).json({id});
+  }));
+  router.post('/api/tapes/:id/tracks',run(async(req,res) => {
+    const id=req.params.id, viewer=req.socialAccount.id;
+    const post=await visiblePost(req,id);
+    if (!post.tape) fail('Tape unavailable.',404);
+    const track=tapeTrack(req.body,req.socialAccount);
+    const [updated]=await db.q(`update social_posts p
+      set tape=jsonb_set(p.tape,'{tracks}',(p.tape->'tracks') || jsonb_build_array($3::jsonb)),updated=now()
+      where p.id=$1 and not p.removed and p.tape is not null
+      and ${access('p','$2',false)}
+      and exists(select 1 from users u where u.id=p.author_id and not u.banned and not coalesce(u.deactivated,false))
+      and exists(select 1 from contacts where owner=p.author_id and contact=$2)
+      and jsonb_array_length(p.tape->'tracks')<5
+      and not exists(select 1 from jsonb_array_elements(p.tape->'tracks') as track
+        where track->>'authorId'=$2::text or track->>'url'=($3::jsonb)->>'url')
+      returning p.tape`,[id,viewer,JSON.stringify(track)]);
+    if (!updated) fail('Only the creator’s friends can add one unique track each, up to five tracks.',409);
+    res.json(updated.tape);
   }));
   router.put('/api/posts/:id/pin',run(async(req,res)=>{
     const post=await visiblePost(req,req.params.id);

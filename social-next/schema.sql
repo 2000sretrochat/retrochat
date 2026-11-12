@@ -84,3 +84,5 @@ from (select ss.user_id,photo.entry->'image' as image from social_settings ss,
   where ss.value->>'portrait'=ss.value->>'galleryAvatarUrl' and photo.entry->>'id'=ss.value->>'galleryDefault') p
 where s.user_id=p.user_id;
 alter table social_posts add column if not exists pinned boolean not null default false;
+
+alter table social_posts add column if not exists tape jsonb;
