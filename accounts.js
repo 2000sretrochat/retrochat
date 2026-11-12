@@ -236,9 +236,18 @@ function sockets(io, hooks) {
       if (!s.data.master) { const dc = module.exports.devConflict && module.exports.devConflict(s, me); if (dc) return { error: 'Another screen name (' + dc + ') is already signed in on this computer. Sign out of it first - only one screen name per computer.' };
         for (const x of replacedSessions(s, online.get(uid) || [])) { x.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); online.get(uid).delete(x); x.disconnect(true); } }
       const [u] = await db.q('select name,status,status_msg,avatar,show_room from users where id=$1', [uid]);
+      const clearStatusOnStart = options?.clearStatusOnStart === true && !ready;
+      if (clearStatusOnStart && u.status_msg) {
+        await db.q("update users set status_msg='' where id=$1", [uid]);
+      }
       const first = !online.has(uid), wasIdle = idleNow(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; s.data.messClient = clientKind(s); s.data.messIdle = false; ready = true;
       if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: u.status === 'brb' ? 'away' : STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg === ROOM_TAG ? '' : u.status_msg, avatar: u.avatar });
-      state.get(uid).showRoom = u.show_room !== false;
+      const ownState = state.get(uid);
+      ownState.showRoom = u.show_room !== false;
+      if (clearStatusOnStart && ownState.msg) {
+        ownState.msg = '';
+        toUser(uid, 'm:self', {status: ownState.status, msg: ''});
+      }
       const cs = await contactList(uid);
       const groups = (await db.q('select name from groups where owner=$1 order by name', [uid])).map(r => r.name);
       const reqs = await pendingRequests(uid);

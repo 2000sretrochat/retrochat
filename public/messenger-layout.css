@@ -111,3 +111,19 @@ html.standalone-messenger.has-overlay:not(.yd) #mwin {
 }
 html.dark #mwin #tree a[data-jr], html.dark .im .st a.imjr { color:#8ec8ff!important; }
 #mwin #tree a[data-jr]:focus-visible, .im .st a.imjr:focus-visible { outline:1px solid currentColor; }
+
+/* The desktop menu bar uses flat labels, even when the app theme styles buttons. */
+#mwin #menu > .desktop-menu-group,
+#mwin #menu .dd { border-radius:0!important; }
+#mwin #menu > .desktop-menu-group > .desktop-menu-trigger {
+  appearance:none;
+  min-height:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:inherit!important;
+  font:inherit;
+}
+#mwin #menu .dd > button { border-radius:0!important; box-shadow:none!important; }
