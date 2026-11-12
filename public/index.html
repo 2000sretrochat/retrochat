@@ -44,6 +44,7 @@ a{color:var(--blue);cursor:pointer}
 .av{width:48px;height:48px;border:1px solid #7f9db9;border-radius:4px;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer}
 .av .rcw{zoom:1.7}.av.sm{width:26px;height:26px;cursor:default}.av.sm .rcw{zoom:1}
 #me .info{flex:1;min-width:0}#me .nm{font-weight:bold;font-size:14px;color:var(--navy);overflow:hidden;text-overflow:ellipsis}
+#clearStatus{border:0;background:transparent;color:var(--muted);font-size:17px;cursor:pointer;padding:0 4px}#clearStatus:disabled{opacity:.5}
 #stsel{margin:3px 0;max-width:100%}#smsg{width:100%;font-size:11px;color:var(--muted)}
 #search{margin:5px 6px;display:flex;gap:4px}#q{flex:1}
 #tabs{display:flex;padding:0 6px}#tabs div{padding:3px 10px;border:1px solid var(--line);border-bottom:0;border-radius:4px 4px 0 0;background:#e8eef6;cursor:pointer}#tabs .on{background:#fff;font-weight:bold}
@@ -196,7 +197,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div id="menu">
 
 
-  <div>Messenger<div class="dd"><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom" title="Let friends see which chat room you are in">&#10003; Show the room I'm in</div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
+  <div>Messenger<div class="dd"><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom"><label><input id="mShowRoomCheck" type="checkbox"> Display Room I’m In</label></div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
   <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mMyProf">Edit My Profile...</div><div id="mGroup" style="display:none"></div><div id="mMove" style="display:none"></div><hr><div id="mBlocked">Blocked List...</div></div></div>
   
   <div>Help<div class="dd"><div id="mHelp">Getting Started</div><div id="mAbout">About</div></div></div>
@@ -226,8 +227,8 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  </div>
  <div id="main">
   <div id="me"><div class="av" id="myav" title="Change display image"></div><div class="info"><div class="nm" id="myname"></div>
-   <div class=stw><span class="sdot available" id=stdot></span><select id="stsel"><option value="available">Available</option><option value="busy">Do Not Disturb</option><option value="away">Away</option><option value="brb">Be Right Back</option><option value="invisible">Invisible</option><option disabled>──────────</option><option value="showroom">&#128172; Show the room I'm in</option></select></div>
-   <div class=mind><span id="mydevice"></span><input type="text" id="smsg" maxlength="60" placeholder="What's on your mind?"><i data-i=pencil data-s=16></i></div></div></div>
+   <div class=stw><span class="sdot available" id=stdot></span><select id="stsel"><option value="available">Available</option><option value="busy">Do Not Disturb</option><option value="away">Away</option><option value="invisible">Invisible</option></select></div>
+   <div class=mind><span id="mydevice"></span><input type="text" id="smsg" maxlength="60" placeholder="What's on your mind?"><button id="clearStatus" type="button" aria-label="Clear status" title="Clear status" hidden>×</button></div></div></div>
   <div id="avpick"></div>
   <div id="search"><div class=srch><i data-i=search data-s=18></i><input type="text" id="q" placeholder="Search contacts..."></div></div>
   <div id="offlinePanel" hidden></div>
@@ -257,7 +258,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"></template></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/desktop-signin.js"></script><script src="/desktop-updates.js"></script><script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=6"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=7"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
+<script src="/desktop-signin.js"></script><script src="/desktop-updates.js"></script><script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=7"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=7"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=isRoomSignIn?['Razzle',' Chat']:['Razzle',''];
@@ -277,7 +278,7 @@ const $=id=>document.getElementById(id)||window.ydFind(id);
 const escT=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const avHtml=(a,cls='',name)=>YAv.html(name||'x',a,cls);
 function setMyAv(){const sd=$('stdot');if(sd)sd.className='sdot '+(ME.status||'available');const st=ME.status=='invisible'?'invisible':ME.status;$('myav').outerHTML=avHtml(ME.avatar,'ring r-'+st,ME.name).replace('class="av ','id="myav" title="Change my avatar" class="av ');$('myav').onclick=pickAv}
-const STL={available:'Available',busy:'Do Not Disturb',away:'Away',brb:'Be Right Back',invisible:'Invisible',offline:'Offline',idle:'Idle'};
+const STL={available:'Available',busy:'Do Not Disturb',away:'Away',brb:'Away',invisible:'Invisible',offline:'Offline',idle:'Idle'};
 const api=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{}),credentials:'same-origin'}).then(async r=>({status:r.status,...await r.json().catch(()=>({error:'Server error'}))}));
 let S=null,ME=null,contacts={},blockedCards={},groups=['Friends'],blockedL=[],sel=null,closedG=new Set(JSON.parse(localStorage.ycClosed||'[]'));
 let sound=localStorage.ycSound!=='off';window.addEventListener('ycsound',()=>{sound=localStorage.ycSound!=='off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')});
@@ -351,8 +352,8 @@ function start(){
   return;
  }
  $('signin').style.display='none';$('main').style.display='flex';S=io({auth:RazzleDevice.auth(),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));
- S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);lastAct=Date.now();idle=false;ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;syncBlocked(r);contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
-  $('mydevice').innerHTML=RazzleDevice.icon(ME.device);$('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
+ S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);lastAct=Date.now();idle=false;ME=r.me;syncRoomVisibility();groups=r.groups;blockedL=r.blocked;syncBlocked(r);contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
+  $('mydevice').innerHTML=RazzleDevice.icon(ME.device);$('myname').textContent=ME.name;syncMyStatus();setMyAv();
   $('reqs').innerHTML='';messengerInbox.reset(r.requests);render();consumeAddParam();
   for(const message of r.offline)holdMessage({...message,receivedOffline:true});
  });
@@ -361,7 +362,8 @@ function start(){
  S.on('m:presence',p=>{const k=p.name.toLowerCase(),c=contacts[k];if(!c)return;const was=c.online;Object.assign(c,p);render();
   if(ME&&k==ME.name.toLowerCase()){/* my own entry: same view my contacts get, but no door sound/toast for myself */}else if(!was&&p.online){localStorage.ycDoor!='off'&&SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar,p.name)}else if(was&&!p.online){localStorage.ycDoor!='off'&&SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar,p.name)}
   const w=ims[k];w&&peerInfo(w,p.name)});
- S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();$('stsel').value=x.status;$('smsg').value=dec(x.msg);roomMode(x.msg=='[room]')});
+ S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();syncMyStatus()});
+ S.on('m:room-visibility',on=>{ME.showRoom=on;syncRoomVisibility()});
  S.on('m:contacts-changed',refreshContacts);
  S.on('m:block-state',({name,on})=>{blockedL=blockedL.filter(n=>n.toLowerCase()!==name.toLowerCase());if(on){blockedL.push(name);blockedCards[name.toLowerCase()]={...contactCard(name),name,online:false,status:'offline',msg:'',blocked:true};}else delete blockedCards[name.toLowerCase()];render();});
 S.on('m:offline-read',ids=>{
@@ -397,9 +399,41 @@ S.on('m:offline-read',ids=>{
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=isRoomSignIn?(returnToSocial?'Join · Razzle Social':'Sign in · Razzle Chat'):APP_NAME.join('')+' Messenger'});
 const dec=s=>{const t=document.createElement('textarea');t.innerHTML=s||'';return t.value};
 // ---------- status / avatar / idle ----------
-function roomMode(on){$('smsg').value=on?'':dec(ME.msg||'');$('smsg').placeholder=on?"Showing the room I'm in (type to switch back)":"What's on your mind?";$('stsel').value=ME.status}
-$('stsel').onchange=async()=>{if($('stsel').value=='showroom'){const r=await emit('m:status',{msg:'[room]'});if(r&&r.ok){ME.msg='[room]';roomMode(true);toast("Buddies now see the room you're in.")}else $('stsel').value=ME.status;return}lastAct=Date.now();idle=false;const r=await emit('m:status',{status:$('stsel').value});if(r.status){ME.status=r.status;setMyAv()}};
-$('smsg').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();$('smsg').blur()}});$('smsg').onchange=()=>{const v=$('smsg').value;if(!v&&ME.msg=='[room]')return;emit('m:status',{msg:v}).then(r=>{if(r&&r.ok){ME.msg=r.msg;roomMode(false)}})};
+function syncRoomVisibility(){
+ $('mShowRoom').style.display=ME.m?'none':'';
+ $('mShowRoomCheck').checked=ME.showRoom!==false;
+}
+$('mShowRoomCheck').onchange=async event=>{
+ const box=event.target;box.disabled=true;
+ try{
+  const result=await emit('m:showroom',box.checked);
+  if(result?.ok)ME.showRoom=result.showRoom;
+  else toast('Could not save room visibility');
+ }finally{box.disabled=false;syncRoomVisibility()}
+};
+function syncMyStatus(){
+ $('smsg').value=ME.msg==='[room]'?'':dec(ME.msg||'');
+ $('clearStatus').hidden=!$('smsg').value;
+ $('stsel').value=ME.status==='brb'?'away':ME.status;
+}
+$('stsel').onchange=async()=>{lastAct=Date.now();idle=false;const r=await emit('m:status',{status:$('stsel').value});if(r.status){ME.status=r.status;setMyAv()}};
+const statusInput=$('smsg'),clearStatus=$('clearStatus');
+let statusSave=Promise.resolve();
+function saveStatus(message){
+ statusSave=statusSave.catch(()=>{}).then(async()=>{
+  const r=await emit('m:status',{msg:message});
+  if(r?.ok){ME.msg=r.msg;if(statusInput.value===message)syncMyStatus()}
+  else {toast('Could not save status');if(statusInput.value===message)syncMyStatus()}
+ });
+ return statusSave;
+}
+statusInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();statusInput.blur()}});
+statusInput.oninput=()=>{clearStatus.hidden=!statusInput.value};
+statusInput.onchange=()=>saveStatus(statusInput.value);
+clearStatus.onclick=()=>{
+ statusInput.value='';clearStatus.hidden=true;statusInput.focus();
+ saveStatus('');
+};
 function pickAv(){YAv.editor(S,{name:ME.name,onSaved:av=>{ME.avatar=av;setMyAv()}})}
 $('mAvatar').onclick=e=>{e.stopPropagation();pickAv()};
 let lastAct=Date.now(),idle=false;['mousemove','keydown','pointerdown'].forEach(ev=>addEventListener(ev,()=>{lastAct=Date.now();if(idle&&S){idle=false;S.emit('m:idle',false)}},{passive:true}));
