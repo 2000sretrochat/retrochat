@@ -264,8 +264,8 @@ function directedRoomReply(bot, text) {
 
 // Direct mentions can receive a short topic reply. Trivia still recognizes normal chat.
 async function botHear(room, who, text) { const bs = botsIn(room).filter(b => !b.silent); if (!bs.length) return; const t = String(text).toLowerCase();
-  const handle = t.match(/@([a-z0-9_]+)/)?.[1]; const target = handle ? BOTMOD.byAlias(handle) : null; const host = target && bs.includes(target) ? target : null;
-  const clean = t.replace(/@[a-z0-9_]+[,:]?\s*/g, '').trim();
+  const address = BOTMOD.roomAddress(bs, t, socks(room).map(socket => socket.data.name).filter(Boolean));
+  const host = address?.bot, clean = address?.clean ?? t;
   if (TRIVIA_GAME.active(room) || (host && host.trivia)) { if (await TRIVIA_GAME.hear(room, who, text, host && host.trivia ? host : null)) return; }
   if (host && host.interactive) { const r = interactiveBotReply(host, room, who, clean); if (r) { botSay(room, host, r); return; } }
   if (host) {
@@ -278,8 +278,8 @@ async function botHear(room, who, text) { const bs = botsIn(room).filter(b => !b
     }, 2000 + Math.random() * 4000).unref?.();
     return;
   }
-  const named = bs.find(b => t.includes(b.name.toLowerCase())); const hi = /\b(hi|hey|hello|hola|sup|yo|wassup|anyone)\b/.test(t);
-  if (!named && !(hi && Math.random() < 0.6)) return; const b = named || bs[Math.floor(Math.random() * bs.length)];
+  if (t.includes('@') || !/^(hi|hey|hello|hola|sup|yo|wassup|anyone)[.!?]*$/.test(t) || Math.random() >= 0.6) return;
+  const b = bs[Math.floor(Math.random() * bs.length)];
   setTimeout(() => botsIn(room).includes(b) && botSay(room, b, BOTMOD.greet(b, who)), 3000 + Math.random() * 6000).unref?.(); }
 botRooms().forEach((r, i) => setTimeout(() => botTick(r), 60e3 + i * 7000 + Math.random() * 120e3).unref?.());
 const onlineTotal = () => new Set([...io.sockets.sockets.values()].filter(x => (x.data.name || x.data.acct) && !x.data.inc).map(x => (x.data.acct?.name || x.data.name).toLowerCase())).size + botRooms().reduce((n, r) => n + botsIn(r).length, 0);

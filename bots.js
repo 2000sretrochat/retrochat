@@ -170,4 +170,37 @@ const PROFILE_SEEDS = BOTS.map(b => { const p = b.photoIndex !== undefined ? [b.
   return { id: b.id, name: b.name, display_name: p[0], location: p[1], interests: p[2], bio: p[3], avatar_key: b.avatar_key || '', replacedProfile: b.replacedProfile, photoIndex:b.photoIndex, room: b.room, silent: !!b.silent, interactive: !!b.interactive, lang: b.lang, legacy: b.legacy || [] }; });
 const byId = id => BOTS.find(b => b.id === String(id || '').toLowerCase());
 const byAlias = h => { h = String(h || '').toLowerCase(); return BOTS.find(b => b.interactive && (b.aliases || []).includes(h)) || BOTS.find(b => b.name.toLowerCase() === h); };
-module.exports = { BOTS, byRoom, P, line, reply, greet, PROFILE_SEEDS, HOSTS, byId, byAlias, LEGACY_DEFAULT_DISPLAY, LEGACY_DEFAULT_BIO, LEGACY_DEFAULT_ROOM };
+// Short names count when they are used to address someone directly.
+function roomAddress(bots, message, people = []) {
+  const normalize = value => String(value).trim().toLowerCase().replace(/[_\s]+/g, ' ');
+  const text = String(message).trim().toLowerCase();
+  const mention = text.match(/@([a-z0-9_]+)/);
+  if (mention) {
+    const bot = byAlias(mention[1]);
+    return bots.includes(bot) ? {bot, clean: text.replace(/@[a-z0-9_]+[,:]?\s*/g, '').trim()} : null;
+  }
+
+  const leading = text.match(/^(?:(hi|hey|hello|yo)\s+)?([a-z0-9_]+)(?=$|[\s,:.!?])/);
+  const trailing = text.match(/,\s*([a-z0-9_]+)[.!?]*$/);
+  let alias, clean;
+  if (leading) {
+    const rest = text.slice(leading[0].length);
+    if (leading[1] || !rest || /^[,:.!?]/.test(rest) ||
+        /^\s+(?:hi|hey|hello|help|trivia|hint|score|top|roll|8ball|recommend)\b/.test(rest)) {
+      alias = normalize(leading[2]);
+      clean = [leading[1], rest.replace(/^[\s,:.!?]+/, '')].filter(Boolean).join(' ');
+    }
+  }
+  if (!alias && trailing) {
+    alias = normalize(trailing[1]);
+    clean = text.slice(0, trailing.index).trim();
+  }
+  if (!alias || people.some(person => {
+    const handle = normalize(person);
+    return handle.startsWith(alias) || handle.split(' ').includes(alias);
+  })) return null;
+
+  const matches = bots.filter(bot => [bot.name, ...(bot.aliases || [])].some(value => normalize(value) === alias));
+  return matches.length === 1 ? {bot: matches[0], clean} : null;
+}
+module.exports = { roomAddress, BOTS, byRoom, P, line, reply, greet, PROFILE_SEEDS, HOSTS, byId, byAlias, LEGACY_DEFAULT_DISPLAY, LEGACY_DEFAULT_BIO, LEGACY_DEFAULT_ROOM };
