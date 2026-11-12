@@ -2,7 +2,7 @@ const EM = require('./emails');
 const mailer = require('./mail');
 // Shared Razzle accounts and Messenger sockets.
 const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db'), geo = require('./geo');
-const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{3,19}$/, STATUSES = ['available', 'busy', 'away', 'brb', 'invisible'];
+const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{3,19}$/, STATUSES = ['available', 'busy', 'away', 'invisible'];
 const AVATARS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sha = t => crypto.createHash('sha256').update(t).digest('hex');
@@ -101,7 +101,7 @@ function http(app, express, hooks = {}) { H = hooks;
     const u = await userFromCookie(req.headers.cookie); if (!u) return res.status(401).json({ error: 'Sign in first.' });
     if (typeof req.body?.invisible !== 'boolean') return res.status(400).json({ error: 'Invalid presence.' });
     const [r] = await db.q(req.body.invisible ? "update users set status='invisible' where id=$1 returning status" : "update users set status=case when status='invisible' then 'available' else status end where id=$1 returning status", [u.id]);
-    const status = r?.status || 'available'; await setStatusFn(u.id, status).catch(() => {});
+    const status = r?.status || 'available'; await setStatusFn(u.id, status === 'brb' ? 'away' : status).catch(() => {});
     res.json({ ok: true, status });
   });
   app.post('/api/logout', async (req, res) => {
@@ -121,8 +121,13 @@ function sockets(io, hooks) {
     const clients = online.get(uid);
     return state.get(uid)?.status === 'available' && !!clients?.size && [...clients].every(client => client.data.messIdle === true);
   };
-  const pres = uid => { const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible'; const sr = on && st.msg === ROOM_TAG, rm = on && (sr || st.showRoom !== false) ? (hooks.roomOf ? hooks.roomOf(st.name) : null) : null; return { online: !!on, status: on ? st.status : 'offline', msg: on ? (sr ? (rm ? 'In: ' + rm : 'Not in a room') : st.msg) : '', room: rm || null, showRoom: !!sr, idle: idleNow(uid), device: presenceDevice(online.get(uid) || [],!!on), avatar: st ? st.avatar : 'a1' }; };
-  const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || (st.msg !== ROOM_TAG && st.showRoom === false)) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
+  const pres = uid => {
+    const st = state.get(uid), on = online.has(uid) && st && st.status !== 'invisible';
+    const room = on && st.showRoom !== false ? hooks.roomOf?.(st.name) || null : null;
+    return { online: !!on, status: on ? st.status : 'offline', msg: on && st.msg !== ROOM_TAG ? st.msg : '',
+      room, showRoom: !!room, idle: idleNow(uid), device: presenceDevice(online.get(uid) || [], !!on), avatar: st ? st.avatar : 'a1' };
+  };
+  const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || st.showRoom === false) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
   setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
   const toUser = (uid, ev, data) => { for (const s of online.get(uid) || []) s.emit(ev, data); };
   contactsChangedFn = (...ids) => { for (const id of ids) toUser(id, 'm:contacts-changed'); };
@@ -143,7 +148,7 @@ function sockets(io, hooks) {
   };
   async function contactList(uid) {
     const rows = await db.q('select u.id,u.name,c.grp from contacts c join users u on u.id=c.contact where c.owner=$1 order by lower(u.name)', [uid]);
-    return rows.map(c => ({ name: c.name, group: c.grp, ...pres(c.id) }));
+    return rows.map(c => ({ name: c.name, group: c.grp, ...(hooks.botContact?.(c.name) || pres(c.id)) }));
   }
   async function blockedContacts(uid){return (await db.q('select u.name,u.avatar from blocks b join users u on u.id=b.blocked where b.owner=$1',[uid])).map(row=>({...row,online:false,status:'offline',msg:'',blocked:true}));}
   async function pendingRequests(uid) {
@@ -222,7 +227,7 @@ function sockets(io, hooks) {
         for (const x of replacedSessions(s, online.get(uid) || [])) { x.emit('signed-elsewhere', { text: 'Signed in elsewhere' }); online.get(uid).delete(x); x.disconnect(true); } }
       const [u] = await db.q('select name,status,status_msg,avatar,show_room from users where id=$1', [uid]);
       const first = !online.has(uid), wasIdle = idleNow(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; s.data.messClient = clientKind(s); s.data.messIdle = false; ready = true;
-      if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg, avatar: u.avatar });
+      if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: u.status === 'brb' ? 'away' : STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg === ROOM_TAG ? '' : u.status_msg, avatar: u.avatar });
       state.get(uid).showRoom = u.show_room !== false;
       const cs = await contactList(uid);
       const groups = (await db.q('select name from groups where owner=$1 order by name', [uid])).map(r => r.name);
@@ -259,12 +264,13 @@ function sockets(io, hooks) {
     s.on('m:offline-dismiss', safe(async ids => ready ? offlineBox().dismiss(uid, ids) : { error: 'Sign in first.' }));
     s.on('m:offline-send', safe(async ({ to, text } = {}) => { if (!ready || flood()) return { error: 'Slow down a little.' }; return offlineBox().send({ id: uid, name: me, master: !!s.data.master }, to, text); }));
     s.on('m:status', safe(async ({ status, msg }) => {
-      if (!ready) return; const st = state.get(uid); if (STATUSES.includes(status)) { st.status = status; s.data.messIdle = false; } if (typeof msg === 'string') st.msg = esc(msg.trim().slice(0, 60));
+      if (!ready) return; const st = state.get(uid); if (status === 'brb') status = 'away'; if (STATUSES.includes(status)) { st.status = status; s.data.messIdle = false; } if (typeof msg === 'string') st.msg = msg.trim() === ROOM_TAG ? '' : esc(msg.trim().slice(0, 60));
       await db.q('update users set status=$2,status_msg=$3 where id=$1', [uid, st.status, st.msg]); for (const x of online.get(uid)) if (x !== s) x.emit('m:self', { status: st.status, msg: st.msg });
       await broadcast(uid, me); return { ok: true, status: st.status, msg: st.msg };
     }));
     s.on('m:room-label',safe(async()=>({room:hooks.rawRoomOf?hooks.rawRoomOf(me):null})));
-    s.on('m:showroom', safe(async on => { if (!ready) return; const st = state.get(uid); st.showRoom = !!on; await db.q('update users set show_room=$2 where id=$1', [uid, !!on]); await broadcast(uid, me); return { ok: true, showRoom: st.showRoom }; }));
+    s.on('m:showroom', safe(async on => { if (!ready) return; const st = state.get(uid); st.showRoom = !!on; await db.q('update users set show_room=$2 where id=$1', [uid, !!on]); for (const x of online.get(uid) || []) if (x !== s) x.emit('m:room-visibility', st.showRoom);
+      await broadcast(uid, me); return { ok: true, showRoom: st.showRoom }; }));
     s.on('m:idle', safe(async on => { if (!ready) return; const wasIdle = idleNow(uid); s.data.messIdle = !!on; if (wasIdle !== idleNow(uid)) await broadcast(uid, me); }));
     s.on('m:avatar', safe(async a => { if (!ready || !AVATARS.includes(a)) return { error: 'bad avatar' }; state.get(uid).avatar = a; await db.q('update users set avatar=$2 where id=$1', [uid, a]); await broadcast(uid, me); }));
     let lastContactSearch = 0;
