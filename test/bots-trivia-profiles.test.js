@@ -37,7 +37,9 @@ test('the room refresh adds distinct accounts with valid rooms and intentionally
   const { profiles, posts } = require('../room-bot-refresh');
   const { PATH } = require('../rooms-dir');
   assert.equal(profiles.length, 44);
-  assert.equal(BOTMOD.BOTS.length, 116);
+  // 116 room bots + 3 interactive Springfield characters (bart-simpson, sideshow-bob, ralph-wiggum)
+  assert.equal(BOTMOD.BOTS.length, 119);
+  assert.deepEqual(BOTMOD.BOTS.filter(bot => bot.lines).map(bot => bot.id), ['bart-simpson', 'sideshow-bob', 'ralph-wiggum']);
   assert.equal(new Set(BOTMOD.BOTS.map(bot => bot.name.toLowerCase())).size, BOTMOD.BOTS.length);
   assert.equal(profiles.filter(bot => bot.room === 'En Español').length, 8);
   assert.deepEqual(PATH['Philippines Karaoke'], ['Countries & Cultures', 'Asia']);

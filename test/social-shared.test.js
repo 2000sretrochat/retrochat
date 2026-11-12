@@ -67,7 +67,11 @@ test('chat bots and Social profiles share stable aliases, and quiet visitors hav
   const {BOTS,PROFILE_SEEDS}=require('../bots');
   assert.equal(new Set(BOTS.map(bot=>bot.name.toLowerCase())).size,BOTS.length);
   assert.deepEqual(BOTS.map(bot=>bot.id),PROFILE_SEEDS.map(seed=>seed.id));
-  assert.deepEqual(PROFILE_SEEDS.slice(61,64).map(seed=>seed.id),['preview-nightowl','preview-retrofan','preview-mialuvs']);
+  // Seeds are keyed by id (not position): the preview profiles stay together and in order after the Springfield characters.
+  const ids=PROFILE_SEEDS.map(seed=>seed.id),at=ids.indexOf('preview-nightowl');
+  assert.deepEqual(ids.slice(at,at+3),['preview-nightowl','preview-retrofan','preview-mialuvs']);
+  assert.deepEqual(ids.slice(at-3,at),['bart-simpson','sideshow-bob','ralph-wiggum']);
+  assert.ok(PROFILE_SEEDS.filter(seed=>seed.id.startsWith('preview-')||['bart-simpson','sideshow-bob','ralph-wiggum'].includes(seed.id)).every(seed=>seed.display_name&&seed.bio&&!seed.silent));
   const visitor=BOTS.find(bot=>bot.silent),queries=[];
   const {seedSocialBots}=require('../social-next/bots');
   await seedSocialBots({q:async(sql,args=[])=>{
