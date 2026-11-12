@@ -188,7 +188,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"></template></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/razzle-startup.js"></script><script src="/messenger-controls.js"></script><script src="/socket.io/socket.io.js" onerror="RazzleStartup.recoverSocket()"></script><script src="/razzle-assets.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=7"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
+<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/razzle-startup.js"></script><link rel="stylesheet" href="/razzle-reconnect.css"><script src="/razzle-reconnect.js"></script><script src="/messenger-controls.js"></script><script src="/socket.io/socket.io.js" onerror="RazzleStartup.recoverSocket()"></script><script src="/razzle-assets.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=7"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',''];
@@ -231,22 +231,43 @@ function masterInit(){MW=1;const dd=document.querySelector('#menu>div .dd');if(d
 function masterCheck(){fetch('/api/me',{cache:'no-store'}).then(r=>r.json()).then(m=>{if(m&&m.m&&!MW)masterInit()}).catch(()=>{})}
 let initialSession;
  if (typeof io === 'function') {
-   initialSession = RazzleStartup.getJSON('/api/me', $('eIn'));
-   initialSession.then(m=>{if(m.name){start();if(m.m)masterInit()}}).catch(error=>{$('eIn').textContent=error.message});
+   initialSession = RazzleReconnect.pending()
+     ? (showSigningOut(), RazzleReconnect.finishLogout().then(() => location.reload()))
+     : RazzleStartup.getJSON('/api/me', $('eIn'));
+   initialSession.then(m=>{if(m?.name&&!RazzleReconnect.pending()){start();if(m.m)masterInit()}}).catch(error=>{$('eIn').textContent=error.message});
  }
 $('toUp').onclick=()=>{$('fIn').style.display='none';$('fUp').style.display='flex';$('uName').focus()};$('toIn').onclick=()=>{$('fUp').style.display='none';$('fIn').style.display='contents'};
 async function doIn(){
- if(typeof io!=='function'||S)return;
+ if(typeof io!=='function'||S||RazzleReconnect.pending())return;
  try{await initialSession;}catch(error){$('eIn').textContent=error.message;return;}
  if(S)return;
  $('eIn').textContent='';const r=await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;await api('/api/signin-presence',{invisible:$('iInv').checked}).catch(()=>{});$('iPw').value='';start();masterCheck()}
 $('bIn').onclick=doIn;['iName','iPw'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doIn()}}));
 let avT;$('uName').addEventListener('input',()=>{clearTimeout(avT);const n=$('uName').value.trim();if(!n)return $('uAv').textContent='';avT=setTimeout(async()=>{const r=await fetch('/api/available?name='+encodeURIComponent(n)).then(r=>r.json()).catch(()=>({}));
  $('uAv').innerHTML=r.valid===false?'<span class=err>4–20 characters, start with a letter; letters, numbers, _ or .</span>':r.available?'<span class=ok>&#10004; '+escT(n)+' is available</span>':r.error?'':'<span class=err>&#10008; '+escT(n)+' is taken</span>'},350)});
-async function doUp(){$('eUp').textContent='';if($('uPw').value!==$('uPw2').value)return $('eUp').textContent='Passwords do not match.';
+async function doUp(){if(RazzleReconnect.pending())return;$('eUp').textContent='';if($('uPw').value!==$('uPw2').value)return $('eUp').textContent='Passwords do not match.';
  if(!$('uAgree').checked)return $('eUp').textContent='Please agree to the Terms and Rules (18 or older) to sign up.';const r=await api('/api/signup',{agree:true,name:$('uName').value.trim(),password:$('uPw').value,email:$('uEm').value.trim()||undefined,remember:$('uRem').checked});if(r.error)return $('eUp').textContent=r.error;$('uPw').value=$('uPw2').value='';window.YVerify&&YVerify.send().then(()=>YVerify.check());start()}
 $('bUp').onclick=doUp;$('fUp').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doUp()}});
-async function signOut(){if(!confirm('Sign out of '+APP_NAME.join('')+' Messenger?'))return;await api('/api/logout');S&&S.disconnect();location.reload()}
+function showSigningOut() {
+ $('main').style.display='none';
+ $('signin').style.display='';
+ $('bIn').disabled=$('bUp').disabled=true;
+ $('eIn').textContent='Signing out… Waiting for Razzle to respond.';
+}
+function returnToSignIn() {
+ showSigningOut();
+ S?.disconnect();
+ for(const window of Object.values(ims)) window.querySelector('.tbar .x')?.click();
+ if($('brw').classList.contains('on')) $('brX').click();
+}
+async function exitMessenger() {
+ returnToSignIn();
+ await RazzleReconnect.requestLogout();
+ location.reload();
+}
+async function signOut() {
+ if(confirm('Sign out of '+APP_NAME.join('')+' Messenger?')) await exitMessenger();
+}
 $('mOut').onclick=$('wx').onclick=signOut;
 // ---------- connect ----------
 window.offlinePanel=createOfflinePanel({el:document.getElementById("offlinePanel"),held:()=>window.pmHeld,openMessage:openIm,dismiss:ids=>emit("m:offline-dismiss",ids)});
@@ -267,13 +288,43 @@ async function refreshContacts(){
   messengerInbox.reset(result.requests);render();
 }
 function start(){if(S||typeof io!=='function')return;$('signin').style.display='none';$('main').style.display='flex';S=io({auth:RazzleDevice.auth('social'),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));
- S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);lastAct=Date.now();idle=false;ME=r.me;groups=r.groups;blockedL=r.blocked;syncBlocked(r);contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
+ const reconnect = RazzleReconnect.indicator($('mwin'), {
+  exit: () => { reconnect.clear(); void exitMessenger(); }
+ });
+ let connectionGeneration = 0;
+ S.on('disconnect', reason => {
+  connectionGeneration++;
+  if(reason !== 'io client disconnect' && S.active) reconnect.show();
+ });
+ S.on('connect_error', () => { if(S.active) reconnect.show(); });
+ RazzleReconnect.onLogout(() => {
+  reconnect.clear();
+  returnToSignIn();
+  RazzleReconnect.finishLogout().then(() => location.reload());
+ });
+ S.on('connect',async()=>{
+  const generation = ++connectionGeneration;
+  let r;
+  while(S.connected && generation === connectionGeneration) {
+   try {
+    r = await S.timeout(10000).emitWithAck('m:init',{offlineInbox:true});
+    break;
+   } catch {
+    if(S.connected && generation === connectionGeneration) reconnect.show();
+   }
+  }
+  if(!r || !S.connected || generation !== connectionGeneration) return;
+  if(r.error) { reconnect.show(r.error); return; }
+  if(!r.me) { reconnect.show('Your session ended. Choose Exit to return to sign-in.'); return; }
+  lastAct=Date.now();idle=false;ME=r.me;groups=r.groups;blockedL=r.blocked;syncBlocked(r);contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
   $('mydevice').innerHTML=RazzleDevice.icon(ME.device);$('myname').textContent=ME.name;myStatus.sync();setMyAv();
   $('reqs').innerHTML='';messengerInbox.reset(r.requests);render();
   for(const message of r.offline)holdMessage({...message,receivedOffline:true});
+  for(const [name, window] of Object.entries(ims)) peerInfo(window, contacts[name]?.name || name);
+  reconnect.clear();
  });
  YAv.listen(S,(n,av)=>{const k=n.toLowerCase();if(contacts[k]){contacts[k].avatar=av;render();ims[k]&&peerInfo(ims[k],n)}if(ME&&k==ME.name.toLowerCase()){ME.avatar=av;setMyAv()}});
- {const d=document.createElement('div');d.id='cdot';d.setAttribute('role','status');d.textContent='Reconnecting…';d.style.cssText='display:none;position:fixed;bottom:8px;left:8px;z-index:999;background:rgba(0,0,0,.55);color:#fff;padding:2px 9px;border-radius:10px;font:500 11px system-ui;pointer-events:none';document.body.appendChild(d);let t=0;S.on('disconnect',()=>{clearTimeout(t);t=setTimeout(()=>{if(!S.connected)d.style.display=''},3000)});let connected=false;S.on('connect_error',()=>{if(!connected&&S.active){d.textContent=RazzleStartup.message;d.style.display=''}});S.on('connect',()=>{connected=true;clearTimeout(t);d.textContent='Reconnecting…';d.style.display='none'})}
+
  S.on('m:presence',p=>{const k=p.name.toLowerCase(),c=contacts[k];if(!c)return;const was=c.online;Object.assign(c,p);render();
   if(ME&&k==ME.name.toLowerCase()){/* my own entry: same view my contacts get, but no door sound/toast for myself */}else if(!was&&p.online){localStorage.ycDoor!='off'&&SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar,p.name)}else if(was&&!p.online){localStorage.ycDoor!='off'&&SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar,p.name)}
   const w=ims[k];w&&peerInfo(w,p.name)});

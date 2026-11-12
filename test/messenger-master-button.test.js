@@ -59,7 +59,8 @@ test('both Messenger pages create the button only from the server role (/api/me 
     const s = read(f);
     assert.match(s, /<script src="\/messenger-master\.js"><\/script><script src="\/offline-panel\.js"><\/script><script src="\/messenger-inbox\.js">/, f);
     assert.match(s, /function masterInit\(\)\{[^\n]*\n[^\n]*ms\.onerror=\(\)=>\{const b=\$\('bMaster'\);if\(b\)b\.remove\(\)\};document\.head\.appendChild\(ms\);window\.createMessengerMasterButton&&createMessengerMasterButton\(\);/, f);
-    assert.match(s, /initialSession = RazzleStartup\.getJSON\('\/api\/me', \$\('eIn'\)\);[\s\S]{0,100}initialSession\.then\(m=>\{if\(m\.name\)\{start\(\);if\(m\.m\)masterInit\(\)\}\}\)/, f);
+    assert.match(s, /RazzleStartup\.getJSON\('\/api\/me', \$\('eIn'\)\)/, f);
+    assert.match(s, /initialSession\.then\(m=>\{if\(m\?\.name&&!RazzleReconnect\.pending\(\)\)\{start\(\);if\(m\.m\)masterInit\(\)\}\}\)/, f);
     assert.equal((s.match(/createMessengerMasterButton\(/g) || []).length, 1, f + ': only called from masterInit');
     assert.doesNotMatch(s, /['"](zainy|tony|bigtony|zainyochka)['"]/i, f + ': no master names in the client');
   }

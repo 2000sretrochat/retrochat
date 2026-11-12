@@ -1,0 +1,37 @@
+.rz-reconnect-overlay {
+  position: absolute; inset: 0; z-index: 9990; display: flex;
+  align-items: center; justify-content: center; gap: 10px;
+  background: #26354680; color: #fff; font: 600 13px Tahoma, sans-serif;
+}
+.rz-reconnect-overlay[hidden], .rz-reconnect-badge[hidden] { display: none; }
+.rz-reconnect-spinner {
+  display: inline-block; flex: none; width: 24px; height: 24px;
+  box-sizing: border-box; border: 3px solid #a8b9cc; border-top-color: #004990;
+  border-radius: 50%; animation: rz-reconnect-spin .85s linear infinite;
+}
+.rz-reconnect-overlay .rz-reconnect-spinner { border-top-color: white; }
+@keyframes rz-reconnect-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rz-reconnect-spinner { animation: none; } }
+.rz-reconnect-badge {
+  position: fixed; bottom: 8px; left: 8px; z-index: 9991;
+  background: #173b60; color: #fff; border: 1px solid #a8bfd8;
+  padding: 4px 9px; font: 12px Tahoma, sans-serif; cursor: pointer;
+}
+.rz-reconnect-dialog {
+  box-sizing: border-box; width: min(310px, calc(100% - 24px)); padding: 16px;
+  background: var(--card, #fff); color: var(--ink, #12213f); border: 1px solid #7f9db9;
+  box-shadow: 3px 4px 14px #0005; font: 13px Tahoma, sans-serif;
+}
+.rz-reconnect-dialog::backdrop { background: transparent; }
+.rz-reconnect-heading, .rz-reconnect-actions { display: flex; align-items: center; gap: 9px; }
+.rz-reconnect-heading { font-size: 15px; }
+.rz-reconnect-actions { justify-content: flex-end; }
+.rz-reconnect-dialog p { line-height: 1.45; }
+.rz-reconnect-dialog button {
+  border: 1px solid #7f9db9; background: var(--card, #fff); color: inherit;
+  padding: 5px 12px; cursor: pointer; font: inherit;
+}
+.rz-reconnect-dialog button:focus-visible { outline: 2px solid #397cba; outline-offset: 2px; }
+.rz-reconnect-dialog .rz-reconnect-close { position: absolute; top: 5px; right: 5px; padding: 1px 6px; }
+#chat:has(> .rz-reconnect-overlay:not([hidden])) { isolation: isolate; }
+#chat > .rz-reconnect-overlay { position: fixed; }
