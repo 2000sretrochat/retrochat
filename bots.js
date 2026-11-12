@@ -42,10 +42,10 @@ const COLS = ['#000080', '#8b0000', '#006400', '#4b0082', '#b8860b', '#008080', 
 const EN2 = ['just got back from {place}', 'anyone here into {thing}?', 'omg {thing} is the best', 'listening to {song} rn', 'what is everyone eating tonight? im having {food}', 'rate my away msg: "{away}"', 'who else is from {city}?', '{greet} everyone', 'cant believe its already {time}', 'my mom keeps yelling at me to get off the computer lol', 'brb phone', 'a/s/l? jk jk', 'i need a new screen name ideas pls', 'its raining here, perfect chat weather', 'anyone want to trade buddy icons', 'lmao', 'hahaha same', 'ok im back', 'thats so random', 'i love this room', 'who has a webcam on?', 'turn up the music!!', 'whats the best movie ever? i say {movie}', 'gonna make some {food} brb', 'quiz time: favorite cereal?', 'sooo sleepy', 'this chat is my fav place on the internet', 'happy {day} everybody!'];
 const FILL = { place: ['the mall', 'school', 'work', 'the gym', 'blockbuster', 'my cousins house'], thing: ['tamagotchis', 'skateboarding', 'the sims', 'pokemon', 'harry potter', 'nsync', 'gel pens', 'myspace layouts'], song: ['Hey Ya', 'Mr. Brightside', 'Toxic', 'In Da Club', 'Complicated', 'Yellow', 'Bye Bye Bye'], food: ['pizza rolls', 'mac n cheese', 'tacos', 'ramen', 'hot pockets', 'cereal'], away: ['out livin la vida loca', 'brb, dont touch my stuff', 'gone to the movies ~*~', 'sleeping... or am i'], city: ['NYC', 'LA', 'Chicago', 'Texas', 'Florida', 'Phoenix', 'Seattle', 'Atlanta'], greet: ['heyyy', 'hi', 'sup', 'hello hello', 'yo'], time: ['this late', 'friday', 'november', 'the weekend'], movie: ['Mean Girls', 'The Matrix', 'Titanic', 'Napoleon Dynamite', 'Shrek'], day: ['monday', 'friday', 'weekend'] };
 const pick = a => a[Math.floor(Math.random() * a.length)];
-function line(b, room, last) { for (let k = 0; k < 4; k++) { const L = P[b.lang] || P.en; let t = b.lang === 'en' && Math.random() < 0.6 ? pick(EN2).replace(/\{(\w+)\}/g, (_, f) => pick(FILL[f] || [''])) : pick(L); if (t !== last) return t; } return pick(P[b.lang] || P.en); }
+function line(b, room, last) { if (b.lines) return pick(b.lines.filter(text => text !== last)); for (let k = 0; k < 4; k++) { const L = P[b.lang] || P.en; let t = b.lang === 'en' && Math.random() < 0.6 ? pick(EN2).replace(/\{(\w+)\}/g, (_, f) => pick(FILL[f] || [''])) : pick(L); if (t !== last) return t; } return pick(P[b.lang] || P.en); }
 const RE = { en: ['lol {n}', 'haha true', 'omg same {n}', 'no way!', 'for real?', 'agreed', '{n} ur funny', 'lmao', 'totally', 'hmm idk about that'], es: ['jaja {n}', 'sí, verdad', '¡qué bueno!'], ru: ['ха-ха {n}', 'точно'] };
 function reply(b, n) { const L = RE[b.lang]; return L ? pick(L).replace('{n}', n) : line(b); }
-function greet(b, n) { const G = { en: ['hey {n}!', 'hi {n} :)', 'welcome {n}', 'sup {n}', 'heyyy {n} whats up'], es: ['¡Hola {n}!'], ru: ['Привет, {n}!'], ja: ['{n}さん、こんにちは！'], ko: ['{n}님 안녕하세요!'], zh: ['{n} 你好！'] }; return pick(G[b.lang] || ['hi {n} :)']).replace('{n}', n); }
+function greet(b, n) { if (b.lines) return line(b); const G = { en: ['hey {n}!', 'hi {n} :)', 'welcome {n}', 'sup {n}', 'heyyy {n} whats up'], es: ['¡Hola {n}!'], ru: ['Привет, {n}!'], ja: ['{n}さん、こんにちは！'], ko: ['{n}님 안녕하세요!'], zh: ['{n} 你好！'] }; return pick(G[b.lang] || ['hi {n} :)']).replace('{n}', n); }
 const byRoom = {};
 // ---- Interactive hosts: natural screen names, no "[bot]" suffix. Stable ids keep old DB rows/avatars. ----
 const HOSTS = [
@@ -56,6 +56,17 @@ const HOSTS = [
 ];
 for (const h of HOSTS) BOTS.push(Object.assign({ lang: 'en', interactive: true, av: '' }, h));
 // Keep these ids and their order to preserve the preview profiles and portraits.
+BOTS.push(
+  { id: 'bart-simpson', name: 'Bart_Simpson', room: 'Lobby', lang: 'en', interactive: true, aliases: ['bart', 'bart_simpson'],
+    portrait: 'https://cdn.imgbin.com/21/21/19/imgbin-bart-simpson-homer-simpson-marge-simpson-maggie-simpson-lisa-simpson-marge-simpson-latest-version-2018-bart-simpson-Ziy3RLd2Z1pQzBfAPeYhWHhCK.jpg',
+    lines: ['I replaced the room rules with skateboard tricks. Rule one is still no spam.', 'I have an excellent alibi. Unfortunately it’s written on the chalkboard.', 'If anybody asks, the whoopee cushion came with the chat room.'] },
+  { id: 'sideshow-bob', name: 'Sideshow_Bob', room: 'Lobby', lang: 'en', interactive: true, aliases: ['bob', 'sideshow_bob'],
+    portrait: 'https://toppng.com/public/uploads/preview/robert-terwilliger-os-simpsons-sideshow-bob-115629370176elfhequwr.png',
+    lines: ['I rehearsed a grand entrance. The rake rehearsed a better one.', 'Bart, your prank lacks a third act. Allow me to recommend an intermission.', 'My campaign platform is simple. Fewer rakes and more opera.'] },
+  { id: 'ralph-wiggum', name: 'Ralph_Wiggum', room: 'Chit Chat', lang: 'en', interactive: true, aliases: ['ralph', 'ralph_wiggum'],
+    portrait: 'https://img1.pnghut.com/5/6/16/wDC42H8Y2k/professor-frink-cartoon-ralph-wiggum-yellow-art.jpg',
+    lines: ['I put my keyboard in time-out because it keeps saying escape.', 'I named my imaginary friend Password. Now I can’t tell anybody.', 'My crayons are on a snack break.'] }
+);
 const PREVIEW_BOTS = [
   {id:'preview-nightowl',name:'NightOwl',room:'Late Night'},
   {id:'preview-retrofan',name:'RetroFan',room:'Lobby'},
@@ -76,6 +87,9 @@ for (const b of BOTS) if (b.interactive) b.greet = 'hey! mention me if you need 
 
 // ---- Profile seeds for EVERY bot: hand-written persona [display name, location, interests, bio] ----
 const PERSONA = {
+  'bart-simpson': ['Bart Simpson', 'Springfield', 'skateboards, pranks', 'Springfield’s resident skateboarder and chalkboard regular.'],
+  'sideshow-bob': ['Sideshow Bob', 'Springfield', 'opera, theater, avoiding rakes', 'Former television sidekick with theatrical plans.'],
+  'ralph-wiggum': ['Ralph Wiggum', 'Springfield', 'crayons, snacks', 'A Springfield chatter with a very literal take on things.'],
   'preview-nightowl': ['NightOwl', 'Portland, Oregon', 'Music, Travel', 'The rest of the house is asleep and I just made coffee.'],
   'preview-retrofan': ['RetroFan', 'Columbus, Ohio', 'Politics, Cars', 'I miss the sound of signing on.'],
   'preview-mialuvs': ['MiaLuvs', 'Austin, Texas', 'Photography, Food, Travel', 'Always have time for a good photo spot.'],
