@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Razzle Social</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #edf4fb; color: #12213f; font: 15px Tahoma, Verdana, sans-serif; }
+    header { background: #fff; border-bottom: 1px solid #a8bfd8; padding: 14px max(16px, calc((100vw - 850px) / 2)); }
+    header a { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; font-weight: bold; white-space: nowrap; }
+    a { color: #004990; }
+    main { max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    section { background: #fff; border: 1px solid #a8bfd8; box-shadow: 2px 2px 6px #00205b22; padding: 24px; }
+    h1 { margin: 0 0 10px; font-size: 26px; }
+    p { line-height: 1.5; }
+    nav, footer { display: flex; flex-wrap: wrap; gap: 12px; }
+    nav a { padding: 8px 12px; border: 1px solid #7f9db9; text-decoration: none; }
+    nav a:first-child { background: #004990; color: white; }
+    footer { padding: 16px 0; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header><a href="/social-next/"><img src="/razzle-social.svg" width="34" height="32" alt="">Razzle Social</a></header>
+  <main>
+    <section>
+      <h1>Your Razzle Social space</h1>
+      <p>Sign in to set up your profile, share updates, and keep in touch with people you meet in the rooms.</p>
+      <nav aria-label="Razzle Social">
+        <a href="/?chat=1&amp;social=1">Sign in to Social</a>
+        <a href="/?chat=1&amp;signup=1&amp;social=1">Create an account</a>
+        <a href="/rooms.html">Browse chat rooms</a>
+      </nav>
+    </section>
+    <footer><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
+  </main>
+</body>
+</html>

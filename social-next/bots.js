@@ -22,16 +22,25 @@ async function publishBotPost(db){
 async function seedSocialBots(db){
   let profiles=0;
   for(const [index,seed] of PROFILE_SEEDS.entries()){
+    if (seed.replacedProfile) {
+      // Keep the bot's user ID so existing contacts and conversations survive the rename.
+      await db.q(`update users u set name=$2,name_lc=$3,display_name=$4,location=$5,bio=$6,interests=$7
+        from social_bot_members b where b.user_id=u.id and b.bot_id=$1
+        and u.name_lc=$8 and u.pw like '!social-bot:%'
+        and not exists(select 1 from users other where other.name_lc=$3)`,
+        [seed.id,seed.name,seed.name.toLowerCase(),seed.display_name,seed.location,seed.bio,seed.interests,seed.replacedProfile.name.toLowerCase()]);
+    }
     await db.q(`with new_user as (
       insert into users(name,name_lc,pw,display_name,location,bio,interests)
-      values($1,$2,$3,$4,$5,$6,$7) on conflict(name_lc) do nothing returning id
+      select $1,$2,$3,$4,$5,$6,$7 where not exists(select 1 from social_bot_members where bot_id=$8)
+      on conflict(name_lc) do nothing returning id
     ) insert into social_bot_members(user_id,bot_id,photo_index) select id,$8,$9 from new_user`,
       [seed.name,seed.name.toLowerCase(),'!social-bot:'+crypto.randomUUID(),seed.display_name,seed.location,seed.bio,seed.interests,seed.id,index]);
     const [bot]=await db.q('select user_id from social_bot_members where bot_id=$1',[seed.id]);
     if(!bot)continue; // A real member who already owns an alias is never converted into a bot.
     profiles++;
     if(seed.silent)continue; // Quiet visitors keep empty walls, bios and portraits.
-        const originalPortrait=seed.photoIndex===undefined?'/social-next/bot-portrait/'+index+'.svg':'/bot-av/'+seed.id;
+    const originalPortrait=seed.photoIndex===undefined&&!seed.avatar_key?'/social-next/bot-portrait/'+index+'.svg':'/bot-av/'+seed.id;
     await db.q(`insert into social_settings(user_id,value) values($1,$2)
       on conflict(user_id) do update set value =
         (case when social_settings.value->>'portrait'=$3
@@ -40,6 +49,14 @@ async function seedSocialBots(db){
         - (case when social_settings.value->>'headline' like 'Chat bot %' then 'headline' else '' end)
       where social_settings.value->>'portrait'=$3 or social_settings.value->>'headline' like 'Chat bot %'`,
       [bot.user_id,JSON.stringify({portrait:originalPortrait+'?v=2',visibility:'public'}),originalPortrait]);
+    if (seed.replacedProfile) {
+      await db.q(`update social_settings set value=jsonb_set(value,'{portrait}',to_jsonb($2::text))
+        where user_id=$1 and value->>'portrait' is distinct from $2`, [bot.user_id,originalPortrait+'?v=3']);
+      await db.q(`update social_posts set body=$3 where id=$1 and author_id=$2 and body in ($4,$5)`,
+        [stablePostId(seed.id),bot.user_id,seed.bio+' Find me in #'+seed.room+'.',
+          seed.replacedProfile.bio+' Find me in #'+seed.room+'.',
+          'Chat bot introduction: '+seed.replacedProfile.bio+' Find me in #'+seed.room+'.']);
+    }
     // Stable UUID: one introduction, never recreated after a moderator removes it.
     if(seed.photoIndex!==undefined)continue; // New accounts receive the curated posts gradually.
     const postId=stablePostId(seed.id);

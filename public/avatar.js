@@ -5,7 +5,7 @@ const PRE={a1:[':)','#cfe8ff'],a2:['B-)','#ffe0b3'],a3:[';)','#d9f7c8'],a4:[':D'
 // html(name, av, cls): av = 'a1'..'a8' preset | 'c<ver>' custom image | '' default
 function html(name,av,cls=''){const lc=String(name||'').toLowerCase();av=av||'';
  if(/^bot:[a-z0-9_-]+$/.test(av))return `<img class="av yav ${cls}" data-avn="${esc(lc)}" alt="" loading="lazy" src="/bot-av/${av.slice(4)}">`;
- if(/^a\d$/.test(av)&&PRE[av]&&window.RCSmileys){const v=PRE[av];return `<span class="av yav ${cls}" data-avn="${esc(lc)}" style="background:radial-gradient(circle at 40% 30%,#fff,${v[1]})">${RCSmileys.html(v[0])}</span>`}
+ if(/^a\d$/.test(av)&&PRE[av]&&window.RazzleAssets){const v=PRE[av];return `<span class="av yav ${cls}" data-avn="${esc(lc)}" style="background:radial-gradient(circle at 40% 30%,#fff,${v[1]})">${RazzleAssets.renderSmileys(esc(v[0]))}</span>`}
  const v=/^c[0-9a-z]+$/.test(av)?av:'0';return `<img class="av yav ${cls}" data-avn="${esc(lc)}" alt="" loading="lazy" src="/av/${encodeURIComponent(name)}?v=${v}">`}
 const cache={};
 // live update: replace every rendered avatar of that user
@@ -81,7 +81,7 @@ function editor(socket,{onSaved,name}={}){
  qa('[data-k]').forEach(e=>e.onclick=()=>{o[e.dataset.k]=e.dataset.v;sync()});
  q('.rnd').onclick=()=>{const r=a=>a[Math.floor(Math.random()*a.length)];Object.assign(o,{face:r(OPT.face),hair:r(OPT.hair),eyes:r(OPT.eyes),mouth:r(OPT.mouth),acc:r(OPT.acc),skin:r(SKIN),hairc:r(HAIRC),bg:r(BG)});sync()};sync();
  qa('[data-pre]').forEach(e=>e.onclick=()=>{pre=e.dataset.pre;qa('[data-pre]').forEach(x=>x.style.outline=x==e?'3px solid #FFCE00':'');});
- const mkQr=(sel='.qrb',m)=>{const b=q(sel);socket.emit('snap:token',async r=>{if(!r||r.error){b.textContent=(r&&r.error)||'Not available right now.';return}if(!window.qrcode)await new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='/qrcode.js';sc.onload=ok;sc.onerror=no;document.head.appendChild(sc)}).catch(()=>{});const url=location.origin+'/snap?t='+r.t+(m?'&m='+m:'');if(!window.qrcode){b.textContent=url;return}const qr=qrcode(0,'M');qr.addData(url);qr.make();b.innerHTML=qr.createSvgTag({cellSize:5,margin:2})})};
+ const mkQr=(sel='.qrb',m)=>{const b=q(sel);socket.emit('snap:token',async r=>{if(!r||r.error){b.textContent=(r&&r.error)||'Not available right now.';return}const makeCode=await window.RazzleAssets?.qrCode().catch(()=>null);const url=location.origin+'/snap?t='+r.t+(m?'&m='+m:'');if(!makeCode){b.textContent=url;return}const qr=makeCode(0,'M');qr.addData(url);qr.make();b.innerHTML=qr.createSvgTag({cellSize:5,margin:2})})};
  const onSnap=()=>{onSaved&&onSaved();const k=q('.bmok');if(tab=='bm'&&k){k.style.display='';setTimeout(close,1500)}else close()};socket.on('snap:done',onSnap);const _cl=close;
  const cv=q('.cv'),cx=cv.getContext('2d');
  const draw=(c,ctx,S)=>{ctx.clearRect(0,0,S,S);ctx.save();if(tab=='bm'){ctx.beginPath();ctx.arc(S/2,S/2,S/2,0,Math.PI*2);ctx.clip()}else{ctx.fillStyle='#DCEBFC';ctx.fillRect(0,0,S,S)}if(!img){ctx.restore();return}const base=Math.min(img.width,img.height)/zoom,sx=Math.max(0,Math.min(img.width-base,(img.width-base)/2+ox)),sy=Math.max(0,Math.min(img.height-base,(img.height-base)/2+oy));ctx.drawImage(img,sx,sy,base,base,0,0,S,S);ctx.restore()};

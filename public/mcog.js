@@ -2,8 +2,8 @@
 (function(){const $=i=>document.getElementById(i),L=localStorage;
 const css=`#thm{display:none!important}#mcog{margin-left:auto;align-self:center;flex:0 0 auto;width:30px;height:28px;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}#mcog svg{width:19px!important;height:19px!important;min-width:19px;flex:0 0 19px}#mcog{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}#mcog:hover,#mcog.on{background:var(--soft,#eaf3fd)!important}
 #mcogdd{position:fixed;z-index:9999;display:none;background:var(--card,#fff);color:var(--ink,#12213F);border:1px solid var(--line,#d5e2f0);border-radius:12px;box-shadow:var(--shadow,0 8px 24px rgba(0,0,0,.2));padding:6px;width:236px;max-height:calc(100vh - 8px);overflow-y:auto;font-size:13px}
-#mcogdd.open{display:block}#mcogdd .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}#mcogdd .it:hover{background:#0033A0;color:#fff}#mcogdd .it .r{margin-left:auto;font-size:12px;opacity:.8}
-#mcogdd hr{border:0;border-top:1px solid var(--line,#d5e2f0);margin:4px 0}#mcogdd .fs{display:flex;gap:4px;padding:4px 10px 6px}#mcogdd .fs span{flex:1;text-align:center;border:1px solid var(--line,#d5e2f0);border-radius:8px;padding:3px 0;cursor:pointer}#mcogdd .fs span.on{background:#0033A0;color:#fff;border-color:#0033A0}
+#mcogdd.open{display:block}#mcogdd .it{width:100%;border:0;background:transparent;color:inherit;text-align:left;font:inherit;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}#mcogdd .it:is(:hover,:focus-visible){background:#0033A0;color:#fff}#mcogdd .it .r{margin-left:auto;font-size:12px;opacity:.8}
+#mcogdd hr{border:0;border-top:1px solid var(--line,#d5e2f0);margin:4px 0}#mcogdd .fs{display:flex;gap:4px;padding:4px 10px 6px}#mcogdd .fs button{flex:1;text-align:center;border:1px solid var(--line,#d5e2f0);border-radius:8px;padding:3px 0;cursor:pointer}#mcogdd .fs button.on{background:#0033A0;color:#fff;border-color:#0033A0}
 #mcogdd .h{font-size:11px;color:var(--muted,#5b6b85);padding:4px 10px 0;font-weight:600}
 :root{--messenger-name-size:13px;--messenger-detail-size:12px;--messenger-menu-size:13px;--messenger-message-size:14px}
 html.mfs-s{--messenger-name-size:12px;--messenger-detail-size:11px;--messenger-menu-size:12px;--messenger-message-size:12px}
@@ -20,25 +20,25 @@ addEventListener('storage',event=>{if(event.key==='ycMFs')fsApply()});
 function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
  const b=document.createElement('button');b.id='mcog';b.type='button';b.title='Quick settings';b.setAttribute('aria-label','Quick settings');b.innerHTML=COG;m.appendChild(b);
  const d=document.createElement('div');d.id='mcogdd';document.body.appendChild(d);
- d.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-a],[data-f]')){e.preventDefault();e.target.click()}};
  const chk=v=>v?'&#10003;':'';
- const draw=()=>{const dark=window.YTheme&&YTheme.get()=='dark',sr=$('mShowRoom'),f=L.ycMFs||'m';
-  d.innerHTML=`<div class=it data-a=th>${dark?SUN:MOON}<span>${dark?'Light mode':'Night mode'}</span></div>
-  <div class=it data-a=pmp><span>Pop up new PMs</span><span class=r>${chk(L.ycPmPop!='off')}</span></div><div class=it data-a=snd><span>Mute sounds</span><span class=r>${chk(L.ycSound=='off')}</span></div>
-  <div class=it data-a=shk><span>Buzz shake</span><span class=r>${L.ycShake=='off'?'Off':'On'}</span></div>
-  <div class=it data-a=rb><span>Allow room buzzes</span><span class=r>${chk(L.ycRoomBuzz!='off')}</span></div>
-  <div class=h>Font size</div><div class=fs>${[['s','Small'],['m','Medium'],['l','Large']].map(([k,l])=>`<span data-f=${k} class="${k==f?'on':''}">${l}</span>`).join('')}</div>
-  ${sr&&sr.style.display!='none'?`<div class=h>Privacy</div><div class=it data-a=sr><span>Show the room I'm in</span><span class=r>${chk(/\u2713/.test(sr.textContent))}</span></div>`:''}
-  <hr><div class=it data-a=av><span>Audio &amp; Video settings&hellip;</span></div><div class=it data-a=all><span>All Settings&hellip;</span></div>`;d.querySelectorAll('[data-a],[data-f]').forEach(item=>{item.tabIndex=0;item.setAttribute('role','button')})};
+ const draw=()=>{const dark=window.YTheme&&YTheme.get()=='dark',sr=$('mShowRoomCheck'),f=L.ycMFs||'m';
+  d.innerHTML=`<button type=button class=it role=menuitem tabindex=-1 data-a=th>${dark?SUN:MOON}<span>${dark?'Light mode':'Night mode'}</span></button>
+  <button type=button class=it role=menuitemcheckbox aria-checked="${L.ycPmPop!='off'}" tabindex=-1 data-a=pmp><span>Pop up new PMs</span><span class=r>${chk(L.ycPmPop!='off')}</span></button><button type=button class=it role=menuitemcheckbox aria-checked="${L.ycSound=='off'}" tabindex=-1 data-a=snd><span>Mute sounds</span><span class=r>${chk(L.ycSound=='off')}</span></button>
+  <button type=button class=it role=menuitemcheckbox aria-checked="${L.ycShake!='off'}" tabindex=-1 data-a=shk><span>Buzz shake</span><span class=r>${L.ycShake=='off'?'Off':'On'}</span></button>
+  <button type=button class=it role=menuitemcheckbox aria-checked="${L.ycRoomBuzz!='off'}" tabindex=-1 data-a=rb><span>Allow room buzzes</span><span class=r>${chk(L.ycRoomBuzz!='off')}</span></button>
+  <div class=h>Font size</div><div class=fs>${[['s','Small'],['m','Medium'],['l','Large']].map(([k,l])=>`<button type=button role=menuitemradio aria-checked="${k===f}" tabindex=-1 data-f=${k} class="${k==f?'on':''}">${l}</button>`).join('')}</div>
+  ${sr&&$('mShowRoom').style.display!='none'?`<div class=h>Privacy</div><button type=button class=it role=menuitemcheckbox aria-checked="${sr.checked}" tabindex=-1 data-a=sr><span>Display Room I’m In</span><span class=r>${chk(sr.checked)}</span></button>`:''}
+  <hr><button type=button class=it role=menuitem tabindex=-1 data-a=av><span>Audio &amp; Video settings&hellip;</span></button><button type=button class=it role=menuitem tabindex=-1 data-a=all><span>All Settings&hellip;</span></button>`};
  const place=()=>{const r=b.getBoundingClientRect(),W=document.documentElement.clientWidth,H=innerHeight,w=d.offsetWidth,h=d.offsetHeight;d.style.left=Math.max(4,Math.min(r.right-w,W-w-4))+'px';d.style.top=Math.max(4,Math.min(r.bottom+2,H-h-4))+'px'};
  const show=o=>{d.classList.toggle('open',o);b.classList.toggle('on',o);if(o){draw();place()}};
- b.onclick=e=>{e.stopPropagation();document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));show(!d.classList.contains('open'))};
- document.addEventListener('click',e=>{if(!e.target.closest('#mcogdd,#mcog'))show(false)});addEventListener('resize',()=>d.classList.contains('open')&&place());
- d.onclick=e=>{e.stopPropagation();const f=e.target.closest('[data-f]');if(f){L.ycMFs=f.dataset.f;fsApply();draw();return}const a=(e.target.closest('[data-a]')||{}).dataset?.a;if(!a)return;
+ const refresh=selector=>{if(d.classList.contains('open')){draw();place();d.querySelector(selector)?.focus()}};
+ RazzleMessengerControls.attach(b,d,show);
+ addEventListener('resize',()=>d.classList.contains('open')&&place());
+ d.onclick=e=>{e.stopPropagation();const f=e.target.closest('[data-f]');if(f){L.ycMFs=f.dataset.f;fsApply();refresh('[data-f='+f.dataset.f+']');return}const a=(e.target.closest('[data-a]')||{}).dataset?.a;if(!a)return;
   if(a=='th')window.YTheme&&YTheme.toggle();else if(a=='pmp'){L.ycPmPop=L.ycPmPop=='off'?'on':'off'}else if(a=='snd'){L.ycSound=L.ycSound=='off'?'on':'off';dispatchEvent(new Event('ycsound'))}
   else if(a=='shk')L.ycShake=L.ycShake=='off'?'on':'off';else if(a=='rb')L.ycRoomBuzz=L.ycRoomBuzz=='off'?'on':'off';
-  else if(a=='sr'){$('mShowRoom').click();setTimeout(draw,400)}
-  else if(a=='all'){show(false);window.YSet&&YSet.open();return}else if(a=='av'){show(false);avPanel();return}draw();place()}}
+  else if(a=='sr'){$('mShowRoomCheck').click();setTimeout(()=>refresh('[data-a=sr]'),400)}
+  else if(a=='all'){RazzleMessengerControls.close(true);window.YSet&&YSet.open();return}else if(a=='av'){RazzleMessengerControls.close(true);avPanel();return}refresh('[data-a='+a+']')}}
 let devicePanel, openingDevices;
 function avPanel(){
  if(devicePanel?.isConnected){devicePanel._pw?.focus();devicePanel.focus();return;}

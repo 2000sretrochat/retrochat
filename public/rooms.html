@@ -178,10 +178,10 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
 @media (max-width:900px){#rhead .hb span{display:none}#rhead .hb.inv span{display:inline}#avb span{display:none}}
 @media (max-height:640px){.adph-lb{height:40px}}
 .ydlogo{display:inline-flex;align-items:center;gap:5px;font:700 13px var(--sys);color:#00205B;padding:0 10px 0 6px;align-self:center}
-</style><link rel="stylesheet" href="/room137.css"><link rel="stylesheet" href="/design-nov10.css"><link rel="stylesheet" href="/razzle-mobile.css"><script defer src="/razzle-mobile.js"></script></head><body>
+</style><link rel="stylesheet" href="/room137.css"><link rel="stylesheet" href="/design-nov10.css"><link rel="stylesheet" href="/razzle-mobile.css"><script defer src="/razzle-mobile.js"></script></head><body class="room-directory-page">
 <p id="room-popout-status" role="status" hidden>Opening your room…</p>
 <header class="social-chat-header" id="social-chat-header">
-  <a class="social-chat-brand" href="/social/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
+  <a class="social-chat-brand" href="/social-next/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <label class="social-chat-search"><span aria-hidden="true">⌕</span><input type="search" id="social-chat-search" placeholder="Search chat rooms and topics" aria-label="Search chat rooms and topics"></label>
   <a href="https://github.com/2000sretrochat/retrochat/releases/latest/download/RazzleMessenger-Setup.exe">Download Messenger</a>
   <a href="/?chat=1" data-chat-signin hidden>Sign in</a>
@@ -189,8 +189,8 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
 <div class="social-chat-layout" id="social-chat-layout">
   <aside class="site-sidebar">
     <nav class="menu" aria-label="Razzle navigation">
-      <a href="/social/">⌂ <span>Social</span></a>
-      <a href="/social/">✧ <span>Find your people</span></a>
+      <a href="/social-next/">⌂ <span>Social</span></a>
+      <a href="/social-next/">✧ <span>Find your people</span></a>
       <a href="/rooms.html" aria-current="page">▦ <span>Chat</span></a>
     </nav>
     <div class="topic-list"><p class="label">FEATURED ROOMS</p>
@@ -246,7 +246,7 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
 <template data-ad-placement="chat-room"><div class="adph adph-c" id=adRoom></div></template>
 </div>
 <!-- Ad placements stay inert during beta. -->
-<template data-ad-placement="room-directory"><div id="ad-slot"></div></template><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div>
+<template data-ad-placement="room-directory"><div id="ad-slot"></div></template><div id="yfoot" data-install-dock style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div>
 <div id="modw" class="pmwin" style="display:none;flex-direction:column;width:330px;left:calc(50% - 165px);top:120px"><div class=tbar><i data-i=shield data-s=16></i> Room Admin Console<span class=sp></span><span class=x id=modX><i data-i=close data-s=14></i></span></div>
 <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
 <label>User: <select id=modu style="width:100%"></select></label>
@@ -255,7 +255,7 @@ html.yd #chat #vrow,html.yd #chat #form,html.yd #chat #erow,html.yd #chat #menu,
 <div id=modown class=modg><button id=mAdm>Make Admin</button><button id=mBan>Ban</button><label style="margin-left:8px">Mics <select id=mMics><option value=1>Single mic</option><option value=2>Multi: 2</option><option value=3>Multi: 3</option><option value=4>Multi: 4</option><option value=5>Multi: 5</option></select></label><label style="margin-left:8px"><input type=checkbox id=mHq style="width:auto;display:inline"> Hands up</label><label style="margin-left:8px">Mic timer <select id=mAn title="Posts 'NAME has been on the mic N minutes' in the room"><option value=0>Off</option><option value=1>1 min</option><option value=2>2 min</option><option value=3>3 min</option><option value=5>5 min</option></select></label><label style="margin-left:8px">Turn limit <select id=mTm><option value=0>Off</option><option value=30>30 sec</option><option value=60>1 min</option><option value=90>1 min 30</option><option value=c>Custom...</option></select></label></div>
 <div style="font-weight:700">Muted / bounced</div><div id=modl></div><div id=modadm style="font-size:12px;color:var(--muted)"></div></div></div>
 <div id="foot"><span class="appname-plain"></span> &middot; <a href="/privacy.html">Privacy</a></div>
-<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/room-invite-popup.js"></script><script src="/settings.js?v=7"></script><link rel="stylesheet" href="/messenger-polish.css?v=7"><script src="/browse.js?v=6"></script><script src="/av.js?v=3"></script><script src="/room-music.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=7"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script>
+<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/room-invite-popup.js"></script><script src="/settings.js?v=7"></script><link rel="stylesheet" href="/messenger-polish.css?v=7"><script src="/browse.js?v=6"></script><script src="/av.js?v=3"></script><script src="/room-music.js"></script><script src="/razzle-startup.js"></script><script src="/socket.io/socket.io.js" onerror="RazzleStartup.recoverSocket()"></script><script src="/razzle-assets.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',' Chat'];
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
@@ -275,7 +275,7 @@ const ignored={has:n=>YSet.hidden(n),get size(){return YSet.get().hide.length}};
 if(!localStorage.rcV9){try{const o=JSON.parse(localStorage.rcPrefs||'{}');o.ts=true;localStorage.rcPrefs=JSON.stringify(o);prefs.ts=true}catch(e){}localStorage.rcV9=1}
 const savePrefs=()=>localStorage.rcPrefs=JSON.stringify(prefs);
 const escT=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const smile=t=>RCSmileys.replace(t);
+const smile=t=>RazzleAssets.renderSmileys(t);
 const NCOL=['#c0392b','#0033A0','#8e44ad','#16a085','#d35400','#2c3e50','#27ae60','#b0186b'];const ncol=n=>NCOL[[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%NCOL.length];
 const popoutKey = new URLSearchParams(location.hash.slice(1)).get('room-transfer');
 const isRoomPopout = /^[0-9a-f-]{36}$/i.test(popoutKey || '') && typeof BroadcastChannel === 'function';
@@ -296,13 +296,13 @@ if (isRoomPopout) {
  $('room-popout-status').hidden = false;
 }
 let sessionChecked=false;
-const roomAccountReady = fetch('/api/me',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('Session unavailable');return r.json()}).then(m=>{
- sessionChecked=true;acct=m.name;S.connect();$('room-session-status').hidden=true;$('who').hidden=false;$('nmw').hidden=!!acct;
+const roomAccountReady = RazzleStartup.getJSON('/api/me', $('room-session-status')).then(m=>{
+ sessionChecked=true;acct=m.name;S.connect();if(!S.connected)$('room-session-status').textContent='Connecting to Razzle…';$('who').hidden=false;$('nmw').hidden=!!acct;
  const signIn=document.querySelector('#social-chat-header [data-chat-signin]');if(signIn&&!acct)signIn.hidden=false;
  $('go').hidden=!acct;syncRoomEntry();$('mk').hidden=!acct;$('mk').disabled=!acct;loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
  if(isRoomPopout)return;
- if(new URLSearchParams(location.search).get('edit')&&acct)new Promise(ok=>S.emit('rooms',ok)).then(()=>editRoom(new URLSearchParams(location.search).get('edit')));else if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(()=>{
- $('room-session-status').textContent='Could not check your sign-in. Refresh this page to try again.';S.connect();
+ if(new URLSearchParams(location.search).get('edit')&&acct)new Promise(ok=>S.emit('rooms',ok)).then(()=>editRoom(new URLSearchParams(location.search).get('edit')));else if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(error=>{
+ $('room-session-status').textContent=error.message;
 });
 document.addEventListener('click', event => {
  const link = event.target.closest('[data-chat-signin]');
@@ -369,11 +369,7 @@ function loadRooms(){new Promise(ok=>S.emit('rooms',ok)).then(rs=>{if(rs.some(r=
   const saved=YBrowse.mine(rooms,String(acct.name||acct).toLowerCase());
   $('rlist').innerHTML=tabs+(saved.map(rr).join('')||'<p class="room-list-note">Star a room or create one and it will show here.</p>');
  }else if(rTab==='top'){
-  const englishRooms = new Set(["Lobby","Late Night","The Lounge","Friends","Chit Chat","Advice Central","Cultures and Community Lobby","Holiday Happenings"]);
-  const top = rooms.filter(r => r.count > 0).sort((a,b) =>
-   Number(englishRooms.has(b.name)) - Number(englishRooms.has(a.name)) ||
-   b.count - a.count || b.cams - a.cams || a.name.localeCompare(b.name)
-  ).slice(0,10);
+  const top = YBrowse.top(rooms);
   const selected=rooms.find(r=>r.name===room);
   $('rlist').innerHTML=tabs+(selected&&!top.includes(selected)?`<div class="cat">Selected room</div>${rr(selected)}`:'')+'<div class="cat">Busiest rooms now</div>'+(top.map(rr).join('')||'<p class="room-list-note">Nobody is chatting right now.</p>');
  }else{
@@ -440,10 +436,8 @@ $('rlist').addEventListener('click', event => {
 });
 $('go').onclick=login;$('nm').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();login()}});
 // smileys + text style
-$('smb').innerHTML=RCSmileys.html(':)');
-$('smp').innerHTML=RCSmileys.ordered.map(m=>`<span data-k="${m.esc}">${m.html}</span>`).join('');
-$('smb').onclick=e=>{e.stopPropagation();$('smp').classList.toggle('open')};
-document.querySelectorAll('#smp>span').forEach(e=>e.onclick=()=>{const t=document.createElement('textarea');t.innerHTML=e.dataset.k;$('msg').value+=' '+t.value+' ';$('smp').classList.remove('open');$('msg').focus()});
+$('smb').textContent='🙂';
+RazzleAssets.bindSmileys($('smb'), $('smp'), $('msg'));
 $('tb').onclick=()=>{$('sty').classList.toggle('open');$('tb').classList.toggle('on')};
 const tog=(k,id,css,val)=>$(id).onclick=()=>{st[k]=!st[k];$(id).classList.toggle('on',st[k]);$('msg').style[css]=st[k]?val:''};
 tog('b','bB','fontWeight','bold');tog('i','bI','fontStyle','italic');tog('u','bU','textDecoration','underline');
@@ -659,7 +653,8 @@ let typers={};S.on('typing',({name})=>{if(ignored.has(name))return;typers[name]=
 function showTyping(){$('typing').textContent=''}
 setInterval(showTyping,1000);S.on('msg',m=>{if(m.name)delete typers[m.name]});
 let dropT=0,wasDown=false;S.on('disconnect',why=>{if(!me)return;wasDown=true;micAttempt++;micPending=false;latch=false;talking=false;mic?.getAudioTracks().forEach(t=>t.enabled=false);$('talk').classList.remove('on');clearTimeout(dropT);dropT=setTimeout(()=>{if(!S.connected)$('cstat').style.display=''},3000)});
-S.on('connect',()=>{clearTimeout(dropT);$('cstat').style.display='none';if(!wasDown||!me||!room)return;wasDown=false;queuedRoomIce.clear();Object.keys(pcs).forEach(k=>{try{pcs[k].close()}catch{}delete pcs[k]});document.querySelectorAll('audio[id^=au]').forEach(a=>a.remove());
+S.on('connect_error',()=>{if(!room&&S.active)$('room-session-status').textContent=RazzleStartup.message;});
+S.on('connect',()=>{$('room-session-status').hidden=true;clearTimeout(dropT);$('cstat').style.display='none';if(!wasDown||!me||!room)return;wasDown=false;queuedRoomIce.clear();Object.keys(pcs).forEach(k=>{try{pcs[k].close()}catch{}delete pcs[k]});document.querySelectorAll('audio[id^=au]').forEach(a=>a.remove());
  let tries=0;const rj=()=>{if(!S.connected)return;$('cstat').style.display='';S.emit('login',{name:me,room},r=>{if(!r||r.error){tries++;if(tries<12)setTimeout(rj,Math.min(30000,1500*2**Math.min(tries,5)));else console.warn('rejoin failed',r&&r.error);return}tries=0;me=r.name;$('cstat').style.display='none'})};rj()});
 // draggable windows
 function drag(w){const bar=w.querySelector('.tbar');bar.onpointerdown=e=>{if(e.target.closest('.x,.b'))return;const ox=e.clientX-w.offsetLeft,oy=e.clientY-w.offsetTop;

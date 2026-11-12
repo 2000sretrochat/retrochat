@@ -57,15 +57,18 @@ const HOSTS = [
 for (const h of HOSTS) BOTS.push(Object.assign({ lang: 'en', interactive: true, av: '' }, h));
 // Keep these ids and their order to preserve the preview profiles and portraits.
 BOTS.push(
-  { id: 'bart-simpson', name: 'Bart_Simpson', room: 'Lobby', lang: 'en', interactive: true, aliases: ['bart', 'bart_simpson'],
-    portrait: 'https://cdn.imgbin.com/21/21/19/imgbin-bart-simpson-homer-simpson-marge-simpson-maggie-simpson-lisa-simpson-marge-simpson-latest-version-2018-bart-simpson-Ziy3RLd2Z1pQzBfAPeYhWHhCK.jpg',
-    lines: ['I replaced the room rules with skateboard tricks. Rule one is still no spam.', 'I have an excellent alibi. Unfortunately it’s written on the chalkboard.', 'If anybody asks, the whoopee cushion came with the chat room.'] },
-  { id: 'sideshow-bob', name: 'Sideshow_Bob', room: 'Lobby', lang: 'en', interactive: true, aliases: ['bob', 'sideshow_bob'],
-    portrait: 'https://toppng.com/public/uploads/preview/robert-terwilliger-os-simpsons-sideshow-bob-115629370176elfhequwr.png',
-    lines: ['I rehearsed a grand entrance. The rake rehearsed a better one.', 'Bart, your prank lacks a third act. Allow me to recommend an intermission.', 'My campaign platform is simple. Fewer rakes and more opera.'] },
-  { id: 'ralph-wiggum', name: 'Ralph_Wiggum', room: 'Chit Chat', lang: 'en', interactive: true, aliases: ['ralph', 'ralph_wiggum'],
-    portrait: 'https://img1.pnghut.com/5/6/16/wDC42H8Y2k/professor-frink-cartoon-ralph-wiggum-yellow-art.jpg',
-    lines: ['I put my keyboard in time-out because it keeps saying escape.', 'I named my imaginary friend Password. Now I can’t tell anybody.', 'My crayons are on a snack break.'] }
+  { id: 'bart-simpson', name: 'Patch_Pigeon', room: 'Lobby', lang: 'en', interactive: true,
+    aliases: ['patch', 'patch_pigeon'], avatar_key: 'patch_pigeon',
+    replacedProfile: { name: 'Bart_Simpson', bio: "Springfield’s resident skateboarder and chalkboard regular." },
+    lines: ["I hid a fake weather report in the room topic. Expect scattered cheese.","My rooftop station has one listener. It’s also me.","If the snack cabinet asks, the crumbs were already there."] },
+  { id: 'sideshow-bob', name: 'Velvet_Vox', room: 'Lobby', lang: 'en', interactive: true,
+    aliases: ['velvet', 'velvet_vox'], avatar_key: 'velvet_vox',
+    replacedProfile: { name: 'Sideshow_Bob', bio: "Former television sidekick with theatrical plans." },
+    lines: ["I prepared a dramatic pause. It’s available in three lengths.","Patch, your weather report needs a sound effect. I brought a kazoo.","My keyboard has a theme song. It plays whenever I misplace the space bar."] },
+  { id: 'ralph-wiggum', name: 'Mochi_Modem', room: 'Chit Chat', lang: 'en', interactive: true,
+    aliases: ['mochi', 'mochi_modem'], avatar_key: 'mochi_modem',
+    replacedProfile: { name: 'Ralph_Wiggum', bio: "A Springfield chatter with a very literal take on things." },
+    lines: ["I put my keyboard in time-out because it keeps saying escape.","I tried to clear my cache. Now my snack drawer is empty.","If my battery gets low, please tell it to think positive."] }
 );
 const PREVIEW_BOTS = [
   {id:'preview-nightowl',name:'NightOwl',room:'Late Night'},
@@ -87,9 +90,9 @@ for (const b of BOTS) if (b.interactive) b.greet = 'hey! mention me if you need 
 
 // ---- Profile seeds for EVERY bot: hand-written persona [display name, location, interests, bio] ----
 const PERSONA = {
-  'bart-simpson': ['Bart Simpson', 'Springfield', 'skateboards, pranks', 'Springfield’s resident skateboarder and chalkboard regular.'],
-  'sideshow-bob': ['Sideshow Bob', 'Springfield', 'opera, theater, avoiding rakes', 'Former television sidekick with theatrical plans.'],
-  'ralph-wiggum': ['Ralph Wiggum', 'Springfield', 'crayons, snacks', 'A Springfield chatter with a very literal take on things.'],
+  'bart-simpson': ["Patch Pigeon","Portland, Oregon","radio, practical jokes","A rooftop radio host who leaves ridiculous clues around the lobby."],
+  'sideshow-bob': ["Velvet Vox","Cleveland, Ohio","radio theater, sound effects","A radio drama host who gives minor inconveniences their own theme music."],
+  'ralph-wiggum': ["Mochi Modem","Mesa, Arizona","gadgets, snacks","A tiny repair robot that takes computer instructions very literally."],
   'preview-nightowl': ['NightOwl', 'Portland, Oregon', 'Music, Travel', 'The rest of the house is asleep and I just made coffee.'],
   'preview-retrofan': ['RetroFan', 'Columbus, Ohio', 'Politics, Cars', 'I miss the sound of signing on.'],
   'preview-mialuvs': ['MiaLuvs', 'Austin, Texas', 'Photography, Food, Travel', 'Always have time for a good photo spot.'],
@@ -164,7 +167,7 @@ const LEGACY_DEFAULT_BIO = {
 };
 const LEGACY_DEFAULT_ROOM = { gamenight: 'Lobby' };
 const PROFILE_SEEDS = BOTS.map(b => { const p = b.photoIndex !== undefined ? [b.displayName,b.location,b.interests,b.bio] : b.silent ? [b.name, '', '', ''] : PERSONA[b.id]; if (!p) throw new Error('bots.js: missing persona for ' + b.id);
-  return { id: b.id, name: b.name, display_name: p[0], location: p[1], interests: p[2], bio: p[3], avatar_key: '', photoIndex:b.photoIndex, room: b.room, silent: !!b.silent, interactive: !!b.interactive, lang: b.lang, legacy: b.legacy || [] }; });
+  return { id: b.id, name: b.name, display_name: p[0], location: p[1], interests: p[2], bio: p[3], avatar_key: b.avatar_key || '', replacedProfile: b.replacedProfile, photoIndex:b.photoIndex, room: b.room, silent: !!b.silent, interactive: !!b.interactive, lang: b.lang, legacy: b.legacy || [] }; });
 const byId = id => BOTS.find(b => b.id === String(id || '').toLowerCase());
 const byAlias = h => { h = String(h || '').toLowerCase(); return BOTS.find(b => b.interactive && (b.aliases || []).includes(h)) || BOTS.find(b => b.name.toLowerCase() === h); };
 module.exports = { BOTS, byRoom, P, line, reply, greet, PROFILE_SEEDS, HOSTS, byId, byAlias, LEGACY_DEFAULT_DISPLAY, LEGACY_DEFAULT_BIO, LEGACY_DEFAULT_ROOM };

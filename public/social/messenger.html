@@ -136,11 +136,11 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 .rrow .uc{display:flex;align-items:center;gap:6px;color:var(--muted);width:60px;font-size:13px}
 #brw .ft{display:flex;gap:10px;padding:14px 16px}
 @media (max-width:760px){#brw{left:0!important;top:0!important;width:100%;max-width:none}.im{width:100%!important}}
-</style><link rel="stylesheet" href="/social/embed.css?v=2"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><link rel="stylesheet" href="/messenger-device.css"><script src="/messenger-device.js"></script><script src="/master-console-layout.js"></script><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css"></head><body>
+</style><link rel="stylesheet" href="/social/embed.css?v=2"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><link rel="stylesheet" href="/messenger-device.css"><script src="/messenger-device.js"></script><script src="/master-console-layout.js"></script><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css?v=2"></head><body>
 <div id="mwin" class="win">
  <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
  <div id="menu">
-  <div>Messenger<div class="dd"><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom" title="Let friends see which chat room you are in">&#10003; Show the room I'm in</div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
+  <div>Messenger<div class="dd"><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom"><label><input id="mShowRoomCheck" type="checkbox" aria-label="Display Room I’m In"> Display Room I’m In</label></div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
   <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mMyProf">Edit My Profile...</div><div id="mGroup" style="display:none"></div><div id="mMove" style="display:none"></div><hr><div id="mBlocked">Blocked List...</div></div></div>
   
   <div>Help<div class="dd"><div id="mHelp">Getting Started</div><div id="mAbout">About</div></div></div>
@@ -154,7 +154,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
    <label for="iPw">Password <a href="/reset.html" style="font-weight:normal;font-size:11px;float:right">Forgot password?</a></label><input type="password" id="iPw" maxlength="100" autocomplete="current-password">
    <div class="row"><label style="font-weight:normal"><input type="checkbox" id="iRem"> Remember me</label></div>
    <div class="row" id="iInvRow"><label style="font-weight:normal"><input type="checkbox" id="iInv"> Sign in as invisible</label></div>
-   <button class="pri" id="bIn" style="width:100%">Sign In</button><div class="err" id="eIn"></div>
+   <button class="pri" id="bIn" style="width:100%">Sign In</button><div class="err" id="eIn" role="status"></div>
    <div>Don't have a screen name? <a id="toUp">Get one free</a></div>
   </div>
   <div id="fUp" style="display:none;flex-direction:column;gap:6px;align-self:stretch">
@@ -170,8 +170,8 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  </div>
  <div id="main">
   <div id="me"><div class="av" id="myav" title="Change display image"></div><div class="info"><div class="nm" id="myname"></div>
-   <div class=stw><span class="sdot available" id=stdot></span><select id="stsel"><option value="available">Available</option><option value="busy">Do Not Disturb</option><option value="away">Away</option><option value="brb">Be Right Back</option><option value="invisible">Invisible</option><option disabled>──────────</option><option value="showroom">&#128172; Show the room I'm in</option></select></div>
-   <div class=mind><span id="mydevice"></span><input type="text" id="smsg" maxlength="60" placeholder="What's on your mind?"><i data-i=pencil data-s=16></i></div></div></div>
+   <div class=stw><span class="sdot available" id=stdot></span><select id="stsel" aria-label="Availability status"><option value="available">Available</option><option value="busy">Do Not Disturb</option><option value="away">Away</option><option value="invisible">Invisible</option></select></div>
+   <div class=mind><span id="mydevice"></span><input type="text" id="smsg" aria-label="Status message" maxlength="60" placeholder="What's on your mind?"><button id="clearStatus" type="button" aria-label="Clear status" title="Clear status" hidden>×</button></div></div></div>
   <div id="avpick"></div>
   <div id="search"><div class=srch><i data-i=search data-s=18></i><input type="text" id="q" placeholder="Search contacts..."></div></div>
   <div id="offlinePanel" hidden></div>
@@ -188,7 +188,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"></template></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/socket.io/socket.io.js"></script><script src="/smileys.js?v=6"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=7"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
+<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/razzle-startup.js"></script><script src="/messenger-controls.js"></script><script src="/socket.io/socket.io.js" onerror="RazzleStartup.recoverSocket()"></script><script src="/razzle-assets.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=7"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',''];
@@ -200,7 +200,7 @@ const $=id=>document.getElementById(id)||window.ydFind(id);
 const escT=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const avHtml=(a,cls='',name)=>YAv.html(name||'x',a,cls);
 function setMyAv(){const sd=$('stdot');if(sd)sd.className='sdot '+(ME.status||'available');const st=ME.status=='invisible'?'invisible':ME.status;$('myav').outerHTML=avHtml(ME.avatar,'ring r-'+st,ME.name).replace('class="av ','id="myav" title="Change my avatar" class="av ');$('myav').onclick=pickAv}
-const STL={available:'Available',busy:'Do Not Disturb',away:'Away',brb:'Be Right Back',invisible:'Invisible',offline:'Offline',idle:'Idle'};
+const STL={available:'Available',busy:'Do Not Disturb',away:'Away',brb:'Away',invisible:'Invisible',offline:'Offline',idle:'Idle'};
 const api=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{}),credentials:'same-origin'}).then(async r=>({status:r.status,...await r.json().catch(()=>({error:'Server error'}))}));
 let S=null,ME=null,contacts={},blockedCards={},groups=['Friends'],blockedL=[],sel=null,closedG=new Set(JSON.parse(localStorage.ycClosed||'[]'));
 let sound=localStorage.ycSound!=='off';window.addEventListener('ycsound',()=>{sound=localStorage.ycSound!=='off';$('mSound').textContent='Sounds: '+(sound?'On':'Off')});
@@ -218,20 +218,28 @@ function modal(title,html,onok,okText='OK'){$('mdT').textContent=title;$('mdB').
  $('mdB').onkeydown=e=>{if(e.key=='Enter'&&e.target.tagName!='TEXTAREA'){e.preventDefault();$('mdOk').click()}}}
 const emit=(ev,d)=>new Promise(r=>S.emit(ev,d,x=>r(x||{})));
 // ---------- menus ----------
-document.querySelectorAll('#menu>div').forEach(m=>m.addEventListener('click',e=>{const was=m.classList.contains('open');document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!was&&!e.target.closest('.dd'))m.classList.add('open')}));
-document.addEventListener('click',e=>{if(!e.target.closest('#menu'))document.querySelectorAll('#menu>div').forEach(x=>x.classList.remove('open'));if(!e.target.closest('.smp,.smb'))document.querySelectorAll('.smp').forEach(x=>x.classList.remove('open'));if(!e.target.closest('#avpick,#myav'))$('avpick').style.display='none'});
+RazzleMessengerControls.bindMenuBar($('menu'));
+document.addEventListener('click',e=>{if(!e.target.closest('.smp,.smb'))document.querySelectorAll('.smp').forEach(x=>x.classList.remove('open'));if(!e.target.closest('#avpick,#myav'))$('avpick').style.display='none'});
 // ---------- sign in / sign up ----------
 fetch('/api/status').then(r=>r.json()).then(s=>{if(!s.accounts){$('maint').style.display='block';$('maint').innerHTML='<b>Maintenance:</b> '+escT(s.message);['bIn','bUp'].forEach(i=>$(i).disabled=true)}});
 let MW=null,watchL=[];
 async function loadWatch(){try{const r=await fetch('/api/master/watch');if(r.ok){watchL=await r.json();render()}}catch{}}
-function masterInit(){MW=1;const dd=document.querySelector('#menu>div .dd');if(dd)dd.insertAdjacentHTML('afterbegin','<div id=mcon>Master Console</div><div id=mwadd>Watch a Screen Name...</div><hr>');
+function masterInit(){MW=1;const dd=document.querySelector('#menu>div .dd');if(dd)dd.insertAdjacentHTML('afterbegin','<button type=button role=menuitem tabindex=-1 id=mcon>Master Console</button><button type=button role=menuitem tabindex=-1 id=mwadd>Watch a Screen Name...</button><hr role=separator>');
  const ms=document.createElement('script');ms.src='/api/master/ui.js';ms.onerror=()=>{const b=$('bMaster');if(b)b.remove()};document.head.appendChild(ms);window.createMessengerMasterButton&&createMessengerMasterButton();$('mcon')&&($('mcon').onclick=()=>window.openMasterConsole&&openMasterConsole());$('mwadd')&&($('mwadd').onclick=async()=>{const n=prompt('Screen name to watch silently (they are not notified):');if(!n)return;const r=await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})});if(!r.ok)alert((await r.json().catch(()=>({}))).error||'Failed');loadWatch()});
  loadWatch();setInterval(loadWatch,15000)}
 // master tools come from the server role (/api/me m) after any sign-in path, not only when the page loads already signed in
 function masterCheck(){fetch('/api/me',{cache:'no-store'}).then(r=>r.json()).then(m=>{if(m&&m.m&&!MW)masterInit()}).catch(()=>{})}
-fetch('/api/me').then(r=>r.json()).then(m=>{if(m.name){start();if(m.m)masterInit()}});
+let initialSession;
+ if (typeof io === 'function') {
+   initialSession = RazzleStartup.getJSON('/api/me', $('eIn'));
+   initialSession.then(m=>{if(m.name){start();if(m.m)masterInit()}}).catch(error=>{$('eIn').textContent=error.message});
+ }
 $('toUp').onclick=()=>{$('fIn').style.display='none';$('fUp').style.display='flex';$('uName').focus()};$('toIn').onclick=()=>{$('fUp').style.display='none';$('fIn').style.display='contents'};
-async function doIn(){$('eIn').textContent='';const r=await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;await api('/api/signin-presence',{invisible:$('iInv').checked}).catch(()=>{});$('iPw').value='';start();masterCheck()}
+async function doIn(){
+ if(typeof io!=='function'||S)return;
+ try{await initialSession;}catch(error){$('eIn').textContent=error.message;return;}
+ if(S)return;
+ $('eIn').textContent='';const r=await api('/api/login',{name:$('iName').value.trim(),password:$('iPw').value,remember:$('iRem').checked});if(r.error)return $('eIn').textContent=r.error;await api('/api/signin-presence',{invisible:$('iInv').checked}).catch(()=>{});$('iPw').value='';start();masterCheck()}
 $('bIn').onclick=doIn;['iName','iPw'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();doIn()}}));
 let avT;$('uName').addEventListener('input',()=>{clearTimeout(avT);const n=$('uName').value.trim();if(!n)return $('uAv').textContent='';avT=setTimeout(async()=>{const r=await fetch('/api/available?name='+encodeURIComponent(n)).then(r=>r.json()).catch(()=>({}));
  $('uAv').innerHTML=r.valid===false?'<span class=err>4–20 characters, start with a letter; letters, numbers, _ or .</span>':r.available?'<span class=ok>&#10004; '+escT(n)+' is available</span>':r.error?'':'<span class=err>&#10008; '+escT(n)+' is taken</span>'},350)});
@@ -258,18 +266,19 @@ async function refreshContacts(){
   for(const contact of result.contacts)if(!groups.includes(contact.group))groups.push(contact.group);
   messengerInbox.reset(result.requests);render();
 }
-function start(){$('signin').style.display='none';$('main').style.display='flex';S=io({auth:RazzleDevice.auth('social'),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));
- S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);lastAct=Date.now();idle=false;ME=r.me;{const b=$('mShowRoom');b.style.display=ME.m?'none':'';const d=()=>b.innerHTML=(ME.showRoom!==false?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+'Show the room I\'m in';d();b.onclick=async()=>{const x=await emit('m:showroom',ME.showRoom===false);if(x&&!x.error){ME.showRoom=x.showRoom;d()}}}groups=r.groups;blockedL=r.blocked;syncBlocked(r);contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
-  $('mydevice').innerHTML=RazzleDevice.icon(ME.device);$('myname').textContent=ME.name;$('stsel').value=ME.status;$('smsg').value=dec(ME.msg);roomMode(ME.msg=='[room]');setMyAv();
+function start(){if(S||typeof io!=='function')return;$('signin').style.display='none';$('main').style.display='flex';S=io({auth:RazzleDevice.auth('social'),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));
+ S.on('connect',async()=>{const r=await emit('m:init',{offlineInbox:true});if(r.error)return alert(r.error);lastAct=Date.now();idle=false;ME=r.me;groups=r.groups;blockedL=r.blocked;syncBlocked(r);contacts={};r.contacts.forEach(c=>contacts[c.name.toLowerCase()]=c);
+  $('mydevice').innerHTML=RazzleDevice.icon(ME.device);$('myname').textContent=ME.name;myStatus.sync();setMyAv();
   $('reqs').innerHTML='';messengerInbox.reset(r.requests);render();
   for(const message of r.offline)holdMessage({...message,receivedOffline:true});
  });
  YAv.listen(S,(n,av)=>{const k=n.toLowerCase();if(contacts[k]){contacts[k].avatar=av;render();ims[k]&&peerInfo(ims[k],n)}if(ME&&k==ME.name.toLowerCase()){ME.avatar=av;setMyAv()}});
- {const d=document.createElement('div');d.id='cdot';d.textContent='Reconnecting…';d.style.cssText='display:none;position:fixed;bottom:8px;left:8px;z-index:999;background:rgba(0,0,0,.55);color:#fff;padding:2px 9px;border-radius:10px;font:500 11px system-ui;pointer-events:none';document.body.appendChild(d);let t=0;S.on('disconnect',()=>{clearTimeout(t);t=setTimeout(()=>{if(!S.connected)d.style.display=''},3000)});S.on('connect',()=>{clearTimeout(t);d.style.display='none'})}
+ {const d=document.createElement('div');d.id='cdot';d.setAttribute('role','status');d.textContent='Reconnecting…';d.style.cssText='display:none;position:fixed;bottom:8px;left:8px;z-index:999;background:rgba(0,0,0,.55);color:#fff;padding:2px 9px;border-radius:10px;font:500 11px system-ui;pointer-events:none';document.body.appendChild(d);let t=0;S.on('disconnect',()=>{clearTimeout(t);t=setTimeout(()=>{if(!S.connected)d.style.display=''},3000)});let connected=false;S.on('connect_error',()=>{if(!connected&&S.active){d.textContent=RazzleStartup.message;d.style.display=''}});S.on('connect',()=>{connected=true;clearTimeout(t);d.textContent='Reconnecting…';d.style.display='none'})}
  S.on('m:presence',p=>{const k=p.name.toLowerCase(),c=contacts[k];if(!c)return;const was=c.online;Object.assign(c,p);render();
   if(ME&&k==ME.name.toLowerCase()){/* my own entry: same view my contacts get, but no door sound/toast for myself */}else if(!was&&p.online){localStorage.ycDoor!='off'&&SND.on();toast('<b>'+escT(p.name)+'</b> has signed in.',p.avatar,p.name)}else if(was&&!p.online){localStorage.ycDoor!='off'&&SND.off();toast('<b>'+escT(p.name)+'</b> has signed out.',p.avatar,p.name)}
   const w=ims[k];w&&peerInfo(w,p.name)});
- S.on('m:self',x=>{ME.status=x.status;ME.msg=x.msg;setMyAv();$('stsel').value=x.status;$('smsg').value=dec(x.msg);roomMode(x.msg=='[room]')});
+ S.on('m:self',x=>{if(ME){ME.status=x.status;ME.msg=x.msg;setMyAv();myStatus.sync()}});
+ S.on('m:room-visibility',on=>{if(ME){ME.showRoom=on;myStatus.sync()}});
  S.on('m:contacts-changed',refreshContacts);
  S.on('m:block-state',({name,on})=>{blockedL=blockedL.filter(n=>n.toLowerCase()!==name.toLowerCase());if(on){blockedL.push(name);blockedCards[name.toLowerCase()]={...contactCard(name),name,online:false,status:'offline',msg:'',blocked:true};}else delete blockedCards[name.toLowerCase()];render();});
 S.on('m:offline-read',ids=>{
@@ -305,9 +314,10 @@ S.on('m:offline-read',ids=>{
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=APP_NAME.join('')+' Messenger'});
 const dec=s=>{const t=document.createElement('textarea');t.innerHTML=s||'';return t.value};
 // ---------- status / avatar / idle ----------
-function roomMode(on){$('smsg').value=on?'':dec(ME.msg||'');$('smsg').placeholder=on?"Showing the room I'm in (type to switch back)":"What's on your mind?";$('stsel').value=ME.status}
-$('stsel').onchange=async()=>{if($('stsel').value=='showroom'){const r=await emit('m:status',{msg:'[room]'});if(r&&r.ok){ME.msg='[room]';roomMode(true);toast("Buddies now see the room you're in.")}else $('stsel').value=ME.status;return}lastAct=Date.now();idle=false;const r=await emit('m:status',{status:$('stsel').value});if(r.status){ME.status=r.status;setMyAv()}};
-$('smsg').addEventListener('keydown',e=>{if(e.key=='Enter'){e.preventDefault();$('smsg').blur()}});$('smsg').onchange=()=>{const v=$('smsg').value;if(!v&&ME.msg=='[room]')return;emit('m:status',{msg:v}).then(r=>{if(r&&r.ok){ME.msg=r.msg;roomMode(false)}})};
+const myStatus = RazzleMessengerControls.bindStatus({
+  getMe: () => ME, emit, decode: dec, toast, onStatus: setMyAv,
+  markActive: () => {lastAct=Date.now();idle=false;}
+});
 function pickAv(){YAv.editor(S,{name:ME.name,onSaved:av=>{ME.avatar=av;setMyAv()}})}
 $('mAvatar').onclick=e=>{e.stopPropagation();pickAv()};
 let lastAct=Date.now(),idle=false;['mousemove','keydown','pointerdown'].forEach(ev=>addEventListener(ev,()=>{lastAct=Date.now();if(idle&&S){idle=false;S.emit('m:idle',false)}},{passive:true}));
@@ -318,8 +328,8 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=[...Object.values
  const gs=['Online','Offline'];
  $('tree').innerHTML=gs.map(g=>{const l=cs.filter(c=>(g=='Online')==!!c.online).sort((a,b)=>(b.online-a.online)||a.name.localeCompare(b.name));const on=l.filter(c=>c.online).length;
   return `<div class="grp${closedG.has(g)?' closed':''}" data-g="${escT(g)}">${escT(g)} (${l.length})</div>`+(closedG.has(g)?'':l.map(c=>{const blocked=isBlockedContact(c.name);const st=c.online?(c.idle?'idle':c.status):'offline';
-   return `<div class="ct${blocked?' is-blocked':''}${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${blocked?'Blocked':STL[st]}"><span class=avw>${avHtml(c.avatar,'sm',c.name)}${blocked?'<span class=blocked-avatar-mark role=img aria-label=Blocked><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m5 5 14 14"/></svg></span>':''}<span class="sdot ${st}"></span></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${blocked?'<span class=blocked-contact-label>Blocked</span> · ':RazzleDevice.icon(c.device,c.online)}${c.online&&c.room?`<a href="#" data-jr="${escT(c.room)}" title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>${c.msg&&!c.showRoom?' &middot; '+RCSmileys.replace(c.msg):''}`:c.msg?RCSmileys.replace(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
-  +(MW?`<div class="grp${closedG.has('Watching')?' closed':''}" data-g="Watching"><span class="watch-shield" title="Master only" aria-label="Master only">${YI.svg('shield',15)}</span> Watching (${watchL.length})</div>`+(closedG.has('Watching')?'':watchL.map(w=>`<div class="ct wct${w.online?'':' off'}" data-w="${escT(w.name)}" title="${escT(w.name)}${w.room?' - in '+escT(w.room):''}${w.ip?' - '+escT(w.ip)+(w.loc?' \u00b7 '+escT(w.loc):''):''}"><span class=avw>${avHtml('a1','sm',w.name)}<span class="sdot ${w.online?escT(w.status||'available'):'offline'}"></span></span><div class=t><div class=n>${escT(w.name)}</div><div class=sm>${w.online?(w.room?'In room: '+escT(w.room)+' &middot; ':'')+(w.msg?RCSmileys.replace(w.msg):STL[w.status]||'Online'):'Offline'}${w.ip?`<div class=sm style="opacity:.75">${escT(w.ip)}${w.loc?' &middot; '+escT(w.loc):''}</div>`:''}</div></div></div>`).join('')):'')
+   return `<div class="ct${blocked?' is-blocked':''}${c.online?'':' off'}${sel==c.name?' sel':''}" data-n="${escT(c.name)}" title="${escT(c.name)} - ${blocked?'Blocked':STL[st]}"><span class=avw>${avHtml(c.avatar,'sm',c.name)}${blocked?'<span class=blocked-avatar-mark role=img aria-label=Blocked><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m5 5 14 14"/></svg></span>':''}<span class="sdot ${st}"></span></span><div class=t><div class=n>${escT(c.name)}</div><div class=sm>${blocked?'<span class=blocked-contact-label>Blocked</span> · ':RazzleDevice.icon(c.device,c.online)}${c.online&&c.room?`<a href="#" data-jr="${escT(c.room)}" title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>${c.msg&&!c.showRoom?' &middot; '+RazzleAssets.renderSmileys(c.msg):''}`:c.msg?RazzleAssets.renderSmileys(c.msg):STL[st]}${c.idle&&c.online?' (idle)':''}</div></div></div>`}).join(''))}).join('')
+  +(MW?`<div class="grp${closedG.has('Watching')?' closed':''}" data-g="Watching"><span class="watch-shield" title="Master only" aria-label="Master only">${YI.svg('shield',15)}</span> Watching (${watchL.length})</div>`+(closedG.has('Watching')?'':watchL.map(w=>`<div class="ct wct${w.online?'':' off'}" data-w="${escT(w.name)}" title="${escT(w.name)}${w.room?' - in '+escT(w.room):''}${w.ip?' - '+escT(w.ip)+(w.loc?' \u00b7 '+escT(w.loc):''):''}"><span class=avw>${avHtml('a1','sm',w.name)}<span class="sdot ${w.online?escT(w.status||'available'):'offline'}"></span></span><div class=t><div class=n>${escT(w.name)}</div><div class=sm>${w.online?(w.room?'In room: '+escT(w.room)+' &middot; ':'')+(w.msg?RazzleAssets.renderSmileys(w.msg):STL[w.status]||'Online'):'Offline'}${w.ip?`<div class=sm style="opacity:.75">${escT(w.ip)}${w.loc?' &middot; '+escT(w.loc):''}</div>`:''}</div></div></div>`).join('')):'')
   +(cs.length||q||MW?'':'<div style="padding:10px;color:var(--muted)">No contacts yet. Click <b>Add a Contact</b> to send a buddy request.</div>');
  document.querySelectorAll('.grp').forEach(e=>e.onclick=()=>{const g=e.dataset.g;closedG.has(g)?closedG.delete(g):closedG.add(g);localStorage.ycClosed=JSON.stringify([...closedG]);render()});
  document.querySelectorAll('.wct').forEach(e=>e.oncontextmenu=async ev=>{ev.preventDefault();if(confirm('Stop watching '+e.dataset.w+'?')){await fetch('/api/master/watch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:e.dataset.w,remove:true})});loadWatch()}});
@@ -407,7 +417,7 @@ function line(w,from,m,old){
  const style=`${color}font-family:'${font}';${m.b?'font-weight:bold;':''}${m.i?'font-style:italic;':''}${m.u?'text-decoration:underline;':''}`;
  const time=new Date(m.t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
  const delivery=m.deliveryState||(m.offline?'Delivered when they sign in':'');
- w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg transcript-message">${avHtml(from.toLowerCase()===ME?.name.toLowerCase()?ME.avatar:contacts[from.toLowerCase()]?.avatar,'sm pm-sender-avatar',from)}<div class=bb><time>${escT(time)}</time> <strong>${escT(from)}:</strong> <span class=message-text style="${style}">${YGif.render(m.text)||RCSmileys.replace(m.text)}</span>${delivery?'<small class=delivery-state>'+escT(delivery)+'</small>':''}</div></div>`);scroll(w)}
+ w.querySelector('.log').insertAdjacentHTML('beforeend',`<div class="msg transcript-message">${avHtml(from.toLowerCase()===ME?.name.toLowerCase()?ME.avatar:contacts[from.toLowerCase()]?.avatar,'sm pm-sender-avatar',from)}<div class=bb><time>${escT(time)}</time> <strong>${escT(from)}:</strong> <span class=message-text style="${style}">${YGif.render(m.text)||RazzleAssets.renderSmileys(m.text, w.ownerDocument)}</span>${delivery?'<small class=delivery-state>'+escT(delivery)+'</small>':''}</div></div>`);scroll(w)}
 function applyImFormatting(w){
  const visible=localStorage.ycImFormatting!=='off';
  w.querySelector('.fmt').classList.toggle('open',visible);
@@ -426,8 +436,8 @@ function applyImTimestamps(w){
 }
 addEventListener('storage',e=>{if(e.key==='ycImTimestamps')Object.values(ims).forEach(applyImTimestamps);if(e.key==='ycImFormatting')Object.values(ims).forEach(applyImFormatting);});
 function peerInfo(w,n){const c=contacts[n.toLowerCase()],st=c?(c.online?(c.idle?'idle':c.status):'offline'):'offline';
- const ih=w.querySelector('.ihead');if(ih){ih.querySelector('.pav').innerHTML=avHtml(c?c.avatar:'','',c?c.name:n);ih.querySelector('.st').innerHTML=`<span class="sdot ${st}"></span>${STL[st]}${c&&c.msg&&!(c.showRoom&&c.room)?' &middot; '+RCSmileys.replace(c.msg):''}${c&&c.online&&c.room?` &middot; <a href="#" class=imjr title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>`:''}`;const j=ih.querySelector('.imjr');if(j)j.onclick=ev=>{ev.preventDefault();window.open('/rooms.html?room='+encodeURIComponent(c.room),'yapprooms')}}
- w.querySelector('.peer').innerHTML=avHtml(c?c.avatar:'','sm ring r-'+st,c?c.name:n)+`<span class="dot d-${st}"></span><b>${escT(c?c.name:n)}</b> &mdash; ${STL[st]}${c&&c.msg?' &middot; '+RCSmileys.replace(c.msg):''}`}
+ const ih=w.querySelector('.ihead');if(ih){ih.querySelector('.pav').innerHTML=avHtml(c?c.avatar:'','',c?c.name:n);ih.querySelector('.st').innerHTML=`<span class="sdot ${st}"></span>${STL[st]}${c&&c.msg&&!(c.showRoom&&c.room)?' &middot; '+RazzleAssets.renderSmileys(c.msg, w.ownerDocument):''}${c&&c.online&&c.room?` &middot; <a href="#" class=imjr title="Join ${escT(c.room)}">In: ${escT(c.room)}</a>`:''}`;const j=ih.querySelector('.imjr');if(j)j.onclick=ev=>{ev.preventDefault();window.open('/rooms.html?room='+encodeURIComponent(c.room),'yapprooms')}}
+ w.querySelector('.peer').innerHTML=avHtml(c?c.avatar:'','sm ring r-'+st,c?c.name:n)+`<span class="dot d-${st}"></span><b>${escT(c?c.name:n)}</b> &mdash; ${STL[st]}${c&&c.msg?' &middot; '+RazzleAssets.renderSmileys(c.msg, w.ownerDocument):''}`}
 let zTop=20;
 function setImv(w,env){[...w.classList].filter(c=>c.startsWith('imv-')).forEach(c=>w.classList.remove(c));if(env&&env!='none')w.classList.add('imv-'+env)}
 async function reportUser(who){const why=prompt('Report '+who+' to the site moderators.\nWhat happened?','');if(why===null)return;const r=await fetch('/api/report',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({who,why})}).then(r=>r.json()).catch(()=>({error:'Network error'}));alert(r.error||'Thanks. Your report was sent to the site moderators.')}
@@ -437,13 +447,13 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  w.innerHTML=`<div class=tbar><span class=lgs>${YI.logo(24)}</span>${escT(name)} &ndash; Private Message<span class=sp></span><span class="wb x"><i data-i=close data-s=16></i></span></div>
  <div class=mbar><div>Conversation<div class=dd><div data-m=close>Close</div></div></div><div>Edit<div class=dd><div data-m=clearin>Clear Message Box</div></div></div><div>View<div class=dd><div data-m=fmt role="menuitemcheckbox">Show font customization</div><div data-m=timestamps role="menuitemcheckbox">Show timestamps</div></div></div><div>Actions<div class=dd><div data-m=buzz>Send BUZZ!</div><div data-m=voice>Voice Call</div><div data-m=video>Webcam Call</div></div></div><div>Help<div class=dd><div data-m=help>Keyboard Tips</div></div></div></div>
  <div class=ihead><span class=pav></span><div><div class=nm style=cursor:pointer title='View profile' data-m=prof>${escT(name)}</div><div class=st></div></div><span class=sp></span>
- <button class=ib data-a=video title="Webcam call">${YI.svg('video',22)}</button><button class=ib data-a=voice title="Voice call">${YI.svg('phone',22)}</button><button class=ib data-a=buzz title="Buzz (Ctrl+G)">${YI.svg('bell',18)} <span>Buzz</span></button><button class=ib data-a=more title="More">${YI.svg('dots',22)}</button>
+ <button class=ib data-a=video title="Webcam call">${YI.svg('video',22)}</button><button class=ib data-a=voice title="Voice call">${YI.svg('phone',22)}</button><button class=ib data-a=buzz title="Buzz (Ctrl+G)">${YI.svg('bell',18)} <span>Buzz</span></button><button class=ib data-a=more title="More" aria-label="More conversation actions">${YI.svg('dots',22)}</button>
  <div class=imenu><div data-m=prof>View Profile</div><div data-m=fmt role="menuitemcheckbox">Show font customization</div><div data-a=block>Block</div><div data-a=rep>Report</div><div data-m=close>Close window</div></div></div>
  <div class=tools><button class=tb data-a=voice title="Start a voice call"><span>&#127908;</span>Call</button><button class=tb data-a=video title="Start a webcam call"><span>&#128247;</span>Webcam</button>
  <button class=tb data-a=buzz title="BUZZ! (Ctrl+G)"><span>&#128243;</span>Buzz</button><button class=tb data-a=aud title="Send an Audible"><span>&#128264;</span>Audibles</button><button class=tb data-a=imv title="IMVironment: theme this conversation for both of you"><span>&#127774;</span>IMVironment</button><button class=tb data-a=rep title="Report this user"><span>&#9873;</span>Report</button></div>
  <div class=call><div class=callbar><div class=cleft><span class=cstatus></span><div class=cs></div></div><div class=cbtns><button type=button class="rzb camt" aria-pressed=false hidden></button><button type=button class="rzb danger hang">Hang Up</button></div></div><div class=cstage hidden><span class=cpeer></span><video class=them autoplay playsinline></video><video class=me autoplay playsinline muted></video></div></div>
  <div class=peer></div><div class=log></div><div class=typ></div>
- <div class="fmt open"><span class=smb title=Emoji role=button tabindex=0 aria-label="Choose an emoji">${RCSmileys.html(':)')}</span><button data-s=b><b>B</b></button><button data-s=i><i>I</i></button><button data-s=u><u>U</u></button>${COLORS.map(c=>`<span class=sw data-c="${c}" style="background:${c}"></span>`).join('')}
+ <div class="fmt open"><span class=smb title=Emoji role=button tabindex=0 aria-label="Choose an emoji">🙂</span><button data-s=b><b>B</b></button><button data-s=i><i>I</i></button><button data-s=u><u>U</u></button>${COLORS.map(c=>`<span class=sw data-c="${c}" style="background:${c}"></span>`).join('')}
  <select class=font>${['Arial','Verdana','Tahoma','Comic Sans MS','Times New Roman','Courier New'].map(f=>`<option>${f}</option>`).join('')}</select><div class=smp></div></div>
  <div class=inbox><button class=ib data-a=aa title="Text style">${YI.svg('font',22)}</button><button class=ib data-a=sm title="Smileys">${YI.svg('smile',22)}</button><button class=ib disabled title="Images coming soon">${YI.svg('image',22)}</button><button class=ib disabled title="Files coming soon">${YI.svg('clip',22)}</button><button type=button class="ib gifb" title="Send a GIF">GIF</button><textarea maxlength=1000 placeholder="Type a message... (Enter to send)"></textarea></div><form></form><template data-ad-placement="private-message"><div class="adph adph-c"></div></template>`;
  YI.fill(w);w.querySelector('.inbox').appendChild(w.querySelector('.smp'));
@@ -453,8 +463,8 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  w.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{st[b.dataset.s]=!st[b.dataset.s];b.classList.toggle('on',st[b.dataset.s]);ta.style.fontWeight=st.b?'bold':'';ta.style.fontStyle=st.i?'italic':'';ta.style.textDecoration=st.u?'underline':''});
  w.querySelectorAll('.sw').forEach(s=>s.onclick=()=>{st.color=s.dataset.c;ta.style.color=st.color==='#000000'?'':st.color;w.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x==s))});w.querySelector('.sw').classList.add('on');
  w.querySelector('.font').onchange=e=>{st.f=e.target.value;ta.style.fontFamily=st.f};
- const smp=w.querySelector('.smp');smp.innerHTML=RCSmileys.ordered.map(m=>`<span data-k="${m.esc}">${m.html}</span>`).join('');
- const emojiButton=w.querySelector('.smb');emojiButton.onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};emojiButton.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();emojiButton.click();}};smp.querySelectorAll('span[data-k]').forEach(e=>e.onclick=()=>{ta.value+=' '+dec(e.dataset.k)+' ';smp.classList.remove('open');ta.focus()});
+ const smp=w.querySelector('.smp');
+ RazzleAssets.bindSmileys(w.querySelector('.smb'), smp, ta);
  const send=gif=>{
   const t=(gif||ta.value).trim();if(!t)return;if(!gif)ta.value='';
   sendMessengerMessage({socket:()=>S,log:w.querySelector('.log'),text:t,payload:{to:name,text:t,...st},avatar:avHtml(ME.avatar,'sm pm-sender-avatar',ME.name),onRejected:reason=>w.ownerDocument.defaultView.alert(reason),onSent:r=>{
@@ -475,10 +485,11 @@ function openIm0(n){const k=n.toLowerCase();if(ims[k]){ims[k].style.zIndex=++zTo
  emit('m:imv-get',{with:name}).then(r=>setImv(w,r.env));
  ta.addEventListener('keydown',e=>{if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();if(!e.repeat&&!e.isComposing)send()}else if(e.ctrlKey&&e.key.toLowerCase()=='g'){e.preventDefault();buzz(name)}else if(e.key.length==1&&Date.now()-lt>2500){lt=Date.now();S.emit('m:typing',{to:name})}});
  w.querySelectorAll('[data-a=buzz]').forEach(b=>b.onclick=()=>buzz(name));const im=w.querySelector('.imenu');
- w.querySelector('[data-a=more]').onclick=e=>{e.stopPropagation();im.classList.toggle('open')};w.querySelector('[data-a=aa]').onclick=toggleImFormatting;
- w.querySelector('[data-a=sm]').onclick=e=>{e.stopPropagation();smp.classList.toggle('open')};w.addEventListener('click',e=>{if(!e.target.closest('[data-a=more]'))im.classList.remove('open');if(!e.target.closest('.mbar'))w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'))});
- w.querySelectorAll('.mbar>div').forEach(m=>m.onclick=e=>{if(e.target.closest('.dd'))return;const o=m.classList.contains('open');w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'));if(!o)m.classList.add('open')});
- w.querySelectorAll('[data-m]').forEach(d=>d.onclick=()=>{const a=d.dataset.m;w.querySelectorAll('.mbar>div').forEach(x=>x.classList.remove('open'));
+ RazzleMessengerControls.bindMenu(w.querySelector('[data-a=more]'), im, open=>im.classList.toggle('open',open));w.querySelector('[data-a=aa]').onclick=toggleImFormatting;
+ w.querySelector('[data-a=sm]').onclick=e=>{e.stopPropagation();w.querySelector('.smb').click()};w.addEventListener('click',e=>{if(!e.target.closest('.mbar,.imenu,[data-a=more]'))RazzleMessengerControls.close()});
+
+ RazzleMessengerControls.bindMenuBar(w.querySelector('.mbar'));
+ w.querySelectorAll('[data-m]').forEach(d=>d.onclick=()=>{const a=d.dataset.m;
   if(a=='prof')YProf.show(name,{me:ME&&ME.name});else if(a=='close')w.querySelector('.tbar .x').click();else if(a=='clearin')ta.value='';else if(a=='fmt')toggleImFormatting();else if(a==='timestamps'){localStorage.ycImTimestamps=localStorage.ycImTimestamps==='off'?'on':'off';Object.values(ims).forEach(applyImTimestamps);}else if(a=='buzz')buzz(name);else if(a=='voice')startCall(w,name,'audio');else if(a=='video')startCall(w,name,'video');else if(a=='help')alert('Enter sends. Shift+Enter adds a new line. Ctrl+G sends a BUZZ.')});
  w.querySelectorAll('[data-a=voice]').forEach(b=>b.onclick=()=>startCall(w,name,'audio'));w.querySelectorAll('[data-a=video]').forEach(b=>b.onclick=()=>startCall(w,name,'video'));w.querySelector('.hang').onclick=()=>endCall(w,true);w.querySelector('.camt').onclick=()=>toggleCamera(w);
  return w}
@@ -489,5 +500,5 @@ const {startCall,onCall,onCallAns,onSig,onHang,disconnect:disconnectCalls,endCal
  socket:()=>S,contact:name=>contacts[name.toLowerCase()],openIm,findIm:name=>ims[name.toLowerCase()],notice:sys,toast,
  sound:type=>tone(type==='ring'?[[440,.18,'sine'],[480,.18,'sine'],[440,.18,'sine'],[480,.18,'sine']]:[[480,.12,'sine'],[320,.22,'sine']])
 });
-</script><script src="/mcog.js?v=2"></script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div><script src="/social/embed.js?v=2"></script><script src="/messenger-layout.js"></script></body></html>
+</script><script src="/mcog.js?v=3"></script><div id="yfoot" style="text-align:center;font:11px Arial;padding:6px;opacity:.75"><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></div><script src="/social/embed.js?v=3"></script><script src="/messenger-layout.js"></script></body></html>
 
