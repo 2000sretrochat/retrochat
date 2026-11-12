@@ -127,7 +127,17 @@ function sockets(io, hooks) {
     return { online: !!on, status: on ? st.status : 'offline', msg: on && st.msg !== ROOM_TAG ? st.msg : '',
       room, showRoom: !!room, idle: idleNow(uid), device: presenceDevice(online.get(uid) || [], !!on), avatar: st ? st.avatar : 'a1' };
   };
-  const lastRoom = new Map(); hooks.roomChanged = n => { const uid = hooks.onlineName(n); if (!uid) return; const st = state.get(uid); if (!st || st.showRoom === false) return; const r = hooks.roomOf ? hooks.roomOf(st.name) : null; if (lastRoom.get(uid) === r) return; lastRoom.set(uid, r); broadcast(uid, st.name).catch(() => {}); };
+  const lastRoom = new Map();
+  hooks.roomChanged = name => {
+    const uid = hooks.onlineName(name);
+    const current = state.get(uid);
+    if (!current) return;
+    const room = hooks.roomOf?.(current.name) || null;
+    if (lastRoom.get(uid) === room) return;
+    lastRoom.set(uid, room);
+    toUser(uid, 'm:my-room', room);
+    if (current.showRoom !== false) broadcast(uid, current.name).catch(() => {});
+  };
   setAvFn = async (uid, av) => { const st = state.get(uid); if (st) { st.avatar = av; await broadcast(uid, st.name); } };
   const toUser = (uid, ev, data) => { for (const s of online.get(uid) || []) s.emit(ev, data); };
   contactsChangedFn = (...ids) => { for (const id of ids) toUser(id, 'm:contacts-changed'); };
@@ -244,7 +254,7 @@ function sockets(io, hooks) {
       ) select * from delivered order by id`, [uid]);
       await broadcast(uid, me);
       const st = state.get(uid);
-      return { me: { name: u.name, device: deviceKind(s), status: st.status, msg: st.msg, avatar: st.avatar, showRoom: st.showRoom !== false, m: !!s.data.master }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.group)])],
+      return { me: { name: u.name, device: deviceKind(s), status: st.status, msg: st.msg, avatar: st.avatar, showRoom: st.showRoom !== false, room: hooks.roomOf?.(me) || null, m: !!s.data.master }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.group)])],
         contacts: cs, requests: reqs, blocked: bl, blockedContacts:blockedRows,
         offline: off.map(o => ({ from: o.name, t: Math.round(o.t), id: 'offline:'+o.id, ...o.body, offlineId:o.id, contact: o.contact !== false })) };
     }));
@@ -405,7 +415,7 @@ function sockets(io, hooks) {
       destination.emit(ev, { from: me, kind: d.kind === 'video' ? 'video' : 'audio', accept: !!d.accept, data: d.data,
         callId:d.callId, ...(ev==='m:hang'&&d.reason==='no-answer'?{reason:d.reason}:{}) }); }));
     s.on('disconnect', async () => { callRoutes.disconnect(s); const set = online.get(uid); if (!set) return;
-      const wasIdle = idleNow(uid); set.delete(s); if (!set.size) { online.delete(uid); state.delete(uid); }
+      const wasIdle = idleNow(uid); set.delete(s); if (!set.size) { online.delete(uid); state.delete(uid); lastRoom.delete(uid); }
       try { await broadcast(uid, me); } catch {} });
   });
 }

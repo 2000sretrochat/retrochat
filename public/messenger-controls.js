@@ -5,16 +5,26 @@
     const clear = document.getElementById('clearStatus');
     const roomItem = document.getElementById('mShowRoom');
     const room = document.getElementById('mShowRoomCheck');
-    let draft = false;
+    let draft;
+    let owner;
     let editVersion = 0;
     let saves = Promise.resolve();
 
     function sync() {
       const me = getMe();
       if (!me) return;
+      if (owner !== me) { owner = me; draft = undefined; editVersion++; }
       status.value = me.status === 'brb' ? 'away' : me.status;
-      if (!draft) message.value = me.msg === '[room]' ? '' : decode(me.msg || '');
-      clear.hidden = !message.value;
+      const sharing = !me.m && me.showRoom !== false;
+      const invisible = status.value === 'invisible';
+      message.disabled = invisible;
+      message.readOnly = sharing;
+      message.placeholder = sharing && !invisible ? 'Room sharing on' : "What's on your mind?";
+      message.value = sharing && !invisible
+        ? (me.room ? 'In: ' + me.room : '')
+        : draft ?? (me.msg === '[room]' ? '' : decode(me.msg || ''));
+      message.title = sharing && !invisible && me.room ? message.value : '';
+      clear.hidden = sharing || invisible || !message.value;
       roomItem.style.display = me.m ? 'none' : '';
       if (!room.disabled) room.checked = me.showRoom !== false;
     }
@@ -47,7 +57,7 @@
     function save(value) {
       const me = getMe();
       if (!me) return;
-      draft = true;
+      draft = value;
       const version = ++editVersion;
       saves = saves.catch(() => {}).then(async () => {
         if (me !== getMe()) return;
@@ -55,7 +65,7 @@
         if (me !== getMe()) return;
         if (result?.ok) me.msg = result.msg;
         else toast('Could not save status');
-        if (editVersion === version) draft = false;
+        if (editVersion === version) draft = undefined;
         sync();
       });
     }
@@ -67,15 +77,17 @@
       }
     });
     message.oninput = () => {
-      draft = true;
+      if (message.readOnly || message.disabled) return;
+      draft = message.value;
       editVersion++;
       clear.hidden = !message.value;
     };
     message.onblur = () => {
-      if (draft) save(message.value);
+      if (draft !== undefined && !message.readOnly && !message.disabled) save(draft);
     };
     clear.onpointerdown = event => event.preventDefault();
     clear.onclick = () => {
+      if (message.readOnly || message.disabled) return;
       message.value = '';
       clear.hidden = true;
       message.focus();

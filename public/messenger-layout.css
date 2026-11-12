@@ -68,3 +68,23 @@ html.standalone-messenger.has-overlay:not(.yd) #mwin {
   font:inherit;text-align:left;white-space:nowrap;padding:7px 14px;cursor:pointer;
 }
 .imenu > button:is(:hover,:focus-visible) {background:#0033a0;color:#fff}
+
+/* Compact contact search and keep room presence visually distinct from messages. */
+#mwin #search { margin:4px 12px 6px!important; padding:0!important; }
+#mwin #search .srch {
+  height:26px!important; min-height:0!important; gap:5px;
+  padding:0 7px!important; border-radius:4px!important;
+  background:var(--field,#edf4fb)!important;
+}
+#mwin #search .srch #q {
+  height:24px!important; min-height:0!important; padding:0!important;
+  font-size:11px!important; line-height:24px!important;
+}
+#mwin .mind:has(#smsg:disabled) { background:#8995a321!important; }
+#mwin .mind #smsg:disabled { color:var(--muted,#657487)!important; opacity:.65; cursor:default; }
+#mwin .mind #smsg:read-only { text-overflow:ellipsis; cursor:default; }
+#mwin #tree a[data-jr], .im .st a.imjr {
+  color:#005da9!important; text-decoration:none!important;
+}
+html.dark #mwin #tree a[data-jr], html.dark .im .st a.imjr { color:#8ec8ff!important; }
+#mwin #tree a[data-jr]:focus-visible, .im .st a.imjr:focus-visible { outline:1px solid currentColor; }
