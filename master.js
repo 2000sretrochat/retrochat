@@ -189,7 +189,19 @@ module.exports = function (C) {
   app.get('/api/master/stats', guard(async (req, res) => { const st = C.stats(); let su = { d: 0, w: 0 }, pk = 0; try { su = (await q("select count(*) filter (where created >= date_trunc('day', now())) as d, count(*) filter (where created >= now() - interval '7 days') as w from users"))[0]; pk = (await q('select peak from stats_day where d=current_date'))[0]?.peak || 0; } catch { }
     res.json({ ...st, peak: Math.max(st.peak, pk), signupsToday: +su.d, signupsWeek: +su.w }); }));
   app.get('/api/master/bots', guard(async (req, res) => res.json(C.getBots())));
-  app.post('/api/master/bots', express.json(), guard(async (req, res) => res.json({ ok: true, on: C.setBots(!!req.body?.on, typeof req.body?.room === 'string' ? req.body.room : undefined), ...C.getBots() })));
+  app.post('/api/master/bots', express.json(), guard(async (req, res, me) => {
+    const {on, room, id, all} = req.body || {};
+    if (typeof on !== 'boolean' || (room !== undefined && typeof room !== 'string') ||
+        (id !== undefined && (typeof id !== 'string' || !id)) ||
+        (all !== undefined && all !== true) || [room, id, all].filter(value => value !== undefined).length > 1) {
+      return res.status(400).json({error: 'Choose one bot, one room, or all bots.'});
+    }
+    if (!ready()) return res.status(503).json({error: 'Bot settings are temporarily unavailable.'});
+    const result = await C.changeBots(on, {room, id, all});
+    if (result.error) return res.status(result.status).json({error: result.error});
+    await audit(me.name, on ? 'bots-enable' : 'bots-disable', id || room || 'all', all ? 'all room bots' : '');
+    res.json(result);
+  }));
   app.get('/api/master/unlimited', guard(async (req, res) => res.json({ emails: await require('./emails').list() })));
   app.post('/api/master/unlimited', express.json(), guard(async (req, res) => res.json({ ok: true, emails: await require('./emails').setList(req.body?.emails) })));
   // incognito + announce prefs (per master, persisted); applied live to the master's room sockets
@@ -212,13 +224,12 @@ module.exports = function (C) {
 
   app.get('/api/master/audit', guard(async (req, res) => res.json(await q('select id,by_name,action,target,detail,at from master_audit order by id desc limit 200'))));
   const botAssets = () => { try { return require('fs').readdirSync(path.join(__dirname, 'public', 'bot-avatars')).filter(f => /^[a-z0-9_-]+\.svg$/.test(f)).map(f => f.slice(0, -4)).sort(); } catch { return []; } };
-  const BOTSRC = () => C.BOTMOD || require('./bots');
   const findBotRow = async b => { const id = String(b.id || '').toLowerCase(), lc = String(b.name || '').trim().toLowerCase();
     return (await q('select name_lc,bot_id,name from bot_profiles where ' + (id ? 'bot_id=$1' : 'name_lc=$1'), [id || lc]))[0]; };
   app.get('/api/master/bot-profiles', guard(async (req, res) => {
     const rows = await q('select p.bot_id as id,p.name,p.display_name,p.bio,p.location,p.interests,p.avatar,p.room,p.interactive,p.updated,p.updated_by,(a.bot_id is not null) as uploaded from bot_profiles p left join bot_avatars a on a.bot_id=p.bot_id order by p.interactive desc, p.room, p.name_lc');
-    const live = new Set(BOTSRC().BOTS.map(b => b.id));
-    res.json({ bots: rows.map(r => ({ ...r, live: live.has(r.id) })), assets: botAssets(), note: 'Bots have no login passwords. Edit profiles here only. Upload a PNG/JPG/WebP (max 600 KB) to replace an avatar.' });
+    const presence = new Map(C.getBots().presence.map(b => [b.id, b]));
+    res.json({ bots: rows.map(r => ({ ...r, live: presence.has(r.id), presence: presence.get(r.id) })), assets: botAssets(), note: 'Bots have no login passwords. Edit profiles here only. Upload a PNG/JPG/WebP (max 600 KB) to replace an avatar.' });
   }));
   app.post('/api/master/bot-profiles', express.json(), guard(async (req, res, me) => {
     const b = req.body || {}; if (!b.id && !String(b.name || '').trim()) return res.status(400).json({ error: 'Bot id or name required.' });

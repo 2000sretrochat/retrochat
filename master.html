@@ -65,15 +65,52 @@ $('bton').onchange=e=>api('bots',{on:e.target.checked}).then(r=>toast('Bots '+(r
 function Broadcast(){$('main').innerHTML=`<div class=box>System message to every room and every Messenger user:<br><textarea id=bt rows=3 cols=70 maxlength=300></textarea><br><button class="b r" id=go>Broadcast</button></div>`;$('go').onclick=()=>{if($('bt').value.trim()&&confirm('Send to everyone?'))api('broadcast',{text:$('bt').value}).then(()=>{toast('Sent');$('bt').value=''})}}
 async function Watching(){const w=await api('watch');$('main').innerHTML=`<div class=box>Silent watch list (the person is never notified). Add <input id=wn> <button class=b id=go>Watch</button></div><table><tr><th>Name</th><th>Status</th><th>Room</th><th>Message</th><th>IP / location</th><th></th></tr>${w.map(x=>`<tr><td>${E(x.name)}</td><td>${x.online?'<span class=on>'+E(x.status)+'</span>':'offline'}</td><td>${E(x.room)}</td><td>${E(x.msg)}</td><td>${E(x.ip)}<br><small>${E(x.loc)}</small></td><td><button class=b onclick="api('watch',{name:'${E(x.name)}',remove:true}).then(show)">Remove</button></td></tr>`).join('')}</table>`;$('go').onclick=()=>api('watch',{name:$('wn').value}).then(show)}
 async function Bots(){const d=await api('bot-profiles');const bots=d.bots||[];
- $('main').innerHTML=`<div class=box><b>Bot profiles</b> (${bots.length}, master session only)<br><small>These are <b>not</b> login accounts. There is no universal bot password. Edit any bot's display name, bio, location and interests below. To replace an avatar (for example an image you made in ChatGPT), click <b>Upload image</b> on that row. Public profiles show these like a normal member profile.</small><br>Filter <input id=bf placeholder="name, room, language"></div>
+ $('main').innerHTML=`<div class=box><b>Bot profiles</b> (${bots.length}, master session only)<br><small>Sign bots in or out of their assigned rooms. You can also edit their profiles and upload avatars.</small><br>Filter <input id=bf placeholder="name, room, language"> <button type=button class=b id=botAllIn>Sign in all</button> <button type=button class=b id=botAllOut>Sign out all</button></div>
  <table id=bt><tr><th>Avatar</th><th>Screen name</th><th>Profile</th><th>Room</th><th></th></tr>${bots.map(b=>`<tr data-id="${E(b.id)}" data-q="${E((b.name+' '+b.room+' '+b.display_name+' '+b.location).toLowerCase())}">
  <td><img class=bav src="/bot-av/${E(b.id)}?t=${Date.now()}" width=48 height=48 style="border-radius:8px;object-fit:cover" alt=""><br><small>${b.uploaded?'uploaded':(b.avatar?E(b.avatar):'placeholder')}</small></td>
  <td><b>${E(b.name)}</b><br><small>id ${E(b.id)}</small>${b.interactive?'<br><span class=tag style=background:#e3eef9>host</span>':''}</td>
  <td><input class=f-dn maxlength=40 value="${E(b.display_name)}" placeholder="Display name" style="width:96%"><br><textarea class=f-bio maxlength=300 rows=2 style="width:96%">${E(b.bio)}</textarea><br>
  <input class=f-loc maxlength=50 value="${E(b.location)}" placeholder="Location" style="width:46%"> <input class=f-int maxlength=150 value="${E(b.interests)}" placeholder="Interests" style="width:48%"><br><small>${b.updated_by?'edited by '+E(b.updated_by):'default profile'}</small></td>
- <td>${E(b.room)}</td>
+ <td>${E(b.room)}<br><small class=bot-presence role=status></small>${b.presence?'<br><button type=button class="b bot-toggle"></button>':''}</td>
  <td><button class="b sv">Save</button><br><label class=b style="display:inline-block;margin-top:4px;cursor:pointer">Upload image<input type=file class=up accept="image/png,image/jpeg,image/webp" hidden></label>${b.uploaded?'<br><button class="b rm" style="margin-top:4px">Remove image</button>':''}</td></tr>`).join('')||'<tr><td colspan=5>No bot profiles yet (they seed on server start).</td></tr>'}</table>
  <div class=box><small>Optional built-in avatar keys: ${(d.assets||[]).map(a=>`<code>${E(a)}</code>`).join(', ')||'none'}</small></div>`;
+ const controls = $('bt');
+ const updatePresence = presence => {
+  const byId = new Map(presence.map(bot => [bot.id, bot]));
+  for (const row of controls.querySelectorAll('tr[data-id]')) {
+   const bot = byId.get(row.dataset.id);
+   row.querySelector('.bot-presence').textContent = !bot ? 'Unavailable' : bot.paused ? 'Paused in Settings' : bot.online ? 'Online' : bot.scheduled ? 'Scheduled visitor' : 'Offline';
+   const toggle = row.querySelector('.bot-toggle');
+   if (!toggle || !bot) continue;
+   toggle.textContent = bot.online ? 'Sign out' : 'Sign in';
+   toggle.dataset.on = String(!bot.online);
+   toggle.dataset.paused = String(bot.paused);
+   toggle.disabled = bot.paused;
+  }
+ };
+ const presenceButtons = [$('botAllIn'), $('botAllOut'), ...controls.querySelectorAll('.bot-toggle')];
+ let busy = false;
+ async function changePresence(request) {
+  if (busy) return;
+  busy = true;
+  presenceButtons.forEach(button => button.disabled = true);
+  try {
+   const result = await api('bots', request);
+   updatePresence(result.presence);
+   toast(request.on ? 'Bot sign-in updated' : 'Bot sign-out updated');
+  } catch (error) {
+   if (!error?.error) toast('Could not update bot presence.');
+  } finally {
+   busy = false;
+   presenceButtons.forEach(button => button.disabled = button.dataset.paused === 'true');
+  }
+ }
+ $('botAllIn').onclick = () => changePresence({all:true, on:true});
+ $('botAllOut').onclick = () => changePresence({all:true, on:false});
+ controls.querySelectorAll('.bot-toggle').forEach(button => button.onclick = () => {
+  changePresence({id:button.closest('tr').dataset.id, on:button.dataset.on === 'true'});
+ });
+ updatePresence(bots.map(bot => bot.presence).filter(Boolean));
  $('bf').oninput=e=>{const v=e.target.value.toLowerCase();document.querySelectorAll('#bt tr[data-id]').forEach(r=>r.style.display=r.dataset.q.includes(v)?'':'none')};
  document.querySelectorAll('#bt tr[data-id]').forEach(tr=>{const id=tr.dataset.id,v=c=>tr.querySelector(c).value;
   tr.querySelector('.sv').onclick=async()=>{await api('bot-profiles',{id,displayName:v('.f-dn'),bio:v('.f-bio'),location:v('.f-loc'),interests:v('.f-int')});toast('Bot profile saved')};

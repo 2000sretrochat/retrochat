@@ -5,8 +5,8 @@ function stablePostId(key){
   const hash=crypto.createHash('sha256').update(key).digest('hex');
   return hash.slice(0,8)+'-'+hash.slice(8,12)+'-4'+hash.slice(13,16)+'-a'+hash.slice(17,20)+'-'+hash.slice(20,32);
 }
-async function publishBotPost(db){
-  const pending=posts.map(([bot,slug,body,link=''])=>({bot,id:stablePostId(bot+':'+slug),body,link}));
+async function publishBotPost(db, allowed = () => true){
+  const pending=posts.filter(([id]) => allowed(id)).map(([bot,slug,body,link=''])=>({bot,id:stablePostId(bot+':'+slug),body,link}));
   await db.q(`insert into social_posts(id,author_id,wall_id,body,link)
     select p.id,b.user_id,b.user_id,p.body,p.link
     from unnest($1::uuid[],$2::text[],$3::text[],$4::text[]) with ordinality p(id,bot,body,link,sequence)

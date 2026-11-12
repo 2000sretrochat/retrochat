@@ -148,8 +148,10 @@ const STAT = { day: '', peak: 0 }; const onlineNow = () => new Set([...io.socket
 setInterval(() => { const d = new Date().toISOString().slice(0, 10), n = onlineNow(); if (STAT.day !== d) { STAT.day = d; STAT.peak = 0; } if (n > STAT.peak) { STAT.peak = n; Promise.resolve().then(() => db.q('insert into stats_day(d,peak) values($1,$2) on conflict(d) do update set peak=greatest(stats_day.peak,$2)', [d, n])).catch(() => {}); } }, 15e3).unref();
 const BOTMOD = require('./bots'), BOTS = BOTMOD.BOTS; let botsOn = true; const botOff = new Set(); // rooms with bots switched off
 let quietVisitor = null;
+const botPresence = new Map();
+const botAllowed = b => botsOn && !botOff.has(b.room) && botPresence.get(b.id) !== false;
 const botsIn = room => botsOn && !botOff.has(room)
-  ? (BOTMOD.byRoom[room] || []).filter(b => !b.silent || b === quietVisitor) : [];
+  ? (BOTMOD.byRoom[room] || []).filter(b => botAllowed(b) && (!b.silent || b === quietVisitor || botPresence.get(b.id) === true)) : [];
 const BOT_LEGACY = new Set(BOTS.flatMap(b => (b.legacy || []).map(x => x.toLowerCase())));
 const isBot = n => { const lc = String(n || '').toLowerCase(); return BOTS.some(b => b.name.toLowerCase() === lc) || BOT_LEGACY.has(lc); };
 const botRooms = () => Object.keys(BOTMOD.byRoom);
@@ -158,9 +160,55 @@ const refreshBotContacts = () => {
     if (socket.data.mess) socket.emit('m:contacts-changed');
   }
 };
-function saveBots() { Promise.resolve().then(() => db.q("insert into kv(k,v) values('bots',$1) on conflict(k) do update set v=$1", [JSON.stringify({ on: botsOn, off: [...botOff] })])).catch(() => {}); botRooms().forEach(r => ROOMS[r] && upd(r)); refreshBotContacts(); }
-function setBots(on, room) { if (room !== undefined) { if (!BOTMOD.byRoom[room]) return botsOn; on ? botOff.delete(room) : botOff.add(room); } else botsOn = !!on; saveBots(); return botsOn; }
-const getBots = () => ({ on: botsOn, total: BOTS.length, rooms: botRooms().map(r => ({ room: r, on: !botOff.has(r), bots: BOTMOD.byRoom[r].map(b => b.name) })) });
+let botChanges = Promise.resolve();
+function changeBots(on, {room, id, all} = {}) {
+  const task = botChanges.then(async () => {
+    const next = new Map(botPresence);
+    const off = new Set(botOff);
+    let enabled = botsOn;
+    if (all) {
+      for (const bot of BOTS) next.set(bot.id, on);
+      if (on) { enabled = true; off.clear(); }
+    } else if (id) {
+      const bot = BOTS.find(b => b.id === id);
+      if (!bot) return {error: 'Unknown room bot.', status: 404};
+      if (on && (!enabled || off.has(bot.room))) {
+        return {error: 'Enable bots for this room in Settings first.', status: 409};
+      }
+      next.set(id, on);
+    } else if (room !== undefined) {
+      if (!BOTMOD.byRoom[room]) return {error: 'Unknown bot room.', status: 404};
+      if (on) off.delete(room);
+      else off.add(room);
+    } else enabled = on;
+
+    await db.q("insert into kv(k,v) values('bots',$1) on conflict(k) do update set v=$1",
+      [JSON.stringify({on: enabled, off: [...off], presence: Object.fromEntries(next)})]);
+    botsOn = enabled;
+    botOff.clear();
+    for (const name of off) botOff.add(name);
+    botPresence.clear();
+    for (const [botId, online] of next) botPresence.set(botId, online);
+    for (const name of botRooms()) {
+      const round = TRIVIA_GAME.state(name);
+      if (round && !botsIn(name).includes(round.host)) TRIVIA_GAME.stop(name);
+      if (ROOMS[name]) upd(name);
+    }
+    refreshBotContacts();
+    return {ok: true, ...getBots()};
+  });
+  botChanges = task.catch(() => {});
+  return task;
+}
+const getBots = () => ({
+  on: botsOn, total: BOTS.length,
+  rooms: botRooms().map(room => ({room, on: !botOff.has(room), bots: BOTMOD.byRoom[room].map(b => b.name)})),
+  presence: BOTS.map(b => ({
+    id: b.id, room: b.room, online: !!ROOMS[b.room] && botsIn(b.room).includes(b),
+    paused: !botsOn || botOff.has(b.room),
+    scheduled: b.silent && botPresence.get(b.id) === undefined
+  }))
+});
 async function applyBotProfiles() {
   if (!db.status().ready) return;
   try {
@@ -175,7 +223,7 @@ async function applyBotProfiles() {
     for (const b of BOTS) (BOTMOD.byRoom[b.room] = BOTMOD.byRoom[b.room] || []).push(b);
   } catch (e) { console.error('[applyBotProfiles]', e.message); }
 }
-(function loadBots(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadBots(n + 1), 2000).unref?.(); Promise.resolve().then(() => db.q("select v from kv where k='bots'")).then(r => { if (r[0]) { const v = r[0].v; if (v === 'on' || v === 'off') botsOn = v !== 'off'; else try { const j = JSON.parse(v); botsOn = j.on !== false; (j.off || []).forEach(x => botOff.add(x)); } catch { } } return applyBotProfiles(); }).then(() => botRooms().forEach(x => ROOMS[x] && upd(x))).catch(() => {}); })(0);
+(function loadBots(n) { if (!db.status().ready) return n < 60 && setTimeout(() => loadBots(n + 1), 2000).unref?.(); botChanges = botChanges.then(() => db.q("select v from kv where k='bots'")).then(r => { if (r[0]) { const v = r[0].v; if (v === 'on' || v === 'off') botsOn = v !== 'off'; else try { const j = JSON.parse(v); botsOn = j.on !== false; (j.off || []).forEach(x => botOff.add(x)); for (const [id, on] of Object.entries(j.presence || {})) if (typeof on === 'boolean') botPresence.set(id, on); } catch { } } return applyBotProfiles(); }).then(() => botRooms().forEach(x => ROOMS[x] && upd(x))).catch(() => {}); })(0);
 // each bot room ticks on its own randomized, staggered timer (every ~3-7 min) and only talks while real people are there
 // bots: each room has its own random timer. Faster (40s-2.5min) while people are in the room, slow (4-10 min) while empty so rooms keep recent text.
 const GAMES = { roll: () => 'rolled a ' + (1 + Math.floor(Math.random() * 6)) + '.', '8ball': () => 'The Magic 8 Ball says: ' + ['Signs point to yes.', 'Ask again later.', 'Outlook good.', 'Cannot predict now.'][Math.floor(Math.random() * 4)] };
@@ -195,14 +243,14 @@ function interactiveBotReply(b, room, who, clean) {
  if (b.id === 'razzleguide') return 'I can help you find rooms, use Contacts, or start trivia. Mention me with help!';
  return null;
 }
-const botSay = (room, b, text) => push(room, { name: b.name, av: b.av || '', role: '', text: esc(text), color: b.color || '#000080', b: false, i: false, u: false, f: b.font || 'Arial', t: Date.now() });
+const botSay = (room, b, text) => botsIn(room).includes(b) && push(room, { name: b.name, av: b.av || '', role: '', text: esc(text), color: b.color || '#000080', b: false, i: false, u: false, f: b.font || 'Arial', t: Date.now() });
 const quietVisitors = BOTS.filter(b => b.silent);
 let nextQuietVisitor = Math.floor(Math.random() * quietVisitors.length);
 async function visitQuietly() {
   setTimeout(visitQuietly, (45 + Math.random() * 45) * 60e3).unref?.();
   const b = quietVisitors[nextQuietVisitor];
   nextQuietVisitor = (nextQuietVisitor + 1) % quietVisitors.length;
-  if (!botsOn || botOff.has(b.room) || !ROOMS[b.room] || !db.status().ready) return;
+  if (!botAllowed(b) || !ROOMS[b.room] || !db.status().ready) return;
   try {
     const [registered] = await db.q(`select 1 from social_bot_members b join users u on u.id=b.user_id
       where b.bot_id=$1 and u.name_lc=$2 and not u.banned and not coalesce(u.deactivated,false)`, [b.id,b.name.toLowerCase()]);
@@ -222,7 +270,7 @@ const rememberBotLine=(room,text)=>{
   const lines=recentBotLines.get(room)||[];
   recentBotLines.set(room,[...lines.slice(-9),text]);
 };
-const postBotUpdate=()=>{if(db.status().ready && botsOn)publishBotPost(db).catch(error=>console.error('[social-bots] post:',error.message));};
+const postBotUpdate=()=>{if(db.status().ready && botsOn)publishBotPost(db, b => BOTS.some(bot => bot.id === b && botAllowed(bot))).catch(error=>console.error('[social-bots] post:',error.message));};
 setTimeout(()=>{
   postBotUpdate();
   setInterval(postBotUpdate,60*60e3).unref();
@@ -836,7 +884,7 @@ io.on('connection', s => {
 });
 acc.sockets(io, AH);
 const RESET = require('./reset')(app, express);
-const MASTER = require('./master')({ BOTMOD, resetLink: RESET.makeLink, applyBotProfiles, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, setBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, MUSICON, setMicOpts, RATINGS, KICK_MS });
+const MASTER = require('./master')({ BOTMOD, resetLink: RESET.makeLink, applyBotProfiles, app, express, io, db, acc, geo, users, ROOMS, UROOMS, RATE, TOPICS, OFFICIAL, MOD, mod, socks, push, upd, history, roomList, closeRoom, changeBots, getBots, stats: () => ({ online: onlineNow(), peak: Math.max(STAT.peak, onlineNow()), rooms: Object.keys(ROOMS).filter(r => socks(r).length).length }), lists, setRating, setTopic, modAct, esc, MICS, setMics, micsOf, HQ, MTIMER, MANN, MUSICON, setMicOpts, RATINGS, KICK_MS });
 // ADMIN_KEY: verify/grant exact authorized masters (t228u/t229u). No password changes.
 app.get('/api/admin/masters', async (req, res) => {
   if (!keyOk(req.get('x-admin-key'))) return res.status(401).json({ error: 'Unauthorized' });
