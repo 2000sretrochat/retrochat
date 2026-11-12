@@ -43,7 +43,9 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
 .rzn-list.open{display:flex;flex-direction:column}
 .rzn-opts{max-height:192px;overflow:auto}
 .rzn-list div[data-n],.rzn-list .rzn-edit,.rzn-list .rzn-empty{display:flex;align-items:center;gap:8px;min-height:32px;padding:4px 8px;border-radius:3px;color:#132849;box-sizing:border-box}
-.rzn-list div[data-n]:hover,.rzn-list div.sel,.rzn-list .rzn-edit:hover{background:#DBEBFF;color:#132849}
+.rzn-list div.sel{background:#edf4fc;color:#132849}
+.rzn-list div[data-n]:is(:hover,:focus-visible),.rzn-list .rzn-edit:is(:hover,:focus-visible){background:#e0edfc;color:#132849}
+.rzn-list [role=option]:focus-visible{outline:1px solid #397cba;outline-offset:-1px}
 .rzn-list .rzn-edit{border-top:1px solid #C6D5E7;border-radius:0 0 3px 3px;margin-top:4px}
 .rzn-list .rzn-edit svg{width:16px;height:16px;flex:none}
 .rzn-list .rzn-pw{margin-left:auto}
@@ -64,7 +66,7 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
     const wrap = document.createElement('div'); wrap.className = 'rzn-wrap';
     name.parentNode.insertBefore(wrap, name); wrap.appendChild(name);
     const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'rzn-btn'; btn.id = 'iNameMore';
-    btn.setAttribute('aria-label', 'Saved screen names'); btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-label', 'Saved screen names'); btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-controls', 'iNameList'); btn.setAttribute('aria-expanded', 'false');
     btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 5 5 5-5"/></svg>';
     const form = $('fIn'); if (form) form.classList.add('rzn-on');
     const list = document.createElement('div'); list.className = 'rzn-list'; list.id = 'iNameList'; list.setAttribute('role', 'listbox');
@@ -86,15 +88,54 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
       else { savedFor = null; pw.value = ''; if (save) save.checked = false; }
       if (inv) inv.checked = !!(e && e.invisible); // "Sign in as invisible" is remembered per screen name
     };
-    const close = () => list.classList.remove('open');
+    const close = () => {
+      list.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    };
+    const options = () => [...list.querySelectorAll('[role=option]')];
+    const open = () => {
+      render();
+      list.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
+    };
     const render = () => {
       const cur = name.value.trim().toLowerCase();
-      list.innerHTML = '<div class="rzn-opts">' + (names.map(e => `<div role="option" data-n="${esc(e.name)}"${e.name.toLowerCase() === cur ? ' class="sel" aria-selected="true"' : ''}>${esc(e.name)}${e.saved ? '<span class="rzn-pw">password saved</span>' : ''}</div>`).join('')
+      list.innerHTML = '<div class="rzn-opts">' + (names.map(e => `<div role="option" tabindex="-1" data-n="${esc(e.name)}"${e.name.toLowerCase() === cur ? ' class="sel" aria-selected="true"' : ''}>${esc(e.name)}${e.saved ? '<span class="rzn-pw">password saved</span>' : ''}</div>`).join('')
         || '<div class="rzn-empty" style="cursor:default">No saved screen names yet</div>') + '</div>'
-        + '<div class="rzn-edit" data-edit="1" role="option"><svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 13 9-9 3 3-9 9-4 1zM11 6l3 3"/></svg><span>Edit</span></div>';
+        + '<div class="rzn-edit" data-edit="1" role="option" tabindex="-1"><svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 13 9-9 3 3-9 9-4 1zM11 6l3 3"/></svg><span>Edit</span></div>';
       btn.style.display = '';
     };
-    btn.onclick = e => { e.preventDefault(); e.stopPropagation(); render(); list.classList.toggle('open'); };
+    btn.onclick = () => {
+      if (list.classList.contains('open')) close();
+      else {
+        open();
+        (list.querySelector('.sel') || options()[0])?.focus();
+      }
+    };
+    wrap.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && list.classList.contains('open')) {
+        event.preventDefault();
+        close();
+        btn.focus();
+        return;
+      }
+      if (list.contains(event.target) && ['Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+        event.target.click();
+        return;
+      }
+      if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+      event.preventDefault();
+      if (!list.classList.contains('open')) open();
+      const rows = options();
+      const current = rows.indexOf(document.activeElement);
+      const next = event.key === 'ArrowDown' ? (current + 1) % rows.length
+        : (current <= 0 ? rows.length - 1 : current - 1);
+      rows[next]?.focus();
+    });
+    wrap.addEventListener('focusout', event => {
+      if (!wrap.contains(event.relatedTarget)) close();
+    });
     list.onclick = e => {
       const it = e.target.closest('div[data-n],div[data-edit]'); if (!it) return;
       close();
@@ -103,7 +144,6 @@ html.yd .rzn-wrap{max-width:320px;align-self:center}
       (savedFor ? $('bIn') : pw).focus();
     };
     document.addEventListener('click', e => { if (!e.target.closest('.rzn-wrap')) close(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
     name.addEventListener('input', () => { if (savedFor && name.value.trim().toLowerCase() !== savedFor.toLowerCase()) { clearSaved(); if (save) save.checked = false; } });
     pw.addEventListener('focus', () => { if (savedFor) pw.select(); });
     pw.addEventListener('input', () => { savedFor = null; });
