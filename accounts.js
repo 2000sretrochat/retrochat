@@ -70,10 +70,10 @@ function http(app, express, hooks = {}) { H = hooks;
       res.json({ ok: true, name });
     } catch (e) { if (e.code === '23505') return res.status(409).json({ error: 'That screen name is already taken.' }); console.error(e); res.status(500).json({ error: 'Sign up failed.' }); }
   });
-  async function signIn(req, res, fromSocial = false) {
+  async function signIn(req, res, socialFailureUrl) {
     const reply = (code, payload) => {
-      if (!fromSocial) return res.status(code).json(payload);
-      return res.redirect(303, code === 200 ? '/social/' : 'https://2000sretrochat.github.io/retrochat/?signin=failed');
+      if (!socialFailureUrl) return res.status(code).json(payload);
+      return res.redirect(303, code === 200 ? '/social/' : socialFailureUrl);
     };
     if (!db.status().ready) return reply(503, { error: 'Accounts are temporarily unavailable.' });
     if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return reply(403, { error: 'Sign-ins from your network are not allowed.' });
@@ -90,11 +90,14 @@ function http(app, express, hooks = {}) { H = hooks;
   }
   app.post('/api/login', (req, res) => signIn(req, res));
   app.post('/social-sign-in', (req, res, next) => {
-    if (req.get('Origin') !== 'https://2000sretrochat.github.io') return res.sendStatus(403);
+    const origin = req.get('Origin');
+    const sameOrigin = origin === req.protocol + '://' + req.get('host');
+    if (!sameOrigin && origin !== 'https://2000sretrochat.github.io') return res.sendStatus(403);
+    res.locals.socialFailureUrl = sameOrigin ? '/?signin=failed' : 'https://2000sretrochat.github.io/retrochat/?signin=failed';
     if (!req.is('application/x-www-form-urlencoded')) return res.sendStatus(415);
     res.set('Cache-Control', 'no-store');
     next();
-  }, express.urlencoded({ extended: false, limit: '2kb', parameterLimit: 3 }), (req, res) => signIn(req, res, true));
+  }, express.urlencoded({ extended: false, limit: '2kb', parameterLimit: 3 }), (req, res) => signIn(req, res, res.locals.socialFailureUrl));
   // "Sign in as invisible" on the sign-in screen: called right after a successful sign-in, before Messenger connects.
   // invisible=true -> invisible; invisible=false only clears a leftover invisible status (busy/away are kept).
   app.post('/api/signin-presence', async (req, res) => {

@@ -69,6 +69,26 @@ require('./social-next')(app, express, acc, db, io, {
   musicLobby,
 });
 app.get(['/social', '/social/'], (_req,res) => res.redirect(302, '/social-next/'));
+const welcomeFiles = require('node:path').join(__dirname, 'docs');
+const readWelcomeFile = name => require('node:fs').readFileSync(require('node:path').join(welcomeFiles, name), 'utf8');
+const welcomePage = readWelcomeFile('index.html')
+  .replace('<head>', '<head><base href="/welcome-assets/">')
+  .replace('href="index.html" class="brand"', 'href="/" class="brand"')
+  .replace('href="https://retrochat-izzg.onrender.com/"', 'href="/index.html"')
+  .replace('<button class="notice" onclick="info()" aria-label="About this preview">◌</button>', '');
+const welcomeScript = readWelcomeFile('social-home.js')
+  .replace("const socialBase = new URL('./', document.baseURI).pathname;", "const socialBase = '/';")
+  .replace('Meet people in live chat rooms and keep in touch through Razzle Messenger.', 'Talk with real people in live chat rooms. Stay in touch through profiles, posts, and Messenger.')
+  .replace('Create a screen name you can use in Chat and Messenger.', 'Share photos, links, and thoughts with the people you meet.');
+const welcomeParams = new Set(['view', 'signin', 'profile', 'sample', 'room', 'interest']);
+app.get('/welcome-assets/social-home.js', (_req, res) => res.type('application/javascript').send(welcomeScript));
+app.use('/welcome-assets', express.static(welcomeFiles, { index: false, redirect: false }));
+app.get('/', (req, res, next) => {
+  res.vary('User-Agent');
+  const desktopMessenger = /\bElectron\//i.test(req.get('User-Agent') || '');
+  if (desktopMessenger || Object.keys(req.query).some(key => !welcomeParams.has(key))) return next();
+  return res.type('html').send(welcomePage);
+});
 app.use(express.static(__dirname + '/public'));
 // ---- avatars: custom (uploaded / avatar-maker) images. Accounts -> Postgres `avatars`; guests -> memory for the session ----
 const AVMEM = new Map(), PRESETS = ['a1','a2','a3','a4','a5','a6','a7','a8'], AVMAX = 32 * 1024;

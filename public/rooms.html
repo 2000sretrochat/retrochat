@@ -300,7 +300,7 @@ const roomAccountReady = (RazzleReconnect.pending()
  : Promise.resolve()).then(() => RazzleStartup.getJSON('/api/me', $('room-session-status'))).then(m=>{
  sessionChecked=true;acct=m.name;S.connect();if(!S.connected)$('room-session-status').textContent='Connecting to Razzle…';$('who').hidden=false;$('nmw').hidden=!!acct;
  const signIn=document.querySelector('#social-chat-header [data-chat-signin]');if(signIn&&!acct)signIn.hidden=false;
- $('go').hidden=!acct;syncRoomEntry();$('mk').hidden=!acct;$('mk').disabled=!acct;loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
+ $('go').hidden=!acct;syncRoomEntry();$('mk').hidden=!acct;$('mk').disabled=!acct;loadRooms();if(acct){$('who').innerHTML='Signed in as <b>'+escT(acct)+'</b> &middot; <a href="/index.html">Messenger</a>';$('nmw').style.display='none';$('go').textContent='Enter Chat'}
  if(isRoomPopout)return;
  if(new URLSearchParams(location.search).get('edit')&&acct)new Promise(ok=>S.emit('rooms',ok)).then(()=>editRoom(new URLSearchParams(location.search).get('edit')));else if(new URLSearchParams(location.search).get('create')&&acct)createRoom();else if(new URLSearchParams(location.search).get('room')&&acct)login()}).catch(error=>{
  $('room-session-status').textContent=error.message;
