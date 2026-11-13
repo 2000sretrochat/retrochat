@@ -1,6 +1,7 @@
 const EM = require('./emails');
 const mailer = require('./mail');
 const RS = require('./room-status');
+const contactLookup = require('./contact-lookup');
 // Shared Razzle accounts and Messenger sockets.
 const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db'), geo = require('./geo');
 const COOKIE = 'yc_sid', NAME_RE = /^[A-Za-z][A-Za-z0-9_.]{3,19}$/, STATUSES = ['available', 'busy', 'away', 'invisible'];
@@ -344,25 +345,16 @@ function sockets(io, hooks) {
       const hits = (SEARCH_HITS.get(uid) || []).filter(t => now - t < 60e3);
       if (hits.length >= 40) { SEARCH_HITS.set(uid, hits); return { error: 'Too many searches. Wait a minute and try again.' }; }
       hits.push(now); SEARCH_HITS.set(uid, hits); if (SEARCH_HITS.size > 5000) for (const [k, v] of SEARCH_HITS) if (!v.some(t => now - t < 60e3)) SEARCH_HITS.delete(k);
-      const offset = Math.min(1000, Math.max(0, Math.trunc(Number(page) || 0))) * 4;
-      // Case-insensitive on name_lc. Never lists yourself or anyone you blocked / who blocked you. Only the screen name,
-      // avatar key and your own relationship flags are returned; presence is shown only for people already in your list
-      // (exactly what your buddy list shows, so invisible/incognito accounts stay hidden).
-      const rows = await db.q(`
-        select u.id, u.name, u.avatar,
-          exists(select 1 from contacts where owner=$1 and contact=u.id) as contact,
-          exists(select 1 from requests where from_id=$1 and to_id=u.id) as sent
-        from users u
-        where strpos(u.name_lc,$2)>0 and u.id<>$1 and not u.banned and not coalesce(u.deactivated,false)
-          and not exists(select 1 from blocks where (owner=u.id and blocked=$1) or (owner=$1 and blocked=u.id))
-        order by (u.name_lc=$2) desc, (strpos(u.name_lc,$2)=1) desc, u.name_lc
-        limit 5 offset $3`, [uid, term, offset]);
-      const people = rows.slice(0, 4).map(r => {
+      // Case-insensitive on name_lc. Never lists yourself or anyone who blocked you. People you blocked, already
+      // added, or with a request either way are returned with flags so the UI can say so instead of "no one found".
+      // Presence is shown only for people already in your list (invisible/incognito accounts stay hidden).
+      const found = await contactLookup.find(db, { uid, query: term, page });
+      if (found.error) return found;
+      const people = found.people.map(r => {
         const p = r.contact ? (hooks.botContact?.(r.name) || pres(r.id)) : null;
-        const hint = r.contact ? (p && p.online ? 'Online' : 'Offline') : r.sent ? 'Request sent' : 'Not in your list yet';
-        return { name: r.name, avatar: /^(a\d+|c[0-9a-z]+)$/.test(r.avatar || '') ? r.avatar : 'a1', contact: r.contact, sent: r.sent, hint };
+        return { ...r, hint: contactLookup.hint(r, p) };
       });
-      return { people, more: rows.length > 4 };
+      return { people, more: found.more, notice: found.notice };
     }));
     s.on('m:add', safe(async ({ name, msg }) => {
       if (!ready || flood()) return { error: 'Slow down a little.' }; const generic = { ok: true, text: 'If ' + esc(String(name).slice(0, 20)) + ' is a Razzle user, they have been sent your request.' };

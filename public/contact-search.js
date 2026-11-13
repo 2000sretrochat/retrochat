@@ -1,5 +1,6 @@
 // Add a contact (Nov 13, 2026): centered dialog with live, debounced, case-insensitive suggestions after 3 characters.
-// The server never lists you or anyone blocked either way; people already in your list show "Already added".
+// The server never lists you or anyone who blocked you. Already-added people, requests you already sent or received,
+// and people you blocked are listed with a clear status (never "no one found").
 window.RazzleContactSearch = (() => {
   let panel;
   const esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
@@ -8,7 +9,7 @@ window.RazzleContactSearch = (() => {
     return '<img class="cd-av" alt="" src="/av/' + encodeURIComponent(person.name) + '?v=' + encodeURIComponent(person.avatar || 'a1') + '">';
   };
 
-  function open({ name, emit, view }) {
+  function open({ name, emit, view, block }) {
     if (panel?.isConnected && !panel._pw?.closed) {
       panel._pw?.focus();
       if (name) {
@@ -47,6 +48,19 @@ window.RazzleContactSearch = (() => {
       const profile = document.createElement('button');
       profile.type = 'button'; profile.className = 'cd-link'; profile.textContent = 'Profile';
       profile.onclick = () => view(person.name);
+      if (person.blocked) {
+        const unblock = document.createElement('button');
+        unblock.type = 'button'; unblock.className = 'cd-add'; unblock.textContent = 'Unblock';
+        unblock.onclick = async () => {
+          unblock.disabled = true; unblock.textContent = 'Unblocking…';
+          const reply = await emit('m:block', { name: person.name, on: false }).catch(() => ({ error: 'Could not unblock. Try again.' }));
+          if (reply.error) { status.textContent = reply.error; unblock.disabled = false; unblock.textContent = 'Unblock'; return; }
+          status.textContent = person.name + ' was unblocked.';
+          search();
+        };
+        item.append(profile, unblock);
+        return item;
+      }
       const add = document.createElement('button');
       add.type = 'button'; add.className = 'cd-add';
       const done = person.contact ? 'Already added' : person.sent ? 'Request sent' : '';
@@ -56,7 +70,7 @@ window.RazzleContactSearch = (() => {
         add.disabled = true; add.textContent = 'Adding…';
         const reply = await emit('m:add', { name: person.name, msg: message.value }).catch(() => ({ error: 'Could not add. Try again.' }));
         const added = reply.self || reply.added;
-        status.textContent = reply.error || (added ? person.name + ' was added to your contacts.' : 'Request sent. ' + person.name + ' shows under Pending until they accept.');
+        status.textContent = reply.error || (added ? person.name + ' was added to your contacts.' : 'Request already sent to ' + person.name + '. They show under Pending until they accept.');
         if (reply.error) { add.disabled = false; add.textContent = 'Add'; return; }
         add.textContent = added ? 'Already added' : 'Request sent';
         item.querySelector('small').textContent = added ? 'In your list' : 'Request sent';
@@ -73,7 +87,7 @@ window.RazzleContactSearch = (() => {
       status.textContent = 'Searching…';
       const response = await emit('m:find-contacts', { query: term, page }).catch(() => ({ error: 'Search unavailable. Try again.' }));
       if (current !== generation || !dialog.isConnected) return;
-      status.textContent = response.error || (response.people.length ? '' : 'No one found with that screen name.');
+      status.textContent = response.error || response.notice || (response.people && response.people.length ? '' : 'No one found with that screen name.');
       if (response.error) return;
       for (const person of response.people) results.append(row(person));
       previous.disabled = page === 0;

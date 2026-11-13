@@ -129,10 +129,10 @@ test('Pending list renders once per name, hides people who already accepted', ()
 test('Add a contact: centered, live suggestions, rate limited, no self/blocked, Already added', () => {
   const acc = read('accounts.js'), cs = read('public/contact-search.js'), css = read('public/messenger-polish.css');
   assert.match(acc, /if \(hits\.length >= 40\)/);
-  assert.match(acc, /u\.id<>\$1 and not u\.banned/);
-  assert.match(acc, /\(owner=u\.id and blocked=\$1\) or \(owner=\$1 and blocked=u\.id\)/);
+  assert.match(acc, /contactLookup\.find\(db, \{ uid, query: term, page \}\)/);
   assert.match(acc, /const p = r\.contact \? \(hooks\.botContact\?\.\(r\.name\) \|\| pres\(r\.id\)\) : null;/, 'presence only for people already in the list');
   assert.match(cs, /person\.contact \? 'Already added'/); assert.match(cs, /timer = setTimeout\(search, 300\)/);
+  assert.match(cs, /response\.notice/);
   assert.match(css, /transform: translate\(-50%, -50%\) !important;/);
   assert.match(read('public/yd.js'), /pw\.moveTo\(Math\.max\(al,/);
 });
