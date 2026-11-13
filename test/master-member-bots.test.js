@@ -39,9 +39,9 @@ test('example names LumaKite PixelOrchard MossComet are reserved via master.rese
   assert.ok(api.EXAMPLE_BLOCKED.includes('lumakite'));
 });
 
-test('shared email allowlist: only zainy + zainyochka may share zainyochka@gmail.com', async () => {
+test('shared email allowlist: only zainy + zainyochka + razzle may share zainyochka@gmail.com', async () => {
   const EM = require('../emails');
-  assert.deepEqual(EM.sharedNames('zainy.ochka+tag@gmail.com'), ['zainy', 'zainyochka']);
+  assert.deepEqual(EM.sharedNames('zainy.ochka+tag@gmail.com'), ['zainy', 'zainyochka', 'razzle']);
   assert.equal(EM.sharedOk('zainyochka@gmail.com', 'zainy', []), true);
   assert.equal(EM.sharedOk('zainyochka@gmail.com', 'zainyochka', ['zainy']), true);
   assert.equal(EM.sharedOk('zainyochka@gmail.com', 'intruder', ['zainy']), false);

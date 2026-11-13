@@ -64,13 +64,8 @@ module.exports = function (C) {
       if (r.kind === 'admin') m.admins.add(r.name_lc); else if (r.kind === 'mt') m.mt.add(r.name_lc); else if (r.kind === 'mm') m.mm.add(r.name_lc);
       else if (r.kind === 'kick' && +r.until > Date.now()) m.kicked.set(r.name_lc, +r.until); else if (r.kind === 'dot' && +r.until > Date.now()) m.dot.set(r.name_lc, +r.until); }
     // Controlled shared-email attachment for owned accounts (no new accounts created).
-    try {
-      const sharedEmail = 'zainyochka@gmail.com', en = EM.norm(sharedEmail);
-      for (const nm of ['zainy', 'zainyochka']) {
-        const u = (await db.q('select id,email_norm from users where name_lc=$1', [nm]))[0];
-        if (u && u.email_norm !== en) await db.q('update users set email=$2,email_norm=$3 where id=$1', [u.id, sharedEmail, en]);
-      }
-    } catch (e) { console.error('[shared-email]', e.message); }
+    try { const se = await require('./master-emails').seedSharedEmail(db); if (se.length) console.log('[shared-email] set for', se.join(', ')); } catch (e) { console.error('[shared-email]', e.message); }
+    try { if (await require('./master-emails').seedBigTonyEmail(db)) console.log('[bigtony-email] set'); } catch (e) { console.error('[bigtony-email]', e.message); }
     try { const bd = await require('./backdate').applyBackdates(db); if (bd.length) console.log('[backdate] set created to 11/11/2026 for', bd.join(', ')); } catch (e) { console.error('[backdate]', e.message); }
     try { await seedBotProfiles(); } catch (e) { console.error('[bot-profiles]', e.message); }
     try { await require('./social-next/bots').seedSocialBots(db); console.log('[social-bots] synchronized'); } catch(e) { console.error('[social-bots]',e.message); }

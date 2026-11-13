@@ -2,9 +2,9 @@
 // Controlled shared-email exception: a specific email may be shared ONLY by an exact allowlisted set of screen names (not unlimited).
 const db = require('./db');
 const DEF = String(process.env.UNLIMITED_EMAILS || '');
-// Hard allowlist: zainy + zainyochka may share zainyochka@gmail.com (Gmail-normalized). No other names on that address.
+// Hard allowlist: zainy + zainyochka + razzle may share zainyochka@gmail.com (Gmail-normalized). No other names on that address.
 const SHARED_EMAIL_NAMES = Object.freeze({
-  'zainyochka@gmail.com': Object.freeze(['zainy', 'zainyochka'])
+  'zainyochka@gmail.com': Object.freeze(['zainy', 'zainyochka', 'razzle'])
 });
 function norm(e) { e = String(e || '').trim().toLowerCase(); const i = e.lastIndexOf('@'); if (i < 1) return e; let [u, d] = [e.slice(0, i), e.slice(i + 1)];
   if (d === 'gmail.com' || d === 'googlemail.com') { u = u.split('+')[0].replace(/\./g, ''); d = 'gmail.com'; } return u + '@' + d; }
