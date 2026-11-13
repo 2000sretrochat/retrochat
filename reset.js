@@ -17,7 +17,7 @@ module.exports = function (app, express) {
   const ACC = require('./accounts'), EM = require('./emails');
   async function vstate(req) { const u = await ACC.userFromCookie(req.headers.cookie); if (!u) return null;
     const r = (await db.q('select id,name,email,verified,is_master from users where id=$1', [u.id]))[0]; if (!r) return null;
-    const exempt = r.is_master || (r.email && EM.list().includes(EM.norm(r.email)));
+    const exempt = r.is_master || (r.email && (await EM.list()).includes(EM.norm(r.email)));
     return { r, need: verifyOn() && !!r.email && !r.verified && !exempt }; }
   // email verification (only when a sender is configured; masters and unlimited-list emails are exempt)
   app.get('/api/verify/status', async (req, res) => { res.set('Cache-Control', 'no-store'); try { const v = await vstate(req); res.json({ need: !!(v && v.need) }); } catch { res.json({ need: false }); } });
