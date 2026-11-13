@@ -390,6 +390,8 @@ app.post('/snapup', express.json({ limit: '80kb' }), async (req, res) => { const
     await db.q('update users set avatar=$2 where id=$1', [v.uid, av]); await acc.setAvatar(v.uid, av);
     for (const [, x] of io.sockets.sockets) if (x.data.acct && x.data.acct.id === v.uid) { x.data.av = av; x.emit('snap:done', { av }); }
     io.emit('avatar', { name: v.name, av }); res.json({ ok: true }); } catch (e) { console.error('[snap]', e.message); res.status(500).json({ error: 'Could not save the photo.' }); } });
+// Help > Feedback: stored in Postgres and emailed via mail.js (feedback.js)
+require('./feedback').register(app, express, { db, userFromReq, clientIp: req => geo.clientIp(req.headers, req.socket.remoteAddress) });
 app.get('/api/online', (q, r) => r.set('Cache-Control', 'no-store').json({ n: onlineTotal() }));
 async function isAdultReq(req) { const u = await acc.userFromCookie(req.headers.cookie); if (!u) return false; try { return !!(await db.q('select adult from users where id=$1', [u.id]))[0]?.adult; } catch { return false; } }
 app.get('/api/rooms', async (q, r) => {

@@ -66,6 +66,10 @@ alter table user_rooms add column if not exists last_used timestamptz;
 create table if not exists room_icons(room text primary key, mime text not null, data bytea not null, updated timestamptz not null default now());
 alter table users add column if not exists night_pref jsonb;
 alter table users add column if not exists ad_room text;
+-- Help > Feedback backup copy (Nov 13, 2026); the email is the primary delivery.
+create table if not exists feedback(id serial primary key, user_id int references users(id) on delete set null, name text not null,
+  category text not null, message text not null, page text not null default '', app text not null default '', ip_hash text not null default '',
+  emailed boolean not null default false, created timestamptz not null default now());
 -- Profile picture history (Nov 13, 2026): every custom Messenger/profile picture written to avatars (Messenger upload,
 -- phone snap, Social photo set) is kept here, deduped by content, newest 30 per account. Starts from the current picture.
 create table if not exists avatar_history(id bigserial primary key, user_id int not null references users(id) on delete cascade,
