@@ -767,7 +767,7 @@ io.on('connection', s => {
     await loadPrefs();
     users.set(name.toLowerCase(), s.id); s.data.name = name; // newest window is the primary for room PMs/lookups
     if (s.data.acct && db.status().ready) { try { s.data.av = (await db.q('select avatar from users where id=$1', [s.data.acct.id]))[0]?.avatar || ''; } catch { } }
-    { const ip = geo.clientIp(s.handshake.headers, s.handshake.address); if (s.data.guest) geo.recordGuest(name, ip).catch(() => {}); else if (s.data.acct) geo.recordAccount(s.data.acct.id, ip, 'room'); }
+    { const ip = s.data.ip || geo.clientIp(s.handshake.headers, s.handshake.address); s.data.ip = ip; if (s.data.acct) geo.recordAccount(s.data.acct.id, ip, 'room').catch(() => {}); }
     join(room); cb({ ok: true, name, colors: COLORS, account: !!s.data.acct, ...(s.data.master ? { m: true } : {}) });
   });
   const graceSkip = room => { const g = GRACE.get(s.data.name.toLowerCase()); if (!g) return false; GRACE.delete(s.data.name.toLowerCase()); clearTimeout(g.t); return g.room === room; };
@@ -776,7 +776,7 @@ io.on('connection', s => {
     const opening = s.data.room !== room && !seen(room).length;
     if (s.data.room) { s.leave(s.data.room); if (noticeOk()) push(s.data.room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has left the room.` }); lists(s.data.room); }
     const old = s.data.room; mediaReset(); if (old) upd(old);
-    s.data.np = null; s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); s.emit('history', { room, music: isMusicRoom(room), np: isMusicRoom(room) ? npList(room) : [], topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, icon: UROOMS.get(room)?.icon || '', rating: rateOf(room), mics: micsOf(room), ann: ANN[room] || '', rec: REC.isOn(room) });
+    s.data.np = null; s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); if (s.data.guest) geo.recordGuest(s.data.name, s.data.ip || geo.clientIp(s.handshake.headers, s.handshake.address), room).catch(() => {}); s.emit('history', { room, music: isMusicRoom(room), np: isMusicRoom(room) ? npList(room) : [], topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, icon: UROOMS.get(room)?.icon || '', rating: rateOf(room), mics: micsOf(room), ann: ANN[room] || '', rec: REC.isOn(room) });
     if (!graceSkip(room) && noticeOk()) push(room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has entered the room.` }); upd(room); s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce });
     if(opening && !s.data.inc)roomActivity('room',room,s);
     if (!s.data.inc && noticeOk()) botJoined(room, s.data.name);

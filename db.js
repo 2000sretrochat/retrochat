@@ -89,6 +89,7 @@ create table if not exists ignores(owner int not null references users(id) on de
 alter table users add column if not exists pm_buddies boolean not null default false;
 alter table users add column if not exists archive boolean not null default false;
 create table if not exists guest_log(id serial primary key, name text not null, ip text, loc text, at timestamptz not null default now());
+alter table guest_log add column if not exists room text;
 alter table users add column if not exists deactivated boolean not null default false;
 create table if not exists master_audit(id bigserial primary key, by_name text not null, action text not null, target text, detail text not null default '', at timestamptz not null default now());
 create index if not exists master_audit_at on master_audit(id desc);

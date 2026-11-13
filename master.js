@@ -103,7 +103,8 @@ module.exports = function (C) {
   app.get('/master', guard((req, res) => res.sendFile(path.join(__dirname, 'master.html'))));
   app.get('/api/master/data', guard(async (req, res) => {
     const d = await geo.adminData(acc.isConnected); const ms = new Set((await q('select name from users where is_master')).map(r => r.name));
-    d.accounts.forEach(a => { a.master = ms.has(a.name); a.room = sockOf(a.name)?.data.room || null; }); d.guests.forEach(g => g.room = sockOf(g.name)?.data.room || null);
+    d.accounts.forEach(a => { a.master = ms.has(a.name); a.room = sockOf(a.name)?.data.room || null; });
+    d.guests = await geo.listOnlineGuests(io);
     d.banned = (await q('select name from users where banned')).map(r => r.name); d.deactivated = (await q('select name from users where deactivated')).map(r => r.name); d.ipbans = await q('select ip,reason,at from ip_bans order by at desc');
     d.locked = (await q("select u.name from login_guard g join users u on g.key='n:'||u.name_lc where g.locked").catch(() => [])).map(r => r.name); res.json(d); }));
   app.get('/api/master/rooms', guard((req, res) => res.json(Object.keys(ROOMS).map(r => ({ name: r, cat: ROOMS[r], topic: TOPICS[r], rating: RATE[r] || 'PG-13', mics: micsOf(r), hq: !!C.HQ[r], timer: C.MTIMER[r] || 0, official: OFFICIAL.has(r), owner: UROOMS.get(r)?.owner || null,

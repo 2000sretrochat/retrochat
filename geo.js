@@ -31,11 +31,48 @@ async function recordAccount(uid, ip, kind) {
     await db.q('delete from login_history where user_id=$1 and id not in (select id from login_history where user_id=$1 order by id desc limit 20)', [uid]);
   } catch (e) { console.error('[geo] account', e.message); }
 }
-async function recordGuest(name, ip) {
-  const g = { name, ip, loc: '', at: Date.now(), online: true }; GUESTS.set(name.toLowerCase(), g);
+async function recordGuest(name, ip, place) {
+  const where = place ? String(place).slice(0, 80) : '';
+  const g = { name, ip, loc: '', at: Date.now(), online: true, room: where }; GUESTS.set(String(name).toLowerCase(), g);
   if (GUESTS.size > 2000) { const old = [...GUESTS.values()].filter(x => !x.online).sort((a, b) => a.at - b.at); for (const x of old.slice(0, 500)) GUESTS.delete(x.name.toLowerCase()); }
   g.loc = await lookup(ip);
-  if (db.status().ready) db.q('insert into guest_log(name,ip,loc) values($1,$2,$3)', [name, ip, g.loc]).catch(e => console.error('[geo] guest', e.message));
+  if (db.status().ready) db.q('insert into guest_log(name,ip,loc,room) values($1,$2,$3,$4)', [name, ip, g.loc, where || null]).catch(e => console.error('[geo] guest', e.message));
+}
+function guestPlace(s) {
+  if (s && s.data && s.data.room) return String(s.data.room);
+  if (s && s.data && s.data.mess) return 'Messenger';
+  return 'lobby';
+}
+function mstStamp(t) {
+  const d = new Date(t);
+  if (Number.isNaN(+d)) return '';
+  return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Phoenix', month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).format(d) + ' MST';
+}
+async function listOnlineGuests(io) {
+  const by = new Map();
+  const socks = io && io.sockets && io.sockets.sockets;
+  if (!socks) return [];
+  for (const s of socks.values()) {
+    if (!s || !s.data || !s.data.guest || !s.data.name) continue;
+    const lc = String(s.data.name).toLowerCase();
+    const ip = s.data.ip || clientIp((s.handshake && s.handshake.headers) || {}, s.handshake && s.handshake.address) || '';
+    let rec = by.get(lc);
+    if (!rec) {
+      const known = GUESTS.get(lc);
+      rec = { name: s.data.name, ip: ip || (known && known.ip) || '', loc: (known && known.loc) || '', places: new Set(), at: (known && known.at) || Date.now(), online: true };
+      by.set(lc, rec);
+    }
+    if (ip) rec.ip = ip;
+    rec.places.add(guestPlace(s));
+  }
+  const out = [];
+  for (const rec of by.values()) {
+    if (rec.ip && !rec.loc) rec.loc = await lookup(rec.ip);
+    const rooms = [...rec.places];
+    out.push({ name: rec.name, ip: rec.ip, loc: rec.loc, room: rooms.join(', '), rooms, at: rec.at, online: true });
+  }
+  out.sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' }));
+  return out;
 }
 const guestOff = n => { const g = GUESTS.get(String(n).toLowerCase()); if (g) { g.online = false; g.left = Date.now(); } };
 function keyOk(k) { const K = process.env.ADMIN_KEY; if (!K || K.length < 16 || typeof k !== 'string') return false; const a = crypto.createHash('sha256').update(k).digest(), b = crypto.createHash('sha256').update(K).digest(); return crypto.timingSafeEqual(a, b); }
@@ -46,7 +83,7 @@ async function adminData(isOnline) {
         coalesce((select json_agg(h order by h.id desc) from (select ip,loc,kind,at,id from login_history where user_id=u.id order by id desc limit 10) h),'[]') hist
         from users u order by u.last_at desc nulls last, u.created desc limit 1000`);
       accounts.forEach(a => a.online = isOnline(a.name));
-      guestLog = await db.q('select name,ip,loc,at from guest_log order by id desc limit 500');
+      guestLog = await db.q('select name,ip,loc,room,at from guest_log order by id desc limit 500');
     }
     return ({ db: db.status().ready, accounts, guests: [...GUESTS.values()].sort((a, b) => b.at - a.at), guestLog });
 }
@@ -62,4 +99,4 @@ function admin(app, isOnline) {
     res.json(await adminData(isOnline));
   });
 }
-module.exports = { adminData, clientIp, lookup, recordAccount, recordGuest, guestOff, admin, keyOk };
+module.exports = { adminData, clientIp, lookup, recordAccount, recordGuest, guestOff, admin, keyOk, guestPlace, mstStamp, listOnlineGuests };
