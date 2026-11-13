@@ -1,11 +1,37 @@
-// Outbound email via Resend HTTP when RESEND_API_KEY + MAIL_FROM are set.
-// No SMTP dependency. Used for password reset, verify, and welcome mail.
-const enabled = () => !!(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
+// Outbound email for password reset, verify, and welcome mail. Two free options:
+//  - Gmail SMTP when GMAIL_USER + GMAIL_APP_PASSWORD are set (smtp.gmail.com:465, an app password, never the account password)
+//  - Resend HTTP when RESEND_API_KEY + MAIL_FROM are set
+// Gmail is used first when both are configured. Credentials are read from the environment only and never logged.
+const gmailOn = () => !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+const resendOn = () => !!(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
+const enabled = () => gmailOn() || resendOn();
+const provider = () => (gmailOn() ? 'gmail' : resendOn() ? 'resend' : null);
 const appName = () => { const n = String(process.env.APP_NAME || 'Razzle').trim(); return !n || /^yappchat$/i.test(n) ? 'Razzle' : n; };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const gmailFrom = () => 'Razzle Social <' + String(process.env.GMAIL_USER).trim() + '>';
+
+let transport = null, transportKey = '';
+// Tests swap in a fake transport; production builds one nodemailer transport per credential set.
+function gmailTransport() {
+  if (module.exports._transport) return module.exports._transport;
+  const key = process.env.GMAIL_USER + '\0' + process.env.GMAIL_APP_PASSWORD;
+  if (!transport || transportKey !== key) {
+    transport = require('nodemailer').createTransport({
+      host: 'smtp.gmail.com', port: 465, secure: true,
+      auth: { user: String(process.env.GMAIL_USER).trim(), pass: String(process.env.GMAIL_APP_PASSWORD).replace(/\s+/g, '') }
+    });
+    transportKey = key;
+  }
+  return transport;
+}
 
 async function sendMail({ to, subject, text, html }) {
-  if (!enabled()) throw new Error('mail not configured');
+  if (gmailOn()) {
+    try { await gmailTransport().sendMail({ from: gmailFrom(), to, subject, text, ...(html ? { html } : {}) }); }
+    catch (e) { throw new Error('mail gmail ' + (e && (e.responseCode || e.code) || 'error')); } // no server text: it can echo account details
+    return;
+  }
+  if (!resendOn()) throw new Error('mail not configured');
   const body = { from: process.env.MAIL_FROM, to: [to], subject, text };
   if (html) body.html = html;
   const r = await fetch('https://api.resend.com/emails', {
@@ -55,4 +81,4 @@ async function sendWelcome(to, name, siteUrl) {
   await sendMail({ to, subject, text, html });
 }
 
-module.exports = { enabled, appName, sendMail, sendWelcome, welcomeContent };
+module.exports = { enabled, provider, appName, sendMail, sendWelcome, welcomeContent, _transport: null };

@@ -1,4 +1,4 @@
-// Password reset: token link (1 hour). Email goes out via Resend when RESEND_API_KEY + MAIL_FROM are set;
+// Password reset: token link (1 hour). Email goes out via mail.js (Gmail SMTP or Resend) when configured;
 // otherwise masters can generate a reset link in Master Control.
 const crypto = require('crypto'), bcrypt = require('bcryptjs'), db = require('./db');
 const mailer = require('./mail');
