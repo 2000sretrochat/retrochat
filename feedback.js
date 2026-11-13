@@ -1,11 +1,11 @@
 'use strict';
 // Help > Feedback (Nov 13, 2026): POST /api/feedback stores the note in Postgres (backup) and emails it through mail.js
-// (Gmail SMTP) to razzlesocialbeta@gmail.com. Signed-in: 5 an hour per account and per IP.
+// (Gmail SMTP) to zainyochka@gmail.com. Signed-in: 5 an hour per account and per IP.
 // Guests: 2 an hour per IP. Never logs addresses, message text, or credentials.
 const crypto = require('node:crypto');
 
 const CATEGORIES = { suggestion: 'Suggestion', broken: "Something's not working", other: 'Other' };
-const FALLBACK_TO = 'razzlesocialbeta@gmail.com';
+const FALLBACK_TO = 'zainyochka@gmail.com';
 const HOUR = 3600e3;
 
 const clean = (v, max) => String(v ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, '').trim().slice(0, max);
