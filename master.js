@@ -67,6 +67,7 @@ module.exports = function (C) {
     try { const se = await require('./master-emails').seedSharedEmail(db); if (se.length) console.log('[shared-email] set for', se.join(', ')); } catch (e) { console.error('[shared-email]', e.message); }
     try { if (await require('./master-emails').seedBigTonyEmail(db)) console.log('[bigtony-email] set'); } catch (e) { console.error('[bigtony-email]', e.message); }
     try { const bd = await require('./backdate').applyBackdates(db); if (bd.length) console.log('[backdate] set created to 11/11/2026 for', bd.join(', ')); } catch (e) { console.error('[backdate]', e.message); }
+    try { const B = require('./backdate'), rz = await B.applyRazzleBackdate(db), bb = await B.applyBotBackdates(db); if (rz.length) console.log('[backdate] set created to 10/23/2026 for', rz.join(', ')); if (bb.length) console.log('[backdate] spread join dates for', bb.length, 'bot accounts'); } catch (e) { console.error('[backdate-bots]', e.message); }
     try { await seedBotProfiles(); } catch (e) { console.error('[bot-profiles]', e.message); }
     try { await require('./social-next/bots').seedSocialBots(db); console.log('[social-bots] synchronized'); } catch(e) { console.error('[social-bots]',e.message); }
   }
