@@ -13,6 +13,15 @@ function photo(value, maximum = 700000) {
   if (typeof value !== 'string' || value.length > maximum || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value)) throw Object.assign(Error('Choose a smaller JPG, PNG, or WebP.'), {status:400});
   return value;
 }
+// Animated GIFs are stored as uploaded (never re-encoded, so the animation survives). Up to 2 MB of GIF.
+const GIF_MAX = 2700000;
+function postPhoto(value) {
+  if (typeof value !== 'string' || !value.startsWith('data:image/gif;')) return photo(value);
+  const bad = () => Object.assign(Error('Choose a GIF under 2 MB.'), {status:400});
+  if (value.length > GIF_MAX || !/^data:image\/gif;base64,[A-Za-z0-9+/=]+$/.test(value)) throw bad();
+  if (!/^GIF8[79]a/.test(Buffer.from(value.slice(22, 34), 'base64').toString('latin1'))) throw bad();
+  return value;
+}
 function link(value) {
   if (!value) return '';
   let url;
@@ -330,7 +339,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const b=req.body || {}, id=b.id || crypto.randomUUID();
     if (!uuid.test(id)) fail('Invalid post.');
     const tape = b.tape == null ? null : {tracks:[tapeTrack(b.tape,req.socialAccount)]};
-    const body=text(b.body,3000), image=photo(b.image), url=link(b.link);
+    const body=text(b.body,3000), image=postPhoto(b.image), url=link(b.link);
     if (tape && (!body || image || url || b.event)) fail('Give your tape a title and one first track.');
     if (!body && !image && !url) fail('Add a thought, photo, or link.');
     let eventRoom=null,eventAt=null;
@@ -575,4 +584,4 @@ function registerApi(router, express, db, accounts, io, botChat) {
     res.json({ok:true});
   }));
 }
-module.exports = {registerApi, settingsPatch, publicSettings};
+module.exports = {registerApi, settingsPatch, publicSettings, postPhoto};

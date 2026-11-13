@@ -33,7 +33,18 @@ function popupOpts(url, frame) {
     webPreferences: PRE
   } };
 }
+// Right-click menu for text (Electron shows none by default). Pages that draw their own menu (the room member list,
+// contacts) call preventDefault, and then Electron does not fire this event, so those menus are unchanged.
+function editMenu(params) {
+  const f = params.editFlags || {}, items = [], link = /^https?:\/\//i.test(params.linkURL || '') ? params.linkURL : '';
+  if (link) items.push({ label: 'Open Link in Browser', click: () => shell.openExternal(link) }, { label: 'Copy Link', click: () => require('electron').clipboard.writeText(link) }, { type: 'separator' });
+  if (params.isEditable) items.push({ role: 'cut', label: 'Cut', enabled: !!f.canCut }, { role: 'copy', label: 'Copy', enabled: !!f.canCopy }, { role: 'paste', label: 'Paste', enabled: !!f.canPaste });
+  else items.push({ role: 'copy', label: 'Copy', enabled: !!(params.selectionText && f.canCopy) });
+  items.push({ type: 'separator' }, { role: 'selectAll', label: 'Select All' });
+  return items;
+}
 function wire(wc) {
+  wc.on('context-menu', (_e, params) => { try { Menu.buildFromTemplate(editMenu(params)).popup({ window: BrowserWindow.fromWebContents(wc) || undefined }); } catch { } });
   wc.on('will-navigate', (e, url) => { if (!internal(url)) { e.preventDefault(); if (/^https?:/.test(url)) shell.openExternal(url); } });
   wc.setWindowOpenHandler(({ url, frameName }) => {
     // about:blank popups are the messenger's own IM / Browse windows (same page, same connection)

@@ -1,4 +1,4 @@
-// Night light (saved in localStorage, shared by Messenger and Chat Rooms).
+// Night light (saved to the signed-in account and in localStorage, shared by Messenger and Chat Rooms).
 // Owner request (Nov 13, 2026): the old dark-blue night mode was too dark and plain white too bright, so night light
 // is now a soft gray tint over the normal (light) look, with a strength slider each chatter picks (10-85%).
 (function(){const K='ycTheme',NK='ycNight',SK='ycNightStrength',MIN=10,MAX=85,DEF=45,H=document.documentElement;
@@ -15,7 +15,12 @@ const apply=()=>{H.classList.remove('dark');H.classList.toggle('nightlight',on);
  const r=document.getElementById('ycNightRange');if(r){r.value=str;r.disabled=!on}const v=document.getElementById('ycNightVal');if(v)v.textContent=str+'%';const c=document.getElementById('ycNightOn');if(c)c.checked=on;
  dispatchEvent(new Event('ycnight'))};
 const save=()=>{try{localStorage[NK]=on?'on':'off';localStorage[SK]=String(str)}catch(e){}};
-const setOn=v=>{on=!!v;save();apply();return on},setStrength=v=>{str=clampS(v);save();apply();return str};
+// Account sync: a signed-in chatter's choice follows them to every device (users.night_pref). Guests, or any error,
+// fall back to this browser's saved setting.
+const NET=typeof fetch=='function'&&typeof location!='undefined'&&/^https?:$/.test(location.protocol);let pushT=0;
+const push=()=>{if(!NET)return;clearTimeout(pushT);pushT=setTimeout(()=>{fetch('/api/night-pref',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({on,strength:str})}).catch(()=>{})},700)};
+if(NET)fetch('/api/night-pref',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok?r.json():null).then(p=>{if(p&&typeof p.on=='boolean'){on=p.on;str=clampS(p.strength);save();apply()}}).catch(()=>{});
+const setOn=v=>{on=!!v;save();apply();push();return on},setStrength=v=>{str=clampS(v);save();apply();push();return str};
 // Small, quiet popover beside the moon button: on/off plus a strength slider.
 let pop=null;const closePop=()=>{if(pop){pop.remove();pop=null}};
 const openPop=b=>{if(pop)return closePop();pop=document.createElement('div');pop.id='ycNightPop';pop.setAttribute('role','dialog');pop.setAttribute('aria-label','Night light');

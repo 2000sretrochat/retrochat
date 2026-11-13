@@ -41,9 +41,18 @@
       if(stored!==null)window.socialPersist(key,JSON.parse(stored));
     } catch { /* A damaged local preference does not prevent sign-in. */ }
   }
+  // GIFs skip the canvas (which would flatten them to one frame) and upload as-is, so they stay animated.
+  const GIF_LIMIT=2000000;
+  function gifData(file) {
+    if(file.size>GIF_LIMIT)return Promise.reject(Error('Choose a GIF under 2 MB.'));
+    return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>{const data=String(reader.result||'');
+      if(!/^data:image\/gif;base64,R0lGOD[ld]h/.test(data))return reject(Error('That file is not a GIF.'));resolve(data);};
+      reader.onerror=()=>reject(Error('Could not read that GIF.'));reader.readAsDataURL(file);});
+  }
   async function photoData(file) {
     if(!file)return '';
-    if(file.size>12000000 || !['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choose a JPG, PNG, or WebP under 12 MB.');
+    if(file.type==='image/gif')return gifData(file);
+    if(file.size>12000000 || !['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choose a JPG, PNG, WebP, or GIF under 12 MB.');
     const url=URL.createObjectURL(file);
     try {
       const image=new Image();image.src=url;await image.decode();

@@ -34,7 +34,8 @@ const UROOMS = new Map(); // name -> { owner, ownerLc, emptySince }
 // user rooms persist in Postgres (user_rooms) and are restored at boot
 const saveURoom = n => { const r = UROOMS.get(n); if (!r) return; Promise.resolve().then(() => db.q('insert into user_rooms(name,cat,owner,rating,mics,topic,icon,last_used) values($1,$2,$3,$4,$5,$6,$7,now()) on conflict(name) do update set cat=$2,rating=$4,mics=$5,topic=$6,icon=$7,last_used=now()', [n, ROOMS[n] || 'Cultures & Community', r.owner, RATE[n] || 'PG-13', MICS[n] || 1, TOPICS[n] || '', r.icon || ''])).catch(e => console.error('save room', e.message)); };
 const ICONS = ['💬','🎵','🎮','⚽','🏀','🎬','📚','💻','🍕','☕','🌙','⭐','❤️','🔥','🌈','🐶','🐱','🌎','✈️','🎨','📷','🎤','🎧','🍷','🌸','🏖️','🧠','👻','🎉','💎','🚀','🎲'];
-const delURoom = n => { Promise.resolve().then(() => db.q('delete from user_rooms where name=$1', [n])).catch(() => {}); };
+const delURoom = n => { Promise.resolve().then(() => db.q('delete from user_rooms where name=$1', [n])).then(() => db.q('delete from room_icons where room=$1', [n])).catch(() => {}); };
+const RICON = require('./room-icons');
 const RATINGS = ['PG-13', 'R'], RATE = {}; const adultR = r => RATE[r] === 'R'; // official rooms default PG-13
 const rateOf = r => RATE[r] || 'PG-13';
 for (const r of ADULT_ROOMS) RATE[r] = 'R';
@@ -157,6 +158,8 @@ const RECW = require('./recordings').wireRecordings(REC, { app, express, emitRoo
   isMaster: async u => { try { return !!(await db.q('select is_master from users where id=$1', [u.id]))[0]?.is_master; } catch { return false; } },
   roomSocketFor: u => { for (const x of io.sockets.sockets.values()) if (x.data.master && x.data.acct && x.data.acct.id === u.id && x.data.name && x.data.room) return x; return null; } });
 // room preview (Browse Rooms hover / long-press): who's inside, minus incognito masters and blocked users
+RICON.route(app, db, n => UROOMS.has(n) && RICON.isUploaded(UROOMS.get(n).icon));
+require('./night-pref').route(app, express, db, userFromReq);
 app.get('/api/peek', async (req, res) => { const room = String(req.query.room || ''); if (!ROOMS[room]) return res.json({ names: [] }); const a = await userFromReq(req).catch(() => null);
   if (adultR(room) && !(await isAdultReq(req))) return res.json({ names: [] });
   if(req.query.full==='1') {
@@ -507,7 +510,7 @@ async function renameURoom(old, nn) {
   const name = String(nn || '').replace(/\s+/g, ' ').trim(); if (name === old) return { ok: true, name };
   const r0 = UROOMS.get(old); if (!r0) return { error: 'No such room.' }; UROOMS.delete(old); const e = roomNameError(name); if (e) { UROOMS.set(old, r0); return { error: e }; }
   try { await db.q('update user_rooms set name=$2 where name=$1', [old, name]);
-    for (const t of ['room_meta', 'room_mod', 'room_ann', 'room_history', 'favorites']) await db.q(`update ${t} set room=$2 where room=$1`, [old, name]).catch(err => console.error('rename', t, err.message));
+    for (const t of ['room_meta', 'room_mod', 'room_ann', 'room_history', 'favorites', 'room_icons']) await db.q(`update ${t} set room=$2 where room=$1`, [old, name]).catch(err => console.error('rename', t, err.message));
   } catch (err) { UROOMS.set(old, r0); return { error: err.code === '23505' ? 'A room with that name already exists.' : 'Could not rename the room right now.' }; }
   UROOMS.set(name, r0); for (const M of [ROOMS, TOPICS, history, RATE, MOD, MICS, HQ, MTIMER, QUEUE, MANN, ANN, MUSICON]) if (old in M) { M[name] = M[old]; delete M[old]; }
   for (const x of socks(old)) { x.leave(old); x.join(name); x.data.room = name; } REC.rename(old, name);
@@ -729,7 +732,7 @@ io.on('connection', s => {
     if (d.cat !== undefined && !DIR[d.cat]) return cb({ error: 'Choose a section (category) for your room.' });
     if (d.rating !== undefined && !RATINGS.includes(d.rating)) return cb({ error: 'Choose a rating for your room: PG-13 or R.' });
     if (d.rating === 'R' && rateOf(room) !== 'R' && !s.data.adult) return cb({ error: 'Confirm you are 18 or older to make the room R-rated.', adult: true });
-    if (d.icon !== undefined && d.icon && !ICONS.includes(d.icon)) return cb({ error: 'Pick an icon from the list.' });
+    if (d.icon !== undefined && d.icon && !ICONS.includes(d.icon) && d.icon !== u.icon) return cb({ error: 'Pick an icon from the list.' });
     if (d.mics !== undefined && ![1, 2, 3, 4, 5].includes(+d.mics)) return cb({ error: 'Mic limit must be 1 to 5.' });
     let name = room; if (d.name !== undefined) { const r = await renameURoom(room, d.name); if (r.error) return cb(r); name = r.name; }
     if (d.topic !== undefined) { const t = cleanTopic(d.topic); if (t && t !== TOPICS[name]) { TOPICS[name] = t; io.to(name).emit('topic', t); push(name, { sys: true, text: esc(s.data.acct.name) + ' changed the topic to: ' + esc(t) }); } }
@@ -764,6 +767,12 @@ io.on('connection', s => {
   s.on('room:icon', (icon, cb) => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room, u = UROOMS.get(room); if (!u) return cb({ error: 'Only rooms created by members can have a custom icon.' });
     if (roleOf(s, room) !== 'owner') return cb({ error: 'Only the room owner can change the room icon.' }); if (icon && !ICONS.includes(icon)) return cb({ error: 'Pick an icon from the list.' });
     u.icon = icon || ''; saveURoom(room); io.to(room).emit('room-icon', { room, icon: u.icon }); cb({ ok: true }); });
+  // Owner uploads a picture as the room icon (stored in Postgres; see room-icons.js).
+  s.on('room:icon-upload', async (dataUrl, cb) => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room, u = UROOMS.get(room); if (!u) return cb({ error: 'Only rooms created by members can have a custom icon.' });
+    if (roleOf(s, room) !== 'owner') return cb({ error: 'Only the room owner can change the room icon.' });
+    const icon = RICON.parseIcon(dataUrl); if (icon.error) return cb(icon);
+    try { await RICON.save(db, room, icon); } catch { return cb({ error: 'Could not save the icon right now. Try again.' }); }
+    u.icon = RICON.newMark(); saveURoom(room); io.to(room).emit('room-icon', { room, icon: u.icon }); cb({ ok: true, icon: u.icon }); });
   s.on('mod:clearhist', cb => { cb = typeof cb === 'function' ? cb : () => {}; const room = s.data.room; if (!room || !roleOf(s, room)) return cb({ error: 'Only the room owner and admins can do that.' });
     history[room] = []; Promise.resolve().then(() => db.q('delete from room_history where room=$1', [room])).catch(() => {}); io.to(room).emit('clear-history', { by: s.data.master ? 'a moderator' : s.data.name }); push(room, { sys: true, mod: true, text: 'Room history was cleared by ' + (s.data.master ? 'a moderator' : esc(s.data.name)) + '.' }); cb({ ok: true }); });
   function doMod(d, cb) { modAct(s, s.data.room, d, cb); }

@@ -7,7 +7,9 @@ window.YBrowse=(function(){
  function groups(rs){const cats={};rs.forEach(r=>(cats[r.cat]=cats[r.cat]||[]).push(r));return Object.entries(cats)}
  // My Rooms tab: rooms I own or admin, then starred rooms
  function mine(rs,meLc){const m=rs.filter(r=>r.mine||(r.owner&&meLc&&r.owner.toLowerCase()==meLc));return m.concat(rs.filter(r=>r.fav&&!m.includes(r)))}
- const icon=(r,sz)=>r&&r.icon?`<span class=ricon style="display:inline-flex;align-items:center;justify-content:center;width:${sz||18}px;height:${sz||18}px;font-size:${Math.round((sz||18)*.8)}px;line-height:1;flex:none">${r.icon}</span>`:'';
+ // Room icon: an emoji from the list, or an uploaded picture ("img:<version>", served from /api/room-icon/<room>).
+ const iconInner=r=>{const m=/^img:([a-z0-9]{1,16})$/.exec(String(r&&r.icon||''));if(m)return `<img src="/api/room-icon/${encodeURIComponent(r.name||r.room||'').replace(/'/g,'%27')}?v=${m[1]}" alt="" style="width:1em;height:1em;object-fit:cover;border-radius:3px;vertical-align:middle">`;return String(r&&r.icon||'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';')};
+ const icon=(r,sz)=>r&&r.icon?`<span class=ricon style="display:inline-flex;align-items:center;justify-content:center;width:${sz||18}px;height:${sz||18}px;font-size:${Math.round((sz||18)*.8)}px;line-height:1;flex:none">${iconInner(r)}</span>`:'';
  // nested Yahoo-style tree: category -> subfolders (r.path) -> rooms; open folders survive refreshes
  const OK='ycOpen';let open;try{open=new Set(JSON.parse(sessionStorage.getItem(OK)||'[]'))}catch{open=new Set()}
  function bindTree(root){
@@ -51,4 +53,4 @@ window.YBrowse=(function(){
  // "N people online" (includes bots)
  let onl=null;const fillOn=()=>{if(onl!=null)document.querySelectorAll('.yonline').forEach(e=>{const t=onl+' '+(onl==1?'person':'people')+' online';if(e.textContent!=t)e.textContent=t})};
  const getOn=()=>fetch('/api/online').then(r=>r.json()).then(j=>{onl=j.n;fillOn()}).catch(()=>{});getOn();setInterval(getOn,30e3);setInterval(fillOn,1500);
- return{favs,toggle,groups,mine,icon,top,star,tree,bindTree}})();
+ return{favs,toggle,groups,mine,icon,iconInner,top,star,tree,bindTree}})();
