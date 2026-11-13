@@ -89,3 +89,22 @@ alter table social_posts add column if not exists tape jsonb;
 
 -- Nov 13, 2026: optional post font (allow-listed in social-next/api.js)
 alter table social_posts add column if not exists font text not null default '';
+
+-- Nov 13, 2026: reactions (existing likes become 'like'), polls, sharing, tagging, birthday/mention/room notifications
+alter table social_likes add column if not exists reaction text not null default 'like';
+alter table social_posts add column if not exists poll jsonb;
+create table if not exists social_poll_votes (
+  post_id uuid not null references social_posts(id) on delete cascade,
+  user_id int not null references users(id) on delete cascade,
+  choice int not null check (choice between 0 and 5),
+  created timestamptz not null default now(),
+  primary key(post_id,user_id)
+);
+alter table social_posts add column if not exists shared_from uuid references social_posts(id) on delete set null;
+alter table social_posts add column if not exists tags jsonb not null default '[]';
+alter table social_posts add column if not exists photo_tags jsonb not null default '[]';
+alter table social_notifications alter column post_id drop not null;
+alter table social_notifications drop constraint if exists social_notifications_kind_check;
+alter table social_notifications add constraint social_notifications_kind_check check(kind in ('post','comment','like','mention','tag','share','birthday','room'));
+-- keep only the newest pin per profile (pins are one at a time from now on)
+update social_posts p set pinned=false where p.pinned and exists(select 1 from social_posts q where q.wall_id=p.wall_id and q.pinned and (q.updated,q.id)>(p.updated,p.id));

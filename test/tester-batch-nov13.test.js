@@ -176,7 +176,8 @@ test('Social: emoji + font + attachments on friend walls; YouTube links in text 
   assert.match(home, /function mountPostDetails\(form, post = \{\}\) \{\s*mountPostStyle\(form, post\);/);
   assert.match(home, /if \(form\.elements\.postFont\) details\.font = POST_FONTS\.includes/);
   assert.match(live, /upgradeFriendWall\(\$\('#friend-wall-form'\)\);/);
-  assert.match(live, /'<p'\+postFontStyle\(post\.font\)\+'>'\+esc\(post\.text\)\+'<\/p>'\+textVideo\(post\)/);
+  assert.match(live, /'<p'\+postFontStyle\(post\.font\)\+'>'\+\(SF\?SF\.richText\(post\.text\):esc\(post\.text\)\)\+'<\/p>'/);
+  assert.match(live, /SF\.sharedBox\(post\):''\)\+textVideo\(post\)/);
   assert.match(api, /const postFonts = new Set\(\['','Arial'/);
   assert.match(api, /tape && JSON\.stringify\(tape\),postFont\(b\.font\)\]\)/);
   assert.match(read('social-next/schema.sql'), /alter table social_posts add column if not exists font text not null default ''/);

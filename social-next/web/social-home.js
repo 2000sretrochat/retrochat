@@ -969,7 +969,7 @@ function readPostDetails(form) {
   };
   // Font is only sent by forms that have the style row, so editing an older post never clears its font.
   if (form.elements.postFont) details.font = POST_FONTS.includes(form.elements.postFont.value) ? form.elements.postFont.value : '';
-  return details;
+  return Object.assign(details, window.SocialFeatures?.readComposer(form) || {});
 }
 
 // Owner request (Nov 13, 2026): every post box (your own timeline and a friend's) gets an emoji picker and a font choice.
@@ -977,6 +977,7 @@ const POST_FONTS = ['', 'Arial', 'Verdana', 'Tahoma', 'Georgia', 'Trebuchet MS',
 const POST_EMOJI = ['😀','😂','🥰','😍','😎','😉','😊','🙂','🤗','🤔','😴','😢','😭','😡','😱','🥳','👍','👎','👏','🙌','🙏','💪','👋','✌️','❤️','💔','💯','🔥','✨','🎉','🎂','🎵','🎶','☕','🍕','🌙','⭐','🌈','🌹','😇'];
 const postFontStyle = font => POST_FONTS.includes(font) && font ? ' style="font-family:\'' + font + '\',sans-serif"' : '';
 function mountPostStyle(form, post = {}) {
+  window.SocialFeatures?.mountComposer(form);
   form.querySelectorAll(':scope > .post-style').forEach(row => row.remove());
   const row = document.createElement('div');
   row.className = 'post-style';
@@ -1052,7 +1053,10 @@ function postLinkMedia(value) {
   if (video) return '<button type="button" class="post-video-preview" data-play-post-video="' + video +
     '" aria-label="Play YouTube video"><img src="https://i.ytimg.com/vi/' + video +
     '/hqdefault.jpg" alt="" loading="lazy"><span aria-hidden="true">▶</span></button>';
-  return '<div class="article-media" data-article-preview="' + esc(url.href) + '" hidden></div>';
+  // A link straight to a picture shows the picture (loaded without a referrer); other pages get a preview card.
+  if (/\.(?:jpe?g|png|gif|webp)$/i.test(url.pathname)) return '<a class="post-inline-image" href="' + esc(url.href) +
+    '" target="_blank" rel="noopener noreferrer"><img src="' + esc(url.href) + '" alt="Linked image" loading="lazy" referrerpolicy="no-referrer"></a>';
+  return '<a class="article-media" data-article-preview="' + esc(url.href) + '" href="' + esc(url.href) + '" target="_blank" rel="noopener noreferrer" hidden></a>';
 }
 
 const articlePreviewRequests = new Map();
@@ -1064,15 +1068,28 @@ function loadArticlePreviews() {
       articlePreviewRequests.set(url, fetch('/social-next/article-preview?url=' + encodeURIComponent(url))
         .then(response => response.ok ? response.json() : {}).catch(() => ({})));
     }
-    articlePreviewRequests.get(url).then(({ image }) => {
-      if (!image || !target.isConnected) return;
-      const photo = document.createElement('img');
-      photo.alt = 'Article preview';
-      photo.referrerPolicy = 'no-referrer';
-      photo.addEventListener('load', () => { target.hidden = false; }, { once: true });
-      photo.addEventListener('error', () => target.remove(), { once: true });
-      target.append(photo);
-      photo.src = image;
+    // Preview card: picture (served through our signed /social-next/link-image proxy), title, description, site.
+    articlePreviewRequests.get(url).then(({ image, title, description, site }) => {
+      if (!target.isConnected || !(title || image)) return;
+      if (image && /^\/social-next\/link-image\?/.test(image)) {
+        const photo = document.createElement('img');
+        photo.alt = '';
+        photo.loading = 'lazy';
+        photo.addEventListener('error', () => photo.remove(), { once: true });
+        photo.src = image;
+        target.append(photo);
+      }
+      const text = document.createElement('span');
+      text.className = 'article-text';
+      for (const [cls, value] of [['article-site', site], ['article-title', title], ['article-description', description]]) {
+        if (!value) continue;
+        const part = document.createElement('span');
+        part.className = cls;
+        part.textContent = value;
+        text.append(part);
+      }
+      target.append(text);
+      target.hidden = false;
     });
   }
 }

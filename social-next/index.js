@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const articlePreview = require('./article-preview');
+const {createLinkPreviews} = require('./link-preview');
+const linkPreviews = createLinkPreviews();
 const {registerApi} = require('./api');
 
 const mount = '/social-next/';
@@ -66,10 +67,7 @@ function attachSocialNext(app, express, accounts, db, io, botChat) {
   });
   router.get('/rooms.html',(_req,res)=>res.redirect(302,'/rooms.html'));
   router.get('/country', (_req, res) => res.json({country: null}));
-  router.get('/article-preview', async (req, res) => {
-    const response = await articlePreview(typeof req.query.url === 'string' ? req.query.url : '');
-    res.json(await response.json());
-  });
+  linkPreviews.routes(router);
   router.get('/session.js', async (req, res) => {
     const { id, alias } = req.socialAccount;
     const [profile] = await db.q('select display_name, age, location, bio, interests, sex, profile_status from users where id=$1', [id]);

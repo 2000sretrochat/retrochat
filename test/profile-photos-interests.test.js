@@ -50,5 +50,6 @@ test('pinning is limited to the author on their own profile',async t=>{
   const server=app.listen(0,'127.0.0.1');t.after(()=>server.close());await once(server,'listening');
   const send=()=>fetch('http://127.0.0.1:'+server.address().port+'/api/posts/'+id+'/pin',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({pinned:true})});
   assert.equal((await send()).status,403);wall=4;assert.equal((await send()).status,200);
-  assert.ok(writes.some(x=>x.sql.startsWith('update social_posts set pinned')&&x.args[1]===true));
+  // one pin at a time: pinning this post unpins the author's other posts on the same profile
+  assert.ok(writes.some(x=>x.sql.startsWith('update social_posts set pinned=(id=$1) where wall_id=$2')&&x.args[0]===id&&x.args[1]===4));
 });
