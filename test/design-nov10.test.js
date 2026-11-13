@@ -140,7 +140,7 @@ test('Offline Messages panel: below the contact toolbar, per-message dismiss tha
   assert.match(panel, /m\.offlineId && m\.receivedOffline/);
   for (const f of ['public/index.html', 'public/social/messenger.html']) {
     const h = R(f);
-    assert.match(h, /id="q" placeholder="Search contacts\.\.\."><\/div><\/div>\r?\n  <div id="offlinePanel" hidden><\/div>/);
+    assert.match(h, /id="q" aria-label="Search contacts" placeholder="Search contacts…"><\/div><\/div>\r?\n  <div id="offlinePanel" hidden><\/div>/);
     assert.match(h, /dismiss:ids=>emit\("m:offline-dismiss",ids\)/);
     assert.match(h, /onRefresh:\(\)=>window\.offlinePanel\.render\(\)/);
     assert.match(h, /<script src="\/offline-panel\.js"><\/script><script src="\/messenger-inbox\.js">/);

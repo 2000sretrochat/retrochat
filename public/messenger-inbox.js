@@ -4,7 +4,8 @@ window.createMessengerInbox = function ({ respond, openMessage, onRefresh }) {
   const bell = document.createElement('button');
   bell.type = 'button';
   bell.className = 'messenger-bell';
-  bell.setAttribute('aria-label', 'Notifications');
+  bell.setAttribute('aria-label', 'Show Notifications');
+  bell.title = 'Show Notifications';
   bell.setAttribute('aria-expanded', 'false');
   // design Nov 10 (item 9): outline bell when quiet, filled orange bell on a navy backing when something is unread
   bell.innerHTML = '<svg class="bell-quiet" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 14.5h-13l1-1c.9-.9 1.5-2 1.5-4V7a4 4 0 0 1 8 0v2.5c0 2 .6 3.1 1.5 4l1 1ZM8 16.8a2.3 2.3 0 0 0 4 0"/></svg>'
@@ -122,7 +123,8 @@ window.createMessengerInbox = function ({ respond, openMessage, onRefresh }) {
     bell.classList.toggle('has-unread', !!count);
     badge.hidden = !count;
     badge.textContent = count > 99 ? '99+' : count;
-    bell.setAttribute('aria-label', count ? 'Notifications, '+count+' unread' : 'Notifications');
+    bell.setAttribute('aria-label', count ? 'Show Notifications, '+count+' unread' : 'Show Notifications');
+    bell.title = count ? 'Show Notifications ('+count+' unread)' : 'Show Notifications';
     if (panel.hidden) return;
     panel.replaceChildren();
     // order (design Nov 10): Contact requests, Unread messages (offline messages first), then Social

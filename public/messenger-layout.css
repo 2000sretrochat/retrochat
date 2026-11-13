@@ -127,3 +127,5 @@ html.dark #mwin #tree a[data-jr], html.dark .im .st a.imjr { color:#8ec8ff!impor
   font:inherit;
 }
 #mwin #menu .dd > button { border-radius:0!important; box-shadow:none!important; }
+/* Signed out: the menu bar stays in place but is grayed out and unusable until sign-in completes. */
+#mwin #menu.signed-out > * {opacity:.45;filter:grayscale(1);pointer-events:none;cursor:default}

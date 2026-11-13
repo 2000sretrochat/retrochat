@@ -59,6 +59,7 @@ create table if not exists room_ann(room text primary key, text text not null, b
 create table if not exists stats_day(d date primary key, peak int not null default 0);
 create table if not exists user_rooms(name text primary key, cat text not null default 'User Rooms', owner text not null, rating text, mics int, topic text, created timestamptz not null default now());
 create table if not exists pw_resets(token text primary key, user_id int not null references users(id) on delete cascade, expires timestamptz not null);
+create table if not exists login_guard(key text primary key, fails int not null default 0, window_start timestamptz, locked_until timestamptz, strikes int not null default 0, strike_at timestamptz, locked boolean not null default false, updated timestamptz not null default now());
 create table if not exists backups(d date primary key, data jsonb not null, created timestamptz not null default now());
 alter table user_rooms add column if not exists icon text;
 alter table user_rooms add column if not exists last_used timestamptz;

@@ -10,7 +10,7 @@ test('live app must not link Social to ChatGPT preview / demo host', () => {
     const s = read(f);
     assert.doesNotMatch(s, /chatgpt\.site/);
     assert.doesNotMatch(s, /social-chat-preview/);
-    assert.match(s, /href="\/social\/"/);
+    assert.match(s, /href="\/social(-next)?\/"/); // Social links point at the live Social app (/social-next/ since Nov 11)
   }
 });
 

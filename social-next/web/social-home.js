@@ -30,7 +30,7 @@ function logoutPreview() {
   previewSignedIn = false;
   save('previewSignedIn', false);
   renderAccountMenu();
-  fetch('/api/logout', {method:'POST'}).then(response => {
+  fetch('/api/logout', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'}).then(response => {
     if (!response.ok) throw Error();
     location.assign('/?chat=1&social=1');
   }).catch(() => { previewSignedIn = true; renderAccountMenu(); toast('Sign-out did not complete.'); });

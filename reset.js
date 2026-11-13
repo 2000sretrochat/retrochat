@@ -41,6 +41,8 @@ module.exports = function (app, express) {
     const r = typeof t === 'string' ? (await db.q('delete from pw_resets where token=$1 returning user_id, expires', [sha(t)]).catch(() => []))[0] : null;
     if (!r || new Date(r.expires) < new Date()) return res.status(400).json({ error: 'This reset link is invalid or has expired. Ask for a new one.' });
     await db.q('update users set pw=$2 where id=$1', [r.user_id, await bcrypt.hash(password, 12)]); await db.q('delete from sessions where user_id=$1', [r.user_id]).catch(() => {});
+    // a new password lifts any failed-sign-in wait or lock on the screen name
+    await db.q("delete from login_guard where key=(select 'n:'||name_lc from users where id=$1)", [r.user_id]).catch(() => {});
     res.json({ ok: true }); });
   return { makeLink, verifyOn };
 };

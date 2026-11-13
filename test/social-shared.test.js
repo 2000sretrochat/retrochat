@@ -59,7 +59,8 @@ test('Social bot introductions use stable IDs and never overwrite member aliases
   const posts=queries.filter(q=>q.sql.includes('insert into social_posts'));
   assert.equal(posts.length,2);assert.equal(posts[0].args[0],posts[1].args[0]);
   assert.match(posts[0].args[0],/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/);
-  assert.ok(!queries.some(q=>q.sql.includes('update users')));
+  // The only users update is the guarded rename of retired bot aliases (bot-owned rows only, never member accounts).
+  for(const {sql} of queries.filter(q=>q.sql.includes('update users')))assert.match(sql,/u\.pw like '!social-bot:%'[\s\S]*not exists\(select 1 from users other where other\.name_lc=\$3\)/);
   assert.ok(queries.filter(q=>q.sql.includes('insert into users')).every(q=>q.sql.includes('on conflict(name_lc) do nothing')));
 });
 

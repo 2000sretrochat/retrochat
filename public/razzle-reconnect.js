@@ -4,19 +4,30 @@
   const pending = () => localStorage.getItem(key) !== null;
   let logoutRequest;
 
+  // Sign-out must always finish: the server ends the session (JSON POST, so the /api write check accepts it);
+  // a 4xx means there is nothing left to end. Network or server errors retry briefly, then the local
+  // "signing out" flag is cleared anyway so Messenger and rooms can never stay stuck on "Signing out…".
+  const LOGOUT_GIVE_UP_MS = 15000;
   async function finishLogout() {
     const run = async () => {
+      const started = Date.now();
       while (pending()) {
         try {
           const response = await fetch('/api/logout', {
-            method: 'POST', credentials: 'same-origin', signal: AbortSignal.timeout(8000)
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' }, body: '{}',
+            signal: AbortSignal.timeout(6000)
           });
-          if (response.ok && (await response.json()).ok) {
+          if (response.status < 500) {
             localStorage.removeItem(key);
             return;
           }
         } catch {}
-        await delay(2500);
+        if (Date.now() - started >= LOGOUT_GIVE_UP_MS) {
+          localStorage.removeItem(key);
+          return;
+        }
+        await delay(2000);
       }
     };
     return logoutRequest ||= (navigator.locks ? navigator.locks.request(key, run) : run())

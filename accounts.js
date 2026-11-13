@@ -19,12 +19,15 @@ setInterval(() => { const now = Date.now(); for (const [k, h] of hits) if (now -
 const DUMMY = bcrypt.hashSync('x-dummy-password', 12);
 
 let H = {};
+let loginGuard = null; const guard = () => loginGuard ||= require('./login-guard').createLoginGuard({ db });
+setInterval(() => { if (db.status().ready) guard().prune().catch(() => {}); }, 6 * 3600e3).unref();
 function http(app, express, hooks = {}) { H = hooks;
   const secure = req => req.secure;
   // CSRF: SameSite=Lax cookies + JSON-only bodies + same-origin check on writes
   app.use('/api', express.json({ limit: '8kb' }), (req, res, next) => {
     if (req.method === 'GET') return next();
-    if (!req.is('application/json')) return res.status(415).json({ error: 'JSON required' });
+    // Sign-out carries no data, so older pages that POST it without a JSON body still end the session (origin check below still applies).
+    if (!req.is('application/json') && !(req.path === '/logout' && !Number(req.get('content-length') || 0))) return res.status(415).json({ error: 'JSON required' });
     const o = req.get('origin'); if (o && new URL(o).host !== req.get('host')) return res.status(403).json({ error: 'Bad origin' });
     next();
   });
@@ -61,6 +64,7 @@ function http(app, express, hooks = {}) { H = hooks;
     const hash = await bcrypt.hash(password, 12);
     try {
       const r = await db.q('insert into users(name,name_lc,pw,email,email_norm) values($1,$2,$3,$4,$5) returning id', [name, name.toLowerCase(), hash, email ? email.trim() : null, email ? EM.norm(email) : null]);
+      await guard().clear(name.toLowerCase()).catch(() => {}); // failures typed against this name before it existed don't follow the new account
       await db.q("insert into groups(owner,name) values($1,'Friends') on conflict do nothing", [r[0].id]);
       await newSession(req, res, r[0].id, !!remember); H.seedMaster && await H.seedMaster(r[0].id, name).catch(() => {}); geo.recordAccount(r[0].id, geo.clientIp(req.headers, req.socket.remoteAddress), 'signup');
       if (email) {
@@ -79,10 +83,21 @@ function http(app, express, hooks = {}) { H = hooks;
     if (H.ipBanned && H.ipBanned(geo.clientIp(req.headers, req.socket.remoteAddress))) return reply(403, { error: 'Sign-ins from your network are not allowed.' });
     const { name, password, remember } = req.body || {};
     const lc = String(name || '').toLowerCase().slice(0, 40);
-    if (limited('li:' + geo.clientIp(req.headers, req.socket.remoteAddress), 20, 900e3) || limited('ln:' + lc, 8, 900e3)) return reply(429, { error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
-    const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw,banned,deactivated from users where name_lc=$1', [lc]) : [];
+    const ip = geo.clientIp(req.headers, req.socket.remoteAddress);
+    // flood guard only; failed passwords are counted (and persisted) by login-guard.js
+    if (limited('li:' + ip, 60, 900e3)) return reply(429, { error: 'Too many sign-in attempts. Please wait a few minutes and try again.' });
+    const blocked = await guard().check(lc, ip).catch(() => null);
+    if (blocked) { if (blocked.retryAfter) res.set('Retry-After', String(blocked.retryAfter)); return reply(blocked.status, { error: blocked.error, locked: !!blocked.locked }); }
+    const r = typeof password === 'string' && password.length <= 100 ? await db.q('select id,name,pw,banned,deactivated,email from users where name_lc=$1', [lc]) : [];
     const ok = await bcrypt.compare(String(password || ''), r[0] && !r[0].pw.startsWith('!social-bot:') ? r[0].pw : DUMMY) && !r[0]?.pw.startsWith('!social-bot:'); // Bots have no usable sign-in password.
-    if (!r[0] || !ok) return reply(401, { error: 'Invalid screen name or password.' });
+    if (!r[0] || !ok) {
+      const f = await guard().fail(lc, ip).catch(() => ({ status: 401, error: 'Invalid screen name or password.' }));
+      if (f.lockedNow && r[0]?.email && mailer.enabled()) { // second round of failures: send the owner a reset link (the reply is the same either way)
+        try { const R = require('./reset'); await R.send(r[0].email, r[0].name, await R.makeLink(req, r[0].id)); } catch (e) { console.error('[login-lock] reset email', e.message); }
+      }
+      return reply(f.status, { error: f.error, locked: f.status === 423 });
+    }
+    await guard().clear(lc).catch(() => {});
     if (r[0].banned) return reply(403, { error: 'This screen name has been banned.' });
     if (r[0].deactivated) return reply(403, { error: 'This screen name has been deactivated.' });
     const typed = String(name).trim(), disp = typed.toLowerCase() === r[0].name.toLowerCase() ? typed : r[0].name; // session display = capitalization typed at sign-in

@@ -15,7 +15,7 @@ if (isRoomSignIn) {
  document.documentElement.classList.add('room-signin');
  document.title = returnToSocial ? 'Join · Razzle Social' : 'Sign in · Razzle Chat';
 }
-</script><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#7c3aed"><link rel="apple-touch-icon" href="/icon-192.png"><script src="/dictate.js" defer></script><script src="/pwa.js" defer></script>
+</script><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#7c3aed"><link rel="apple-touch-icon" href="/icon-192.png"><script src="/dictate.js" defer></script><script src="/password-toggle.js" defer></script><script src="/pwa.js" defer></script>
 <style>
 :root{--brand:#0033A0;--blue:#00205B;--deep:#2468D7;--navy:#00205B;--ink:#12213F;--sky:#00A3E0;--bub:rgba(74,183,242,.58);--line:#d5e2f0;--pale:#eaf3fd;--mid:#cfe3fa;--muted:#5b6b85;--acc:#FFCE00;
  --sys:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -174,7 +174,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 </style>
 <style id="fr-inbox-css">
 </style>
-<link rel="stylesheet" href="/chat-account.css?v=mobile-signin"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><link rel="stylesheet" href="/messenger-device.css"><script src="/messenger-device.js"></script><script src="/master-console-layout.js"></script><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css?v=6"></head><body>
+<link rel="stylesheet" href="/chat-account.css?v=mobile-signin"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><link rel="stylesheet" href="/messenger-device.css"><script src="/messenger-device.js"></script><script src="/master-console-layout.js"></script><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css?v=7"></head><body>
 <div class="auth-site-header" hidden><header class="social-chat-header" id="social-chat-header">
   <a class="social-chat-brand" href="/social-next/"><img src="/razzle-social.svg" width="68" height="62" alt="">Razzle Social<span>.</span></a>
   <a class="auth-browse-link" href="/rooms.html">Browse chat rooms</a>
@@ -193,7 +193,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
   </aside></div><main class="social-chat-main auth-site-main">
 <div id="mwin" class="win">
  <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
- <div id="menu">
+ <div id="menu" class="signed-out" aria-disabled="true" inert>
 
 
   <div>Messenger<div class="dd"><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom"><label><input id="mShowRoomCheck" type="checkbox" aria-label="Display Room I’m In"> Display Room I’m In</label></div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
@@ -336,7 +336,14 @@ async function consumeAddParam(){try{const add=new URLSearchParams(location.sear
   history.replaceState(null,'',location.pathname+(location.hash||''));
   const r=await emit('m:add',{name:n,msg:''}); if(r&&r.error)toast(escT(r.error)); else toast(r&&r.text?r.text:('Contact request sent to '+escT(n)));
 }catch(e){}}
+// Menu bar (Messenger, Contacts, Help, bell, Master, gear) stays grayed out and unusable until sign-in completes.
+function menuSignedIn(on) {
+ const menu=$('menu');if(!menu)return;
+ menu.classList.toggle('signed-out',!on);menu.inert=!on;menu.setAttribute('aria-disabled',String(!on));
+ if(!on)menu.querySelectorAll('.open').forEach(item=>item.classList.remove('open'));
+}
 function showSigningOut() {
+ menuSignedIn(false);
  $('main').style.display='none';
  $('signin').style.display='';
  $('bIn').disabled=$('bUp').disabled=true;
@@ -384,7 +391,7 @@ function start(){if(S||typeof io!=='function')return;
   location.replace(roomSignInDestination);
   return;
  }
- $('signin').style.display='none';$('main').style.display='flex';S=io({auth:RazzleDevice.auth(),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));
+ $('signin').style.display='none';$('main').style.display='flex';menuSignedIn(true);window.RazzlePasswordToggle?.hide();S=io({auth:RazzleDevice.auth(),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));
  const reconnect = RazzleReconnect.indicator($('mwin'), {
   exit: () => { reconnect.clear(); void exitMessenger(); }
  });
