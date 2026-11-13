@@ -74,6 +74,7 @@ const readWelcomeFile = name => require('node:fs').readFileSync(require('node:pa
 const welcomePage = readWelcomeFile('index.html')
   .replace('<head>', '<head><base href="/welcome-assets/">')
   .replace('href="index.html" class="brand"', 'href="/" class="brand"')
+  .replace('href="https://retrochat-izzg.onrender.com/rooms.html"', 'href="rooms.html"')
   .replace('href="https://retrochat-izzg.onrender.com/"', 'href="/index.html"')
   .replace('<button class="notice" onclick="info()" aria-label="About this preview">◌</button>', '');
 const welcomeScript = readWelcomeFile('social-home.js')
