@@ -920,6 +920,7 @@ const postFeelings = new Map([
 ]);
 
 function mountPostDetails(form, post = {}) {
+  mountPostStyle(form, post);
   const details = document.createElement('details');
   details.className = 'post-details';
   details.open = Boolean(post.feeling || post.location);
@@ -962,11 +963,60 @@ function mountPostDetails(form, post = {}) {
 
 function readPostDetails(form) {
   const feeling = form.elements.feeling?.value || '';
-  return {
+  const details = {
     feeling: postFeelings.has(feeling) ? feeling : '',
     location: (form.elements.postLocation?.value || '').trim().slice(0, 120),
   };
+  // Font is only sent by forms that have the style row, so editing an older post never clears its font.
+  if (form.elements.postFont) details.font = POST_FONTS.includes(form.elements.postFont.value) ? form.elements.postFont.value : '';
+  return Object.assign(details, window.SocialFeatures?.readComposer(form) || {});
 }
+
+// Owner request (Nov 13, 2026): every post box (your own timeline and a friend's) gets an emoji picker and a font choice.
+const POST_FONTS = ['', 'Arial', 'Verdana', 'Tahoma', 'Georgia', 'Trebuchet MS', 'Comic Sans MS', 'Times New Roman', 'Courier New'];
+const POST_EMOJI = ['😀','😂','🥰','😍','😎','😉','😊','🙂','🤗','🤔','😴','😢','😭','😡','😱','🥳','👍','👎','👏','🙌','🙏','💪','👋','✌️','❤️','💔','💯','🔥','✨','🎉','🎂','🎵','🎶','☕','🍕','🌙','⭐','🌈','🌹','😇'];
+const postFontStyle = font => POST_FONTS.includes(font) && font ? ' style="font-family:\'' + font + '\',sans-serif"' : '';
+function mountPostStyle(form, post = {}) {
+  window.SocialFeatures?.mountComposer(form);
+  form.querySelectorAll(':scope > .post-style').forEach(row => row.remove());
+  const row = document.createElement('div');
+  row.className = 'post-style';
+  row.innerHTML = '<button type="button" class="secondary post-emoji-button" data-post-emoji aria-haspopup="true" aria-expanded="false" title="Add an emoji">🙂 Emoji</button>' +
+    '<label>Font<select name="postFont">' + POST_FONTS.map(font => '<option value="' + font + '"' + (font ? ' style="font-family:\'' + font + '\'"' : '') + '>' + (font || 'Default') + '</option>').join('') + '</select></label>';
+  form.append(row);
+  const select = form.elements.postFont;
+  select.value = POST_FONTS.includes(post.font) ? post.font : '';
+  const text = () => form.elements.thought || form.querySelector('textarea');
+  const preview = () => { const field = text(); if (field) field.style.fontFamily = select.value ? "'" + select.value + "',sans-serif" : ''; };
+  select.addEventListener('change', preview);
+  form.addEventListener('reset', () => setTimeout(preview));
+  preview();
+}
+document.addEventListener('click', event => {
+  const open = document.querySelector('.post-emoji-pop');
+  const pick = event.target.closest('.post-emoji-pop [data-emoji]');
+  if (pick) {
+    const form = open._form, field = form && (form.elements.thought || form.querySelector('textarea'));
+    if (field) {
+      const start = field.selectionStart ?? field.value.length, end = field.selectionEnd ?? start, add = pick.dataset.emoji;
+      if (field.maxLength > 0 && field.value.length - (end - start) + add.length > field.maxLength) return;
+      field.value = field.value.slice(0, start) + add + field.value.slice(end);
+      field.focus(); field.selectionStart = field.selectionEnd = start + add.length;
+    }
+    return;
+  }
+  const button = event.target.closest('[data-post-emoji]');
+  if (open && (!button || open._button === button)) { open._button?.setAttribute('aria-expanded', 'false'); open.remove(); if (button) return; }
+  if (!button || event.target.closest('.post-emoji-pop')) return;
+  const pop = document.createElement('div');
+  pop.className = 'post-emoji-pop';
+  pop.setAttribute('role', 'dialog');
+  pop.setAttribute('aria-label', 'Emoji');
+  pop.innerHTML = POST_EMOJI.map(emoji => '<button type="button" data-emoji="' + emoji + '" aria-label="' + emoji + '">' + emoji + '</button>').join('');
+  pop._form = button.form || button.closest('form'); pop._button = button;
+  button.setAttribute('aria-expanded', 'true');
+  button.closest('.post-style').append(pop);
+});
 
 function postDetailsMarkup(post) {
   const parts = [];
@@ -1003,7 +1053,10 @@ function postLinkMedia(value) {
   if (video) return '<button type="button" class="post-video-preview" data-play-post-video="' + video +
     '" aria-label="Play YouTube video"><img src="https://i.ytimg.com/vi/' + video +
     '/hqdefault.jpg" alt="" loading="lazy"><span aria-hidden="true">▶</span></button>';
-  return '<div class="article-media" data-article-preview="' + esc(url.href) + '" hidden></div>';
+  // A link straight to a picture shows the picture (loaded without a referrer); other pages get a preview card.
+  if (/\.(?:jpe?g|png|gif|webp)$/i.test(url.pathname)) return '<a class="post-inline-image" href="' + esc(url.href) +
+    '" target="_blank" rel="noopener noreferrer"><img src="' + esc(url.href) + '" alt="Linked image" loading="lazy" referrerpolicy="no-referrer"></a>';
+  return '<a class="article-media" data-article-preview="' + esc(url.href) + '" href="' + esc(url.href) + '" target="_blank" rel="noopener noreferrer" hidden></a>';
 }
 
 const articlePreviewRequests = new Map();
@@ -1015,15 +1068,28 @@ function loadArticlePreviews() {
       articlePreviewRequests.set(url, fetch('/social-next/article-preview?url=' + encodeURIComponent(url))
         .then(response => response.ok ? response.json() : {}).catch(() => ({})));
     }
-    articlePreviewRequests.get(url).then(({ image }) => {
-      if (!image || !target.isConnected) return;
-      const photo = document.createElement('img');
-      photo.alt = 'Article preview';
-      photo.referrerPolicy = 'no-referrer';
-      photo.addEventListener('load', () => { target.hidden = false; }, { once: true });
-      photo.addEventListener('error', () => target.remove(), { once: true });
-      target.append(photo);
-      photo.src = image;
+    // Preview card: picture (served through our signed /social-next/link-image proxy), title, description, site.
+    articlePreviewRequests.get(url).then(({ image, title, description, site }) => {
+      if (!target.isConnected || !(title || image)) return;
+      if (image && /^\/social-next\/link-image\?/.test(image)) {
+        const photo = document.createElement('img');
+        photo.alt = '';
+        photo.loading = 'lazy';
+        photo.addEventListener('error', () => photo.remove(), { once: true });
+        photo.src = image;
+        target.append(photo);
+      }
+      const text = document.createElement('span');
+      text.className = 'article-text';
+      for (const [cls, value] of [['article-site', site], ['article-title', title], ['article-description', description]]) {
+        if (!value) continue;
+        const part = document.createElement('span');
+        part.className = cls;
+        part.textContent = value;
+        text.append(part);
+      }
+      target.append(text);
+      target.hidden = false;
     });
   }
 }

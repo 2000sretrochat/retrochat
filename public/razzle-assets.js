@@ -54,6 +54,18 @@
     });
   }
 
+  // Fills a smiley picker (once) and adds the smiley art styles to the picker's document.
+  // Every button that opens a picker must go through this: a picker opened without it is an empty box.
+  async function fillSmileys(picker, doc = picker.ownerDocument) {
+    const art = await smileys();
+    art.prepare(doc);
+    if (picker.ownerDocument !== doc) art.prepare(picker.ownerDocument);
+    if (!picker.querySelector('[data-k]')) {
+      picker.innerHTML = art.ordered.map(item => `<span data-k="${item.esc}">${item.html}</span>`).join('');
+    }
+    return picker;
+  }
+
   function bindSmileys(button, picker, input) {
     let opening = false;
     button.onclick = async event => {
@@ -65,12 +77,8 @@
       if (opening) return;
       opening = true;
       try {
-        const art = await smileys();
+        await fillSmileys(picker);
         if (!picker.isConnected) return;
-        art.prepare(picker.ownerDocument);
-        if (!picker.children.length) {
-          picker.innerHTML = art.ordered.map(item => `<span data-k="${item.esc}">${item.html}</span>`).join('');
-        }
         picker.classList.add('open');
       } catch {
         button.title = 'Could not load smileys. Click to try again.';
@@ -88,13 +96,14 @@
       const item = event.target.closest('[data-k]');
       if (!item) return;
       input.value += ' ' + item.dataset.k + ' ';
+      input.dispatchEvent(new (input.ownerDocument.defaultView || window).Event('input', { bubbles: true }));
       picker.classList.remove('open');
       input.focus();
     };
   }
 
   window.RazzleAssets = {
-    renderSmileys, bindSmileys,
+    renderSmileys, bindSmileys, fillSmileys,
     qrCode: () => load('/qrcode.js', 'qrcode')
   };
 })();

@@ -11,7 +11,7 @@
     document.getElementById('tree').innerHTML='<section class="guest-messenger-notice"><h2>Your contacts</h2><p>Guests can visit chat rooms, but cannot add friends or be added.</p><p>Create a free screen name or sign in to keep a contact list.</p><a class="btn pri" href="https://github.com/2000sretrochat/retrochat/releases/latest/download/RazzleMessenger-Setup.exe">Download Messenger</a><p><a href="/?chat=1&amp;signup=1">Create an account</a> · <a href="/?chat=1">Sign in</a></p></section>';
     document.querySelectorAll('#menu > div').forEach(el=>el.hidden=true);
     const add=document.getElementById('bAdd');if(add){add.disabled=true;add.title='Sign in with an account to add friends';}
-    const rooms=document.getElementById('bRooms');if(rooms)rooms.onclick=()=>window.open('/rooms.html','yapprooms');
+    const rooms=document.getElementById('bRooms');if(rooms)rooms.onclick=()=>(window.openRoomWindow?openRoomWindow('/rooms.html'):window.open('/rooms.html','yapprooms'));
     const status=document.getElementById('smsg');if(status){status.disabled=true;status.value='Guest · Chat rooms only';}
     const select=document.getElementById('stsel');if(select)select.disabled=true;
     const x=document.getElementById('wx');if(x)x.onclick=()=>window.close();

@@ -21,8 +21,8 @@ function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.crea
  const b=document.createElement('button');b.id='mcog';b.type='button';b.title='Quick settings';b.setAttribute('aria-label','Quick settings');b.innerHTML=COG;m.appendChild(b);
  const d=document.createElement('div');d.id='mcogdd';document.body.appendChild(d);
  const chk=v=>v?'&#10003;':'';
- const draw=()=>{const dark=window.YTheme&&YTheme.get()=='dark',sr=$('mShowRoomCheck'),f=L.ycMFs||'m';
-  d.innerHTML=`<button type=button class=it role=menuitem tabindex=-1 data-a=th>${dark?SUN:MOON}<span>${dark?'Light mode':'Night mode'}</span></button>
+ const draw=()=>{const dark=!!(window.YTheme&&YTheme.night&&YTheme.night()),nls=window.YTheme&&YTheme.strength?YTheme.strength():45,sr=$('mShowRoomCheck'),f=L.ycMFs||'m';
+  d.innerHTML=`<button type=button class=it role=menuitemcheckbox tabindex=-1 aria-checked="${dark}" data-a=th>${dark?SUN:MOON}<span>Night light</span><span class=r>${dark?'On':'Off'}</span></button>${dark?`<label class=nls style="display:flex;align-items:center;gap:6px;padding:2px 10px 6px;font-size:12px">Strength<input type=range data-nl min=10 max=85 step=1 value="${nls}" aria-label="Night light strength" style="flex:1;accent-color:#0033A0"><span>${nls}%</span></label>`:''}
   <button type=button class=it role=menuitemcheckbox aria-checked="${L.ycPmPop!='off'}" tabindex=-1 data-a=pmp><span>Pop up new PMs</span><span class=r>${chk(L.ycPmPop!='off')}</span></button><button type=button class=it role=menuitemcheckbox aria-checked="${L.ycSound=='off'}" tabindex=-1 data-a=snd><span>Mute sounds</span><span class=r>${chk(L.ycSound=='off')}</span></button>
   <button type=button class=it role=menuitemcheckbox aria-checked="${L.ycShake!='off'}" tabindex=-1 data-a=shk><span>Buzz shake</span><span class=r>${L.ycShake=='off'?'Off':'On'}</span></button>
   <button type=button class=it role=menuitemcheckbox aria-checked="${L.ycRoomBuzz!='off'}" tabindex=-1 data-a=rb><span>Allow room buzzes</span><span class=r>${chk(L.ycRoomBuzz!='off')}</span></button>
@@ -34,7 +34,8 @@ function init(){const m=$('menu');if(!m||$('mcog'))return;const st=document.crea
  const refresh=selector=>{if(d.classList.contains('open')){draw();place();d.querySelector(selector)?.focus()}};
  RazzleMessengerControls.attach(b,d,show);
  addEventListener('resize',()=>d.classList.contains('open')&&place());
- d.onclick=e=>{e.stopPropagation();const f=e.target.closest('[data-f]');if(f){L.ycMFs=f.dataset.f;fsApply();refresh('[data-f='+f.dataset.f+']');return}const a=(e.target.closest('[data-a]')||{}).dataset?.a;if(!a)return;
+ d.oninput=e=>{const r=e.target.closest('[data-nl]');if(r&&window.YTheme){const v=YTheme.setStrength(r.value);r.nextElementSibling.textContent=v+'%'}};
+ d.onclick=e=>{e.stopPropagation();if(e.target.closest('.nls'))return;const f=e.target.closest('[data-f]');if(f){L.ycMFs=f.dataset.f;fsApply();refresh('[data-f='+f.dataset.f+']');return}const a=(e.target.closest('[data-a]')||{}).dataset?.a;if(!a)return;
   if(a=='th')window.YTheme&&YTheme.toggle();else if(a=='pmp'){L.ycPmPop=L.ycPmPop=='off'?'on':'off'}else if(a=='snd'){L.ycSound=L.ycSound=='off'?'on':'off';dispatchEvent(new Event('ycsound'))}
   else if(a=='shk')L.ycShake=L.ycShake=='off'?'on':'off';else if(a=='rb')L.ycRoomBuzz=L.ycRoomBuzz=='off'?'on':'off';
   else if(a=='sr'){$('mShowRoomCheck').click();setTimeout(()=>refresh('[data-a=sr]'),400)}

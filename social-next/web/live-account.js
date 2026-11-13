@@ -41,9 +41,18 @@
       if(stored!==null)window.socialPersist(key,JSON.parse(stored));
     } catch { /* A damaged local preference does not prevent sign-in. */ }
   }
+  // GIFs skip the canvas (which would flatten them to one frame) and upload as-is, so they stay animated.
+  const GIF_LIMIT=2000000;
+  function gifData(file) {
+    if(file.size>GIF_LIMIT)return Promise.reject(Error('Choose a GIF under 2 MB.'));
+    return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>{const data=String(reader.result||'');
+      if(!/^data:image\/gif;base64,R0lGOD[ld]h/.test(data))return reject(Error('That file is not a GIF.'));resolve(data);};
+      reader.onerror=()=>reject(Error('Could not read that GIF.'));reader.readAsDataURL(file);});
+  }
   async function photoData(file) {
     if(!file)return '';
-    if(file.size>12000000 || !['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choose a JPG, PNG, or WebP under 12 MB.');
+    if(file.type==='image/gif')return gifData(file);
+    if(file.size>12000000 || !['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choose a JPG, PNG, WebP, or GIF under 12 MB.');
     const url=URL.createObjectURL(file);
     try {
       const image=new Image();image.src=url;await image.decode();
@@ -177,6 +186,7 @@
       const value=session.settings.socialLinks?.[domain]||'';const path=value?new URL(value).pathname.slice(1)+new URL(value).search:'';
       return '<label>'+platformIcon(paths)+title+'<span class="profile-domain-field"><span>'+domain+'/</span><input name="socialLink'+i+'" maxlength="350" aria-label="'+title+' channel or profile" placeholder="'+(i===0?'@yourchannel':'yourname')+'" value="'+esc(path)+'" autocomplete="off"></span></label>';
     }).join('');form.querySelector('button.primary').before(fields);
+    if(window.SocialFeatures)fields.insertAdjacentHTML('afterend',window.SocialFeatures.birthdayFields(session.settings.birthday));
   };
   let profileMode='owner';
   function previewAllows(policy, fallback='profile'){
@@ -205,17 +215,30 @@
       if(rows.length===40){const last=rows[rows.length-1],b=document.createElement('button');b.type='button';b.dataset.photoNext='';b.className='secondary';b.textContent='More photos';b.onclick=()=>{b.disabled=true;loadTimelinePhotos(container,last.created,last.id);};container.append(b);}
     }catch(error){const b=container.querySelector('[data-photo-next]');if(b)b.disabled=false;toast(error.message);}
   }
+  // A YouTube link typed into the post text (not only the Link attachment) shows as a playable video, like Facebook.
+  // youtubeId() only accepts an 11-character video ID, and playback uses the youtube-nocookie embed.
+  // Same for picture links (shown as the picture) and other pages (preview card) when there is no Link attachment.
+  function textVideo(post) {
+    if (post.url && youtubeId(post.url)) return '';
+    const found=String(post.text || '').match(/https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?[^\s<>"']*|shorts\/[\w-]{11}|embed\/[\w-]{11}|live\/[\w-]{11})|youtu\.be\/[\w-]{11})[^\s<>"']*/i);
+    if (found && youtubeId(found[0])) return '<div class="link-preview">'+postLinkMedia(found[0])+'</div>';
+    if (post.url) return '';
+    const link=String(post.text || '').match(/https?:\/\/[^\s<>"']+/i);
+    return link ? '<div class="link-preview">'+postLinkMedia(link[0].replace(/[.,!?;:)\]]+$/,''))+'</div>' : '';
+  }
   function sharedCard(post) {
     const owner=!publicPreview && post.author_id===myId, moderator=!publicPreview && (session.master || owner || post.wall_id===myId);
     const comments=(post.comments || []).map(comment=>'<div class="shared-comment">'+author(comment.name)+
-      '<small>'+esc(new Date(comment.created).toLocaleString())+'</small><p>'+esc(comment.body)+'</p>'+
+      '<small>'+esc(new Date(comment.created).toLocaleString())+'</small><p>'+(window.SocialFeatures?window.SocialFeatures.richText(comment.body):esc(comment.body))+'</p>'+
       ((comment.author_id===myId || post.wall_id===myId || session.master)?'<button type="button" class="text-action" data-shared-comment-remove="'+comment.id+'">Delete comment</button>':'')+'</div>').join('');
-    return '<article class="post" data-post-id="'+post.id+'"><div class="post-top">'+author(post.name)+
-      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+(post.pinned&&current==='profile'?'<span class=post-pin-marker>📌 Pinned</span>':'')+postDetailsMarkup(post)+'<p>'+esc(post.text)+'</p>'+eventCard(post)+tapeCard(post)+
-      (post.image?'<button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Shared photo"></button>':'')+
+    const SF=window.SocialFeatures;
+    return '<article class="post" data-post-id="'+post.id+'"><div class="post-top">'+author(post.name)+(post.shared_from?' <span class="post-shared-label">shared a post</span>':'')+
+      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+(post.pinned&&current==='profile'?'<span class=post-pin-marker>📌 Pinned</span>':'')+postDetailsMarkup(post)+
+      (post.text||!post.shared_from?'<p'+postFontStyle(post.font)+'>'+(SF?SF.richText(post.text):esc(post.text))+'</p>':'')+(SF?SF.withTags(post,me)+SF.pollCard(post)+SF.sharedBox(post):'')+textVideo(post)+eventCard(post)+tapeCard(post)+
+      (post.image?'<button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Shared photo">'+((post.photo_tags||[]).length?'<span class="photo-tag-count">🏷 '+post.photo_tags.length+'</span>':'')+'</button>':'')+
       (post.url?'<div class="link-preview">'+postLinkMedia(post.url)+'<a href="'+esc(post.url)+'" target="_blank" rel="noopener noreferrer">'+esc(new URL(post.url).hostname)+'</a></div>':'')+
-      '<div class="post-actions"><button type="button" data-shared-like="'+post.id+'" aria-pressed="'+post.liked+'">'+(post.liked?'♥ Liked':'♡ Like')+' '+post.likes+'</button>'+
-      '<button type="button" data-shared-comment="'+post.id+'">Comment '+(post.comments?.length || '')+'</button>'+
+      '<div class="post-actions">'+(SF?SF.reactionBar(post):'<button type="button" data-shared-like="'+post.id+'" aria-pressed="'+post.liked+'">'+(post.liked?'♥ Liked':'♡ Like')+' '+post.likes+'</button>')+
+      '<button type="button" data-shared-comment="'+post.id+'">Comment '+(post.comments?.length || '')+'</button>'+(SF&&!publicPreview?SF.shareButton(post):'')+
       (moderator?'<details class="post-settings"><summary>Post settings</summary>'+
         (owner?'<button type="button" data-shared-edit="'+post.id+'">Edit post or audience</button>':'')+
         (owner&&post.wall_id===myId?'<button type="button" data-shared-pin="'+post.id+'" data-pinned="'+!!post.pinned+'">'+(post.pinned?'Unpin from profile':'Pin to profile')+'</button>':'')+
@@ -228,6 +251,7 @@
     const query=q.trim().toLowerCase();
     $('#content').innerHTML=feed.filter(post=>!query || (post.text+' '+post.name+' '+displayName(post.name)).toLowerCase().includes(query))
       .map(sharedCard).join('') || '<section class="empty">No posts yet. Share something or visit a friend’s space.</section>';
+    window.SocialFeatures?.birthdayNotice($('#content'));
   };
   function renderOwner() {
     if(!publicPreview)profileMode='owner';
@@ -265,7 +289,7 @@
       if(stream)stream.innerHTML=privateNotice(actions);
       return;
     }
-    document.querySelector('.space-about > .space-card')?.insertAdjacentHTML('beforeend',socialLinksMarkup(session.settings.socialLinks));
+    document.querySelector('.space-about > .space-card')?.insertAdjacentHTML('beforeend',socialLinksMarkup(session.settings.socialLinks)+(window.SocialFeatures?.birthdayMarkup(session.settings.birthday,true)||''));
     const stream=$('.space-posts');
     stream?.querySelectorAll(':scope > .post').forEach(node=>node.remove());
     mountAudience($('#wall-post-composer'));
@@ -305,17 +329,27 @@
       const photos=rows.length?'<details class="space-card"><summary>Photos</summary>'+albumMarkup(record)+'</details>':'';
       $('#content').innerHTML='<div class="space-layout visitor-profile"><aside class="space-about"><section class="space-card">'+
         (record.settings.portrait?'<img class="profile-portrait" src="'+esc(record.settings.portrait)+'" alt="Profile photo">':profileAvatar(record.name))+
-        socialLinksMarkup(record.settings.socialLinks)+'<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span>'+(record.bot?'<p class="bot-profile-badge">Chat bot</p>':'')+'<p>'+esc(record.bio || '')+
+        socialLinksMarkup(record.settings.socialLinks)+(window.SocialFeatures?.birthdayMarkup(record.settings.birthday)||'')+'<h2>'+esc(record.displayName)+'</h2><span class="handle">@'+esc(record.name.toLowerCase())+'</span>'+(record.bot?'<p class="bot-profile-badge">Chat bot</p>':'')+'<p>'+esc(record.bio || '')+
         '</p><div class="profile-basics">'+esc([record.age,record.sex,record.location].filter(Boolean).join(' · '))+'</div><div class="space-actions">'+
         (record.private?'':actions)+
         '<button class="text-action" data-profile-block="'+esc(record.name)+'" data-blocked="'+record.blocked+'">'+(record.blocked?'Unblock':'Block')+'</button>'+
         '<button class="text-action" data-profile-report="'+esc(record.name)+'">Report</button></div></section>'+gallery+'</aside><section class="space-posts">'+
         (record.private?privateNotice('<div class="space-actions">'+actions+'</div>'):wall+posts+photos)+'</section></div>';
       document.querySelectorAll('.timeline-photo-list').forEach(container=>loadTimelinePhotos(container));
+      upgradeFriendWall($('#friend-wall-form'));
       mountAudience($('#friend-wall-form'));
       loadArticlePreviews();
     }).catch(error=>{if(generation===profileGeneration)$('#content').innerHTML='<section class="empty">'+esc(error.message)+'</section>';});
   };
+  // Posting on a friend's timeline gets the same tools as your own: attachments (link or photo), feeling/location,
+  // emoji and font. The submit handler already sends attachmentUrl, the photo and readPostDetails() for this form.
+  function upgradeFriendWall(form) {
+    if(!form || form.dataset.upgraded)return;form.dataset.upgraded='1';
+    const source=$('#quick-post .post-attachments');
+    if(source){const attachments=source.cloneNode(true);attachments.open=false;attachments.querySelectorAll('input').forEach(input=>{input.value='';});form.append(attachments);}
+    mountPostDetails(form);
+  }
+  window.SocialLive={api,refresh:()=>refreshView(),post:id=>postsById.get(id),friends:()=>friends,me,myId,modal:html=>modal(html)};
   async function refreshView() {
     if(loading)return;
     loading=true;
@@ -406,8 +440,8 @@
     if(panel){panel.remove();$('#notification-bell').setAttribute('aria-expanded','false');return;}
     panel=document.createElement('section');panel.id='notification-dropdown';panel.setAttribute('aria-label','Notifications');panel.tabIndex=-1;
     panel.innerHTML='<h2>Notifications</h2><h3>Friend requests</h3>'+(inbox.requests.map(requestMarkup).join('') || '<p>No pending requests.</p>')+
-      offlineSection()+'<h3>Post activity</h3>'+(inbox.notifications.map(item=>'<button class="text-action notification-post" data-shared-notification="'+item.post_id+'">'+esc(item.display_name)+' '+
-        ({post:'posted on your wall',comment:'commented on your post',like:'liked your post'}[item.kind] || '')+'</button>').join('') || '<p>No post activity yet.</p>');
+      offlineSection()+'<h3>Post activity</h3>'+(inbox.notifications.map(item=>{const label=esc(item.display_name)+' '+(({post:'posted on your wall',comment:'commented on your post',...(window.SocialFeatures?.NOTE||{like:'liked your post'})})[item.kind] || '');
+        return item.post_id?'<button class="text-action notification-post" data-shared-notification="'+item.post_id+'">'+label+'</button>':'<p class="notification-note">'+label+'</p>';}).join('') || '<p>No post activity yet.</p>');
     document.querySelector('body > header').appendChild(panel);$('#notification-bell').setAttribute('aria-expanded','true');panel.focus();
     save('seenSharedRequests',inbox.requests.map(item=>item.name));
     api('/notifications/read','POST',{ids:inbox.notifications.map(item=>item.id)}).then(refreshNotifications).catch(error=>toast(error.message));
@@ -558,7 +592,7 @@
         if(image)modal('<h2>Messenger profile picture</h2><img class="profile-photo-detail" src="'+esc(image.getAttribute('src'))+'" alt="'+esc(image.alt)+'">');
         return;
       }
-      else if(d.sharedPhoto){const post=postsById.get(d.sharedPhoto);if(post?.image)modal('<h2>Photo</h2><p>'+esc(post.text||'')+'</p><img class="profile-photo-detail" src="'+esc(post.image)+'" alt="Shared photo">');return;}
+      else if(d.sharedPhoto){const post=postsById.get(d.sharedPhoto);if(post?.image)modal('<h2>Photo</h2><p>'+esc(post.text||'')+'</p>'+(window.SocialFeatures?window.SocialFeatures.photoHtml(post,me):'<img class="profile-photo-detail" src="'+esc(post.image)+'" alt="Shared photo">'));return;}
       else if(d.liveMessage){privateChat(d.liveMessage);return;}
       else if(d.liveRequest){
         button.disabled=true;
@@ -585,7 +619,7 @@
     try {
       window.RazzleInterests.clean(f.interests.value);
       const socialLinks={};socialPlatforms.forEach(([domain],i)=>{const value=f['socialLink'+i]?.value.trim();if(value)socialLinks[domain]=/^https?:\/\//i.test(value)||value.startsWith(domain+'/')?value:'https://'+domain+'/'+value;});
-      session.settings=await api('/settings','PATCH',{socialLinks});
+      session.settings=await api('/settings','PATCH',{socialLinks,...(window.SocialFeatures?.readBirthday(form)||{})});
       const response=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({displayName:f.displayAlias.value.trim(),age:f.age.value,location:f.location.value.trim(),
           bio:f.bio.value.trim(),interests:f.interests.value.trim(),sex:f.sex.value,profileStatus:f.personalStatus.value.trim()})});

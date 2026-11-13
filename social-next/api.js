@@ -2,13 +2,25 @@ const crypto = require('node:crypto');
 const geo = require('../geo');
 const bots = require('../bots');
 const {createOfflineMessages,registerOfflineRoutes} = require('../offline-messages');
+const F = require('./features');
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const postFonts = new Set(['','Arial','Verdana','Tahoma','Georgia','Trebuchet MS','Comic Sans MS','Times New Roman','Courier New']);
+const postFont = (value, fallback = '') => value === undefined ? fallback : postFonts.has(value) ? value : '';
 const feelings = new Set(['','Happy','Excited','Grateful','Relaxed','Hopeful','Loved','Proud','Curious','Tired','Bored','Sad','Worried','Frustrated','Lonely']);
 const text = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 function photo(value, maximum = 700000) {
   if (!value) return '';
   if (typeof value !== 'string' || value.length > maximum || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value)) throw Object.assign(Error('Choose a smaller JPG, PNG, or WebP.'), {status:400});
+  return value;
+}
+// Animated GIFs are stored as uploaded (never re-encoded, so the animation survives). Up to 2 MB of GIF.
+const GIF_MAX = 2700000;
+function postPhoto(value) {
+  if (typeof value !== 'string' || !value.startsWith('data:image/gif;')) return photo(value);
+  const bad = () => Object.assign(Error('Choose a GIF under 2 MB.'), {status:400});
+  if (value.length > GIF_MAX || !/^data:image\/gif;base64,[A-Za-z0-9+/=]+$/.test(value)) throw bad();
+  if (!/^GIF8[79]a/.test(Buffer.from(value.slice(22, 34), 'base64').toString('latin1'))) throw bad();
   return value;
 }
 function link(value) {
@@ -52,10 +64,11 @@ function galleryPhotos(settings, {owner, master, friend, restricted}) {
 function publicSettings(value = {}) {
   return {portrait:value.portrait || '', headline:value.headline || '', appearance:value.appearance || null,
     visibility:value.visibility === 'private' ? 'private' : 'public', favoriteRooms:value.favoriteRooms || [],
-    musicService:value.musicService || null,details:value.details?.enabled ? value.details : null,cover:value.cover || '#d9e9fa',socialLinks:value.socialLinks || {}};
+    musicService:value.musicService || null,details:value.details?.enabled ? value.details : null,cover:value.cover || '#d9e9fa',socialLinks:value.socialLinks || {},
+    birthday:F.publicBirthday(value.birthday)};
 }
 function settingsPatch(value) {
-  const allowed = new Set(['portrait','headline','cover','appearance','visibility','favoriteRooms','musicService','details','defaultPresence','socialLinks']);
+  const allowed = new Set(['portrait','headline','cover','appearance','visibility','favoriteRooms','musicService','details','defaultPresence','socialLinks','birthday']);
   if (!value || Array.isArray(value) || typeof value !== 'object') throw Object.assign(Error('Invalid settings.'), {status:400});
   const result = {};
   for (const [key, item] of Object.entries(value)) {
@@ -74,7 +87,8 @@ function settingsPatch(value) {
         if(!validPath)throw Object.assign(Error('Use a '+domain+' channel or profile link.'),{status:400});
         url.protocol='https:';url.hostname=domain;url.search='';result.socialLinks[domain]=url.href;
       }
-    } else if (key === 'portrait') result[key] = photo(item);
+    } else if (key === 'birthday') result[key] = F.cleanBirthday(item);
+    else if (key === 'portrait') result[key] = photo(item);
     else if (key === 'headline') result[key] = text(item,100);
     else if (key === 'cover') result[key] = /^#[0-9a-f]{6}$/i.test(item) ? item : '#d9e9fa';
     else if (key === 'visibility') result[key] = item === 'private' ? 'private' : 'public';
@@ -122,7 +136,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
     not ${isBlocked(post+'.author_id',viewer)} and not ${isBlocked(post+'.wall_id',viewer)}
     and (${post}.wall_id=${post}.author_id or ${post}.wall_id=${viewer} or ${profileAccess(post+'.wall_id',viewer)})
     and ${audienceAccess(post,viewer,post+".audience->'post'")}
-    and (${post}.body<>'' or ${post}.link<>'' or (${post}.image<>'' and ${imageAccess(post,viewer,master)}))))`;
+    and (${post}.body<>'' or ${post}.link<>'' or ${post}.shared_from is not null or (${post}.image<>'' and ${imageAccess(post,viewer,master)}))))`;
   async function visiblePost(req, id) {
     if (!uuid.test(id)) fail('Invalid post.');
     const [post] = await db.q(`select p.* from social_posts p join users u on u.id=p.author_id
@@ -137,13 +151,24 @@ function registerApi(router, express, db, accounts, io, botChat) {
     return {ip, location:await geo.lookup(ip)};
   }
   const postFields = master => `p.id,p.author_id,p.wall_id,p.pinned,p.body,p.link,p.tape,case when ${imageAccess('p','$1',master)} then p.image else '' end as image,
-    case when p.author_id=$1 then p.audience else '{}'::jsonb end as audience,p.feeling,p.place,p.created,p.updated,p.event_room,p.event_at,
+    case when p.author_id=$1 then p.audience else '{}'::jsonb end as audience,p.feeling,p.font,p.place,p.created,p.updated,p.event_room,p.event_at,
     (select count(*)::int from social_event_rsvps r where r.post_id=p.id) as attendees,
     exists(select 1 from social_event_rsvps r where r.post_id=p.id and r.user_id=$1) as attending,
     u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
     coalesce(s.value->>'portrait','') as portrait,
     (select count(*)::int from social_likes where post_id=p.id) as likes,
-    exists(select 1 from social_likes where post_id=p.id and user_id=$1) as liked`;
+    exists(select 1 from social_likes where post_id=p.id and user_id=$1) as liked,
+    (select coalesce(jsonb_object_agg(reaction,n),'{}'::jsonb) from (select reaction,count(*)::int as n from social_likes where post_id=p.id group by reaction) r) as reactions,
+    (select reaction from social_likes where post_id=p.id and user_id=$1) as my_reaction,
+    p.poll,(select choice from social_poll_votes where post_id=p.id and user_id=$1) as my_vote,
+    case when p.poll is not null and (p.author_id=$1 or exists(select 1 from social_poll_votes where post_id=p.id and user_id=$1)
+      or (p.poll->>'ends' is not null and (p.poll->>'ends')::timestamptz<=now()))
+      then (select coalesce(jsonb_object_agg(choice,n),'{}'::jsonb) from (select choice,count(*)::int as n from social_poll_votes where post_id=p.id group by choice) v) end as poll_results,
+    p.tags,p.photo_tags,p.shared_from,
+    (select jsonb_build_object('id',o.id,'name',ou.name,'display_name',coalesce(nullif(ou.display_name,''),ou.name),'body',o.body,'link',o.link,
+      'image',case when ${imageAccess('o','$1',master)} then o.image else '' end,'created',o.created)
+      from social_posts o join users ou on ou.id=o.author_id where o.id=p.shared_from and not o.removed and not ou.banned
+      and not coalesce(ou.deactivated,false) and ${access('o','$1',master)}) as shared`;
   router.use('/api/profile-gallery', express.json({limit:'4mb'}));
   router.use('/api', express.json({limit:'3mb'}), (req,res,next) => {
     if (req.method !== 'GET') {
@@ -161,6 +186,8 @@ function registerApi(router, express, db, accounts, io, botChat) {
     }
     next();
   });
+  const features={run,fail,visiblePost,access,isBlocked,rooms:()=>botChat?.rooms?.()||[]};
+  F.registerFeatures(router,db,features);
   const offline=createOfflineMessages({db,isOnline:name=>!!accounts.isOnline?.(name),toUser:(...args)=>accounts.toUser?.(...args)});
   registerOfflineRoutes(router,offline,run);
   router.get('/api/settings',run(async(req,res) => {
@@ -322,15 +349,19 @@ function registerApi(router, express, db, accounts, io, botChat) {
       from social_comments c join users u on u.id=c.author_id left join social_settings s on s.user_id=u.id
       where c.post_id=any($1::uuid[]) and not c.removed and not u.banned and not coalesce(u.deactivated,false)
       order by c.created limit 600`,[rows.map(p=>p.id)]) : [];
-    res.json(rows.map(row=>({...row,comments:comments.filter(c=>c.post_id===row.id)})));
+    const blocked = new Set((await db.q('select owner,blocked from blocks where owner=$1 or blocked=$1',[req.socialAccount.id])).map(b=>b.owner===req.socialAccount.id?b.blocked:b.owner));
+    const visibleTags = list => (list || []).filter(t => !blocked.has(t.id)).map(({id, ...t}) => t);
+    res.json(rows.map(row=>({...row,tags:visibleTags(row.tags),photo_tags:visibleTags(row.photo_tags),comments:comments.filter(c=>c.post_id===row.id)})));
   }));
   router.post('/api/posts',run(async(req,res) => {
     const b=req.body || {}, id=b.id || crypto.randomUUID();
     if (!uuid.test(id)) fail('Invalid post.');
     const tape = b.tape == null ? null : {tracks:[tapeTrack(b.tape,req.socialAccount)]};
-    const body=text(b.body,3000), image=photo(b.image), url=link(b.link);
+    const body=text(b.body,3000), image=postPhoto(b.image), url=link(b.link);
     if (tape && (!body || image || url || b.event)) fail('Give your tape a title and one first track.');
     if (!body && !image && !url) fail('Add a thought, photo, or link.');
+    const poll = F.cleanPoll(b.poll);
+    if (poll && (!body || tape || b.event)) fail('Write your poll question in the post.');
     let eventRoom=null,eventAt=null;
     if(b.event){
       eventRoom=text(b.event.room,150);
@@ -349,11 +380,15 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const policy = {post:audience(b.audience?.post || {mode:'profile'}),photo:audience(b.audience?.photo,true)};
     const info=await originInfo(req);
     await db.q(`with added as (
-      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at,audience,tape)
-      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) on conflict(id) do nothing returning id,wall_id
+      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at,audience,tape,font)
+      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) on conflict(id) do nothing returning id,wall_id
     ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
       select wall_id,$2,'post',id,id::text from added where wall_id<>$2 on conflict do nothing`,
-      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt,JSON.stringify(policy),tape && JSON.stringify(tape)]);
+      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt,JSON.stringify(policy),tape && JSON.stringify(tape),postFont(b.font)]);
+    const tags = await features.tagRows(req.socialAccount.id, b.tags);
+    if (poll || tags.length) await db.q('update social_posts set poll=$2,tags=$3 where id=$1 and author_id=$4',[id,poll && JSON.stringify(poll),JSON.stringify(tags),req.socialAccount.id]);
+    for (const t of tags) await features.notify([t.id],req.socialAccount.id,'tag',id,id+':with:'+t.id);
+    await features.afterText({actor:req.socialAccount.id,postId:id,text:body,ref:id});
     res.status(201).json({id});
   }));
   router.post('/api/tapes/:id/tracks',run(async(req,res) => {
@@ -378,7 +413,9 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const post=await visiblePost(req,req.params.id);
     if(post.author_id!==req.socialAccount.id || post.wall_id!==req.socialAccount.id)fail('Pin your own posts on your own profile.',403);
     if(typeof req.body?.pinned!=='boolean')fail('Choose pin or unpin.');
-    await db.q('update social_posts set pinned=$2,updated=now() where id=$1',[post.id,req.body.pinned]);
+    // One pinned post at a time: pinning a post unpins the others on the same profile.
+    if (req.body.pinned) await db.q('update social_posts set pinned=(id=$1) where wall_id=$2 and (pinned or id=$1)',[post.id,req.socialAccount.id]);
+    else await db.q('update social_posts set pinned=false where id=$1',[post.id]);
     res.json({ok:true});
   }));
   router.patch('/api/posts/:id',run(async(req,res) => {
@@ -388,8 +425,8 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const body=b.body===undefined?post.body:text(b.body,3000), url=b.link===undefined?post.link:link(b.link), image=b.removeImage ? '' : post.image;
     const policy = b.audience ? {post:audience(b.audience.post),photo:audience(b.audience.photo,true)} : null;
     if (!body && !url && !image) fail('Keep a thought, link, or photo.');
-    await db.q('update social_posts set body=$2,link=$3,image=$4,feeling=$5,place=$6,audience=coalesce($7::jsonb,audience),updated=now() where id=$1',
-      [post.id,body,url,image,b.feeling===undefined?post.feeling:feelings.has(b.feeling)?b.feeling:'',b.location===undefined?post.place:text(b.location,120),policy && JSON.stringify(policy)]);
+    await db.q('update social_posts set body=$2,link=$3,image=$4,feeling=$5,place=$6,audience=coalesce($7::jsonb,audience),font=$8,updated=now() where id=$1',
+      [post.id,body,url,image,b.feeling===undefined?post.feeling:feelings.has(b.feeling)?b.feeling:'',b.location===undefined?post.place:text(b.location,120),policy && JSON.stringify(policy),postFont(b.font,post.font || '')]);
     res.json({ok:true});
   }));
   router.delete('/api/posts/:id',run(async(req,res) => {
@@ -408,6 +445,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
     ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
       select $7,$3,'comment',$2,id::text from added where $7<>$3 on conflict do nothing`,
       [id,post.id,req.socialAccount.id,body,info.ip,info.location,post.author_id]);
+    await features.afterText({actor:req.socialAccount.id,postId:post.id,text:body,ref:id});
     res.status(201).json({id});
   }));
   router.delete('/api/comments/:id',run(async(req,res) => {
@@ -429,10 +467,11 @@ function registerApi(router, express, db, accounts, io, botChat) {
     res.json({ok:true});
   }));
   router.get('/api/notifications',run(async(req,res) => {
+    await features.birthdayNotifications(req.socialAccount.id).catch(()=>{});
     const notifications=await db.q(`select n.id,n.kind,n.post_id,n.created,n.seen,u.name,
       coalesce(nullif(u.display_name,''),u.name) as display_name
-      from social_notifications n join users u on u.id=n.actor_id join social_posts p on p.id=n.post_id
-      where n.recipient_id=$1 and not p.removed and ${access('p','$1',req.socialAccount.master)}
+      from social_notifications n join users u on u.id=n.actor_id left join social_posts p on p.id=n.post_id
+      where n.recipient_id=$1 and (n.post_id is null and n.kind='birthday' or n.post_id is not null and not p.removed and ${access('p','$1',req.socialAccount.master)})
       and (n.kind<>'comment' or exists(select 1 from social_comments where id::text=n.reference_id and not removed))
       order by n.created desc limit 100`,[req.socialAccount.id]);
     const requests=await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
@@ -573,4 +612,4 @@ function registerApi(router, express, db, accounts, io, botChat) {
     res.json({ok:true});
   }));
 }
-module.exports = {registerApi, settingsPatch, publicSettings};
+module.exports = {registerApi, settingsPatch, publicSettings, postPhoto};

@@ -5,6 +5,42 @@
     const clear = document.getElementById('clearStatus');
     const roomItem = document.getElementById('mShowRoom');
     const room = document.getElementById('mShowRoomCheck');
+    // "Show my room" picker beside the status: Off, or one of the rooms I'm in (up to 4). Buddies see "In <Room>".
+    let pickRoom = document.getElementById('adRoom');
+    if (!pickRoom && status) {
+      pickRoom = document.createElement('select');
+      pickRoom.id = 'adRoom';
+      pickRoom.setAttribute('aria-label', 'Room shown to buddies');
+      status.after(pickRoom);
+      const css = document.createElement('style');
+      css.textContent = '#adRoom{all:unset;font:12px var(--sys,Tahoma,sans-serif);color:var(--muted,#567);cursor:pointer;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:6px;padding:0 14px 0 4px;border-left:1px solid var(--line,#c6d5e7);background:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 10 6%27%3E%3Cpath d=%27M0 0l5 6 5-6z%27 fill=%27%23667%27/%3E%3C/svg%3E") no-repeat right 2px center/8px 5px}#adRoom:disabled{opacity:.55;cursor:default}#adRoom:focus-visible{outline:2px solid #2468d7;outline-offset:1px}';
+      document.head.appendChild(css);
+    }
+    const esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+    function fillRooms(me, invisible) {
+      if (!pickRoom) return;
+      const rooms = Array.isArray(me.rooms) ? me.rooms : me.room ? [me.room] : [];
+      const on = me.showRoom !== false, current = on ? (me.room || '') : '';
+      pickRoom.innerHTML = '<option value="off">Room: Don’t show</option>' +
+        (rooms.length ? '' : '<option value="*">Room: Show when I’m in one</option>') +
+        rooms.map(r => '<option value="' + esc(r) + '">In ' + esc(r) + '</option>').join('');
+      pickRoom.value = !on ? 'off' : current && rooms.includes(current) ? current : rooms.length ? rooms[0] : '*';
+      pickRoom.disabled = invisible;
+      pickRoom.title = invisible ? 'You are Invisible, so your room is hidden' : on && current ? 'Buddies see: In ' + current : 'Choose a room to show your buddies';
+    }
+    if (pickRoom) pickRoom.onchange = async () => {
+      const me = getMe(); if (!me) return;
+      const v = pickRoom.value;
+      pickRoom.disabled = true;
+      try {
+        const result = await emit('m:showroom', v === 'off' ? {room: null} : v === '*' ? true : {room: v});
+        if (result?.ok && me === getMe()) Object.assign(me, {showRoom: result.showRoom, adRoom: result.adRoom, room: result.room, rooms: result.rooms || me.rooms});
+        else toast('Could not save room visibility');
+      } finally {
+        pickRoom.disabled = false;
+        sync();
+      }
+    };
     let draft;
     let owner;
     let editVersion = 0;
@@ -15,18 +51,20 @@
       if (!me) return;
       if (owner !== me) { owner = me; draft = undefined; editVersion++; }
       status.value = me.status === 'brb' ? 'away' : me.status;
-      const sharing = !me.m && me.showRoom !== false;
+      // Masters can show their room too (incognito room windows are never listed by the server).
+      const sharing = me.showRoom !== false;
       const invisible = status.value === 'invisible';
       message.disabled = invisible;
       message.readOnly = sharing;
       message.placeholder = sharing && !invisible ? 'Room sharing on' : "What's on your mind?";
       message.value = sharing && !invisible
-        ? (me.room ? 'In: ' + me.room : '')
+        ? (me.room ? 'In ' + me.room : '')
         : draft ?? (me.msg === '[room]' ? '' : decode(me.msg || ''));
       message.title = sharing && !invisible && me.room ? message.value : '';
       clear.hidden = sharing || invisible || !message.value;
-      roomItem.style.display = me.m ? 'none' : '';
+      roomItem.style.display = '';
       if (!room.disabled) room.checked = me.showRoom !== false;
+      fillRooms(me, invisible);
     }
 
     status.onchange = async () => {

@@ -534,6 +534,14 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
 #wall-post-composer > .wall-send:hover { background: #e7f0f9; }
 #wall-post-composer > .photo-button { grid-column: 2 / -1; justify-self: start; }
 #wall-post-composer > .post-details { grid-column: 2 / -1; }
+/* Emoji + font row on every post box (Nov 13, 2026) */
+.post-style { grid-column: 2 / -1; flex: 0 0 100%; position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: #173b60; }
+.post-style .post-emoji-button { padding: 4px 10px; font-size: 13px; }
+.post-style label { display: inline-flex; align-items: center; gap: 6px; }
+.post-style select { font: inherit; max-width: 170px; }
+.post-emoji-pop { position: absolute; z-index: 30; left: 0; top: calc(100% + 4px); width: min(300px, calc(100vw - 32px)); display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 6px; background: #fff; border: 1px solid #c6d5e7; border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 32, 91, .14); }
+.post-emoji-pop button { font-size: 20px; line-height: 1; padding: 4px; border-radius: 6px; background: transparent; border: 0; cursor: pointer; }
+.post-emoji-pop button:hover, .post-emoji-pop button:focus-visible { background: #e7f0f9; }
 .post-attachments { grid-column: 2 / -1; width: 100%; font-size: 13px; }
 .post-attachments > summary { cursor: pointer; color: #004990; font-weight: 650; }
 .post-attachments > label { display: grid; gap: 4px; margin-top: 8px; }
@@ -553,6 +561,13 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
 .post-video-preview span { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 10px; padding: 8px 18px; color: #fff; background: #a60000; font-size: 23px; }
 .article-media[hidden] { display: none; }
 .article-media img { display: block; max-width: 100%; width: min(100%, 560px); height: auto; border: 1px solid #000; }
+.article-media { display: block; max-width: 560px; color: inherit; text-decoration: none; border: 1px solid #c8d3e0; border-radius: 6px; overflow: hidden; background: #fff; }
+.article-media img { border: 0; border-bottom: 1px solid #c8d3e0; max-height: 300px; object-fit: cover; }
+.article-text { display: grid; gap: 3px; padding: 8px 10px; }
+.article-site { font-size: 11px; text-transform: uppercase; color: #667; }
+.article-title { font-weight: 700; }
+.article-description { font-size: 13px; color: #445; }
+.post-inline-image img { display: block; max-width: min(100%, 560px); max-height: 480px; height: auto; border-radius: 4px; }
 
 .live-social-messenger { display: block; width: 100%; height: 660px; border: 0; background: #f1f5f8; }
 #messenger, #reopen { display: none !important; }
@@ -622,6 +637,7 @@ button.primary,a.primary,.home-hero button,.welcome-hero .welcome-join,.room-inv
 .visitor-profile #friend-wall-form { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .visitor-profile #friend-wall-form textarea { flex:1 0 100%; width:100%; min-height:68px; box-sizing:border-box; padding:8px; font:inherit; resize:vertical; }
 .visitor-profile #friend-wall-form > .primary { margin:0; }
+.visitor-profile #friend-wall-form > .post-attachments, .visitor-profile #friend-wall-form > .post-details, .visitor-profile #friend-wall-form > .post-style { flex: 1 0 100%; }
 .visitor-profile .visitor-empty p { margin-bottom:0; }
 
 .tape-card { margin:12px 0; padding:10px 12px; border:1px solid #92b0cc; background:#edf5fd; color:#153653; }
@@ -635,3 +651,42 @@ button.primary,a.primary,.home-hero button,.welcome-hero .welcome-join,.room-inv
 .tape-icon { position:relative; vertical-align:middle; border-radius:2px; }
 .tape-icon::before { content:''; position:absolute; inset:3px 4px auto; height:5px; background:#fff; border-radius:2px; }
 .tape-icon::after { content:''; position:absolute; inset:auto 6px 2px; height:2px; background:#a9c6e3; }
+
+/* Nov 13, 2026: reactions, polls, sharing, tags, mentions, birthdays */
+.react-wrap { position: relative; display: inline-flex; }
+.react-menu { display: none; position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 20; gap: 2px; padding: 4px 6px; background: #fff; border: 1px solid #c8d3e0; border-radius: 20px; box-shadow: 0 3px 10px rgba(0,0,0,.18); white-space: nowrap; }
+.react-wrap:hover .react-menu, .react-wrap:focus-within .react-menu { display: flex; }
+.react-menu button { border: 0; background: none; font-size: 20px; padding: 2px 3px; cursor: pointer; transition: transform .1s; }
+.react-menu button:hover, .react-menu button[aria-pressed="true"] { transform: scale(1.25); }
+.react-summary { font-size: 13px; }
+.post-poll-card { display: grid; gap: 6px; margin: 8px 0; max-width: 520px; }
+.poll-option { text-align: left; padding: 7px 10px; border: 1px solid #9fb3cc; border-radius: 6px; background: #f6f9fd; cursor: pointer; }
+.poll-option:hover { background: #e6effa; }
+.poll-result { position: relative; display: flex; justify-content: space-between; padding: 6px 10px; border: 1px solid #c8d3e0; border-radius: 6px; overflow: hidden; }
+.poll-result.mine { border-color: #0033a0; font-weight: 700; }
+.poll-bar { position: absolute; inset: 0 auto 0 0; background: #dbe8f8; z-index: 0; }
+.poll-label, .poll-pct { position: relative; z-index: 1; }
+.post-with { margin: 2px 0 6px; color: #556; font-size: 13px; }
+.post-shared-label { color: #667; font-size: 13px; }
+.shared-original { margin: 6px 0 8px; padding: 8px 10px; border: 1px solid #c8d3e0; border-left: 3px solid #4d90cd; border-radius: 6px; background: #fafcff; }
+.shared-original img { display: block; max-width: min(100%, 480px); border-radius: 4px; margin-top: 6px; }
+.photo-tag-box { position: relative; display: inline-block; max-width: 100%; }
+.photo-tag-box.can-tag img { cursor: crosshair; }
+.photo-tag { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
+.photo-tag span { display: none; position: absolute; top: 28px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.78); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 12px; white-space: nowrap; }
+.photo-tag:hover span, .photo-tag:focus span { display: block; }
+.photo-tag-choose { position: absolute; transform: translate(-50%, 8px); z-index: 5; background: #fff; padding: 4px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+.photo-tag-count { display: inline-block; margin-top: 4px; font-size: 12px; color: #556; }
+.photo-tag-help { font-size: 12px; color: #667; }
+.mention-pick { display: grid; max-width: 260px; background: #fff; border: 1px solid #c8d3e0; border-radius: 6px; box-shadow: 0 3px 10px rgba(0,0,0,.15); margin-top: 2px; }
+.mention-pick button { text-align: left; border: 0; background: none; padding: 5px 8px; cursor: pointer; }
+.mention-pick button:hover { background: #e6effa; }
+a.mention, a.room-tag { font-weight: 600; }
+.post-extras { display: grid; gap: 4px; grid-column: 1 / -1; }
+.post-poll input { display: block; width: 100%; margin: 3px 0; }
+.tag-friend-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 2px 8px; max-height: 160px; overflow: auto; }
+.birthday-notice h3 { margin: 0 0 4px; }
+.profile-birthday { margin: 4px 0; }
+.birthday-fields { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 10px; }
+.birthday-fields .checkbox-label { grid-column: 1 / -1; }
+.notification-note { margin: 4px 0; }
