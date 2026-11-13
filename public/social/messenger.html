@@ -182,7 +182,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div id="foot"><a id="footBrand" data-home-link href="/social-next/" target="_blank" rel="noopener noreferrer" title="Open Razzle Social" style="display:contents;color:inherit;text-decoration:none;cursor:pointer"><span class=lgs2 style="cursor:pointer"></span><span class="brandname appname" style="cursor:pointer"></span></a></div>
 </div>
 <div id="brw" class="win"><div class=tbar><span class=lgs></span><span>Browse Chat Rooms</span><span class=sp></span><span class="wb x" id=brX><i data-i=close data-s=16></i></span></div>
- <div class=yonline style="font:bold 12px Tahoma;color:#2a7a2a;padding:4px 8px"></div><div class=tabs><div data-t=mine>My Rooms</div><div data-t=top>Top Rooms</div><div class="on" data-t=all>Browse Rooms</div></div>
+ <div class=yonline style="font:bold 12px Tahoma;color:#2a7a2a;padding:4px 8px"></div><div class=tabs><div class="on" data-t=mine>My Rooms</div><div data-t=top>Top Rooms</div><div data-t=all>Browse Rooms</div></div>
  <div class=srch><i data-i=search data-s=18></i><input id=brq placeholder="Search rooms..."></div>
  <div id=brl></div>
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"></template></div>
@@ -431,8 +431,8 @@ function openBrowseDestination(path){
  try{window.top.location.assign(path);}catch{location.assign(path);}
 }
 $('bRooms').onclick=()=>{const b=$('brw')||brEl;
-if(mobileBrowse()){brTab='all';b.querySelectorAll('.tabs [data-t]').forEach(tab=>tab.classList.toggle('on',tab.dataset.t===brTab));}b.classList.add('on');b.style.zIndex=++zTop;if(YD){if(b._pw){try{b._pw.focus()}catch(e){}}else ydPop(b,'ybrowse',760,640,'Browse Chat Rooms',()=>{b.classList.remove('on');document.body.appendChild(b)})}loadBr()};const brEl=$('brw');
-let brTab='all',brRooms=[];drag($('brw'));$('brX').onclick=()=>{brEl.classList.remove('on');brEl._pw&&brEl._pw.close()};
+brTab='mine';b.querySelectorAll('.tabs [data-t]').forEach(tab=>tab.classList.toggle('on',tab.dataset.t===brTab));b.classList.add('on');b.style.zIndex=++zTop;if(YD){if(b._pw){try{b._pw.focus()}catch(e){}}else ydPop(b,'ybrowse',760,640,'Browse Chat Rooms',()=>{b.classList.remove('on');document.body.appendChild(b)})}loadBr()};const brEl=$('brw');
+let brTab='mine',brRooms=[];drag($('brw'));$('brX').onclick=()=>{brEl.classList.remove('on');brEl._pw&&brEl._pw.close()};
 // tabs live in the Browse window, which the desktop app pops out into its own window: toggle siblings, not this document
 $('brw').querySelectorAll('.tabs div').forEach(t=>t.onclick=()=>{brTab=t.dataset.t;t.parentNode.querySelectorAll('div').forEach(x=>x.classList.toggle('on',x==t));drawBr()});
 $('brq').oninput=drawBr;$('brR').onclick=loadBr;$('brC').onclick=()=>openBrowseDestination('/rooms.html?create=1');

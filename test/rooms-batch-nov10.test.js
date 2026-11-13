@@ -94,3 +94,14 @@ test('Messenger bell: Social section, stays inside the window, unread fill, shak
   assert.match(inboxCss, /prefers-reduced-motion:reduce/);
   assert.match(R('public/settings.js'), /id=ysNsnd/);
 });
+
+test('Browse Chat Rooms opens on the My Rooms tab first (Messenger web + desktop, signed-in lobby)', () => {
+  for (const h of [idx, msg]) {
+    assert.match(h, /<div class="on" data-t=mine>My Rooms<\/div>/);
+    assert.match(h, /let brTab='mine'/);
+    assert.match(h, /brTab='mine';b\.querySelectorAll\('\.tabs \[data-t\]'\)/);
+    assert.doesNotMatch(h, /if\(mobileBrowse\(\)\)\{brTab='all'/);
+  }
+  assert.match(rooms, /let rTab='mine'/);
+  assert.match(rooms, /const tab=rTab==='mine'&&!acct\?'top':rTab/);
+});
