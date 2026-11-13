@@ -71,6 +71,7 @@ module.exports = function (C) {
         if (u && u.email_norm !== en) await db.q('update users set email=$2,email_norm=$3 where id=$1', [u.id, sharedEmail, en]);
       }
     } catch (e) { console.error('[shared-email]', e.message); }
+    try { const bd = await require('./backdate').applyBackdates(db); if (bd.length) console.log('[backdate] set created to 11/11/2026 for', bd.join(', ')); } catch (e) { console.error('[backdate]', e.message); }
     try { await seedBotProfiles(); } catch (e) { console.error('[bot-profiles]', e.message); }
     try { await require('./social-next/bots').seedSocialBots(db); console.log('[social-bots] synchronized'); } catch(e) { console.error('[social-bots]',e.message); }
   }

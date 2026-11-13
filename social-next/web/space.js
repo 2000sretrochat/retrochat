@@ -1,6 +1,6 @@
 // Sample join dates for the local preview profiles.
 const previewJoinDates = new Map([
-  ['Zainy', '2026-11-03'],
+  ['Zainy', '2026-11-11'],
   ['NightOwl', '2026-10-18'],
   ['RetroFan', '2026-10-22'],
   ['MiaLuvs', '2026-10-27'],
