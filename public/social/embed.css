@@ -127,3 +127,10 @@ html:not(.dark) #bottom button{background:#004990!important;color:white!importan
     color:var(--muted)!important;
   }
 }
+
+/* Nov 13, 2026: the close button never gets pushed past the right edge (the title shrinks instead). */
+#mwin>.tbar{gap:5px!important;padding-right:8px!important}
+#mwin>.tbar>span:nth-child(2){flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#mwin>.tbar>.wb{flex:none!important}
+#mwin #adRoom{color:inherit;opacity:.85}
+html.dark #mwin #adRoom{color:#cce1f4}

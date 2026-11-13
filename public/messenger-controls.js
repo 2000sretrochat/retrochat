@@ -13,7 +13,7 @@
       pickRoom.setAttribute('aria-label', 'Room shown to buddies');
       status.after(pickRoom);
       const css = document.createElement('style');
-      css.textContent = '#adRoom{all:unset;font:12px var(--sys,Tahoma,sans-serif);color:var(--muted,#567);cursor:pointer;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:6px;padding:0 14px 0 4px;border-left:1px solid var(--line,#c6d5e7);background:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 10 6%27%3E%3Cpath d=%27M0 0l5 6 5-6z%27 fill=%27%23667%27/%3E%3C/svg%3E") no-repeat right 2px center/8px 5px}#adRoom:disabled{opacity:.55;cursor:default}#adRoom:focus-visible{outline:2px solid #2468d7;outline-offset:1px}';
+      css.textContent = '#me .info{min-width:0}#me .stw{flex-wrap:wrap;row-gap:2px;min-width:0;max-width:100%}#adRoom{all:unset;box-sizing:border-box;flex:0 1 auto;min-width:0;font:12px var(--sys,Tahoma,sans-serif);color:var(--muted,#567);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:6px;padding:0 14px 0 4px;border-left:1px solid var(--line,#c6d5e7);background:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 10 6%27%3E%3Cpath d=%27M0 0l5 6 5-6z%27 fill=%27%23667%27/%3E%3C/svg%3E") no-repeat right 2px center/8px 5px}#adRoom:disabled{opacity:.55;cursor:default}#adRoom:focus-visible{outline:2px solid #2468d7;outline-offset:1px}';
       document.head.appendChild(css);
     }
     const esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
@@ -21,12 +21,13 @@
       if (!pickRoom) return;
       const rooms = Array.isArray(me.rooms) ? me.rooms : me.room ? [me.room] : [];
       const on = me.showRoom !== false, current = on ? (me.room || '') : '';
-      pickRoom.innerHTML = '<option value="off">Room: Don’t show</option>' +
-        (rooms.length ? '' : '<option value="*">Room: Show when I’m in one</option>') +
+      // Short labels so the picker fits beside the status in the narrow Social dock; the tooltip has the full meaning.
+      pickRoom.innerHTML = '<option value="off" title="Don’t show buddies which room I’m in">Room: hidden</option>' +
+        (rooms.length ? '' : '<option value="*" title="Show my room whenever I’m in one">Room: auto</option>') +
         rooms.map(r => '<option value="' + esc(r) + '">In ' + esc(r) + '</option>').join('');
       pickRoom.value = !on ? 'off' : current && rooms.includes(current) ? current : rooms.length ? rooms[0] : '*';
       pickRoom.disabled = invisible;
-      pickRoom.title = invisible ? 'You are Invisible, so your room is hidden' : on && current ? 'Buddies see: In ' + current : 'Choose a room to show your buddies';
+      pickRoom.title = invisible ? 'You are Invisible, so your room is hidden' : on && current ? 'Buddies see: In ' + current : !on ? 'Room hidden: buddies don’t see which room you’re in' : 'Room auto: buddies see the room you’re in, whenever you’re in one';
     }
     if (pickRoom) pickRoom.onchange = async () => {
       const me = getMe(); if (!me) return;

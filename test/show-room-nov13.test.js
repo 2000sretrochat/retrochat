@@ -40,7 +40,8 @@ test('server: presence uses every room window and the saved choice; Invisible ad
 test('Messenger: picker beside the status (all users, masters too), buddies see "In <Room>"', () => {
   const c = read('public/messenger-controls.js');
   assert.match(c, /pickRoom\.id = 'adRoom';/); assert.match(c, /status\.after\(pickRoom\);/);
-  assert.match(c, /<option value="off">Room: Don’t show<\/option>/);
+  assert.match(c, /<option value="off" title="Don’t show buddies which room I’m in">Room: hidden<\/option>/);
+  assert.match(c, /#me \.stw\{flex-wrap:wrap/, 'wraps instead of clipping in the narrow dock');
   assert.match(c, /'">In ' \+ esc\(r\) \+ '<\/option>'/);
   assert.match(c, /emit\('m:showroom', v === 'off' \? \{room: null\} : v === '\*' \? true : \{room: v\}\)/);
   assert.match(c, /pickRoom\.disabled = invisible;/);

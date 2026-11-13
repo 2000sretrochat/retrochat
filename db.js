@@ -66,6 +66,18 @@ alter table user_rooms add column if not exists last_used timestamptz;
 create table if not exists room_icons(room text primary key, mime text not null, data bytea not null, updated timestamptz not null default now());
 alter table users add column if not exists night_pref jsonb;
 alter table users add column if not exists ad_room text;
+-- Profile picture history (Nov 13, 2026): every custom Messenger/profile picture written to avatars (Messenger upload,
+-- phone snap, Social photo set) is kept here, deduped by content, newest 30 per account. Starts from the current picture.
+create table if not exists avatar_history(id bigserial primary key, user_id int not null references users(id) on delete cascade,
+  mime text not null, data bytea not null, hash text not null, created timestamptz not null default now(), unique(user_id, hash));
+create or replace function rz_avatar_history() returns trigger language plpgsql as $$ begin
+  insert into avatar_history(user_id,mime,data,hash) values(new.user_id,new.mime,new.data,md5(new.data)) on conflict(user_id,hash) do nothing;
+  delete from avatar_history where user_id=new.user_id and hash<>md5(new.data) and id not in
+    (select id from avatar_history where user_id=new.user_id order by created desc, id desc limit 30);
+  return new; end $$;
+drop trigger if exists avatars_history on avatars;
+create trigger avatars_history after insert or update of data on avatars for each row execute function rz_avatar_history();
+insert into avatar_history(user_id,mime,data,hash,created) select user_id,mime,data,md5(data),updated from avatars on conflict(user_id,hash) do nothing;
 create table if not exists room_history(id bigserial primary key, room text not null, msg jsonb not null, at timestamptz not null default now());
 create index if not exists room_history_r on room_history(room, id);
 create table if not exists favorites(owner text not null, room text not null, primary key(owner, room));

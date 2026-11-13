@@ -192,6 +192,10 @@ function sockets(io, hooks) {
     const rows = await db.q('select u.name,r.msg from requests r join users u on u.id=r.from_id where r.to_id=$1', [uid]);
     return rows.map(r => ({ name: r.name, msg: esc(r.msg) }));
   }
+  // Requests I sent that are still waiting (Nov 13, 2026): shown in my list as "Pending" so an added contact never just vanishes.
+  async function sentRequests(uid) {
+    return (await db.q('select u.name from requests r join users u on u.id=r.to_id where r.from_id=$1 and not exists(select 1 from contacts c where c.owner=$1 and c.contact=r.to_id) order by lower(u.name)', [uid])).map(r => r.name);
+  }
   async function watchers(uid) { return (await db.q('select owner from contacts where contact=$1', [uid])).map(r => r.owner); }
   async function broadcast(uid, name) { const bl = new Set((await db.q('select blocked from blocks where owner=$1', [uid]).catch(() => [])).map(r => r.blocked)); const audience = await watchers(uid); const p = { name, ...pres(uid) }; for (const w of audience) toUser(w, 'm:presence', bl.has(w) ? { name, online: false, status: 'offline', msg: '', room: null, idle: false, device: null, avatar: p.avatar } : p); }
   const idOf = async n => { const r = await db.q('select id,name from users where name_lc=$1', [String(n || '').toLowerCase().slice(0, 40)]); return r[0]; };
@@ -292,12 +296,12 @@ function sockets(io, hooks) {
       await broadcast(uid, me);
       const st = state.get(uid);
       return { me: { name: u.name, device: deviceKind(s), status: st.status, msg: st.msg, avatar: st.avatar, showRoom: st.showRoom !== false, room: roomInfo(uid).room, rooms: roomInfo(uid).rooms, adRoom: st.adRoom || null, m: !!s.data.master }, groups: [...new Set(['Friends', ...groups, ...cs.map(c => c.group)])],
-        contacts: cs, requests: reqs, blocked: bl, blockedContacts:blockedRows,
+        contacts: cs, requests: reqs, sent: await sentRequests(uid), blocked: bl, blockedContacts:blockedRows,
         offline: off.map(o => ({ from: o.name, t: Math.round(o.t), id: 'offline:'+o.id, ...o.body, offlineId:o.id, contact: o.contact !== false })) };
     }));
     s.on('m:contacts',safe(async()=>{
       if(!ready)return {error:'Sign in first.'};const blockedRows=await blockedContacts(uid);
-      return {contacts:await contactList(uid),requests:await pendingRequests(uid),blocked:blockedRows.map(r=>r.name),blockedContacts:blockedRows};
+      return {contacts:await contactList(uid),requests:await pendingRequests(uid),sent:await sentRequests(uid),blocked:blockedRows.map(r=>r.name),blockedContacts:blockedRows};
     }));
     s.on('m:offline-read', safe(async ids => {
       if (!ready || !Array.isArray(ids)) return {error:'Invalid messages.'};
@@ -336,17 +340,29 @@ function sockets(io, hooks) {
       const now = Date.now();
       if (now - lastContactSearch < 200) return { error: 'Please wait a moment and try again.' };
       lastContactSearch = now;
+      // Per account across all windows: at most 40 searches a minute (live suggestions are debounced client-side).
+      const hits = (SEARCH_HITS.get(uid) || []).filter(t => now - t < 60e3);
+      if (hits.length >= 40) { SEARCH_HITS.set(uid, hits); return { error: 'Too many searches. Wait a minute and try again.' }; }
+      hits.push(now); SEARCH_HITS.set(uid, hits); if (SEARCH_HITS.size > 5000) for (const [k, v] of SEARCH_HITS) if (!v.some(t => now - t < 60e3)) SEARCH_HITS.delete(k);
       const offset = Math.min(1000, Math.max(0, Math.trunc(Number(page) || 0))) * 4;
+      // Case-insensitive on name_lc. Never lists yourself or anyone you blocked / who blocked you. Only the screen name,
+      // avatar key and your own relationship flags are returned; presence is shown only for people already in your list
+      // (exactly what your buddy list shows, so invisible/incognito accounts stay hidden).
       const rows = await db.q(`
-        select u.name, u.id = $1 as self,
+        select u.id, u.name, u.avatar,
           exists(select 1 from contacts where owner=$1 and contact=u.id) as contact,
-          exists(select 1 from blocks where owner=$1 and blocked=u.id) as blocked
+          exists(select 1 from requests where from_id=$1 and to_id=u.id) as sent
         from users u
-        where strpos(u.name_lc,$2)>0 and not u.banned and not coalesce(u.deactivated,false)
-          and not exists(select 1 from blocks where owner=u.id and blocked=$1)
+        where strpos(u.name_lc,$2)>0 and u.id<>$1 and not u.banned and not coalesce(u.deactivated,false)
+          and not exists(select 1 from blocks where (owner=u.id and blocked=$1) or (owner=$1 and blocked=u.id))
         order by (u.name_lc=$2) desc, (strpos(u.name_lc,$2)=1) desc, u.name_lc
         limit 5 offset $3`, [uid, term, offset]);
-      return { people: rows.slice(0, 4), more: rows.length > 4 };
+      const people = rows.slice(0, 4).map(r => {
+        const p = r.contact ? (hooks.botContact?.(r.name) || pres(r.id)) : null;
+        const hint = r.contact ? (p && p.online ? 'Online' : 'Offline') : r.sent ? 'Request sent' : 'Not in your list yet';
+        return { name: r.name, avatar: /^(a\d+|c[0-9a-z]+)$/.test(r.avatar || '') ? r.avatar : 'a1', contact: r.contact, sent: r.sent, hint };
+      });
+      return { people, more: rows.length > 4 };
     }));
     s.on('m:add', safe(async ({ name, msg }) => {
       if (!ready || flood()) return { error: 'Slow down a little.' }; const generic = { ok: true, text: 'If ' + esc(String(name).slice(0, 20)) + ' is a Razzle user, they have been sent your request.' };
@@ -359,7 +375,8 @@ function sockets(io, hooks) {
       // if they already asked me, accept straight away
       if ((await db.q('select 1 from requests where from_id=$1 and to_id=$2', [t.id, uid])).length) return await accept(t);
       await db.q('insert into requests(from_id,to_id,msg) values($1,$2,$3) on conflict (from_id,to_id) do update set msg=excluded.msg, created=now()', [uid, t.id, String(msg || '').slice(0, 120)]);
-      toUser(t.id, 'm:request', { name: me, msg: esc(String(msg || '').slice(0, 120)) }); return generic;
+      toUser(t.id, 'm:request', { name: me, msg: esc(String(msg || '').slice(0, 120)) });
+      toUser(uid, 'm:sent', { name: t.name, on: true }); return { ...generic, pending: true, name: t.name };
     }));
     async function accept(t) {
       await db.q('delete from requests where (from_id=$1 and to_id=$2) or (from_id=$2 and to_id=$1)', [uid, t.id]);
@@ -367,8 +384,14 @@ function sockets(io, hooks) {
       await db.q('delete from blocks where owner=$1 and blocked=$2', [uid, t.id]);
       const [ug] = await db.q('select grp from contacts where owner=$1 and contact=$2', [uid, t.id]), [tg] = await db.q('select grp from contacts where owner=$2 and contact=$1', [uid, t.id]);
       toUser(uid, 'm:contact', { name: t.name, group: ug.grp, ...(hooks.botContact?.(t.name) || pres(t.id)) }); toUser(t.id, 'm:contact', { name: me, group: tg.grp, ...pres(uid) });
+      toUser(uid, 'm:sent', { name: t.name, on: false }); toUser(t.id, 'm:sent', { name: me, on: false });
       toUser(t.id, 'm:toast', { text: esc(me) + ' accepted your contact request.' }); return { ok: true, added: true, text: esc(t.name) + ' was added to your contacts.' };
     }
+    s.on('m:cancel-request', safe(async ({ name } = {}) => {
+      if (!ready) return { error: 'Sign in first.' }; const t = await idOf(name); if (!t) return { error: 'Request not found.' };
+      await db.q('delete from requests where from_id=$1 and to_id=$2', [uid, t.id]);
+      toUser(uid, 'm:sent', { name: t.name, on: false }); contactsChangedFn(t.id); return { ok: true };
+    }));
     s.on('m:respond', safe(async ({ name, accept: yes }) => {
       if (!ready) return; const t = await idOf(name); if (!t) return { error: 'Request not found.' };
       const r = await db.q('select 1 from requests where from_id=$1 and to_id=$2', [t.id, uid]); if (!r.length) return { error: 'Request not found.' };
@@ -466,6 +489,7 @@ function sockets(io, hooks) {
   });
 }
 let isOnlineFn = () => false, isConnectedFn = () => false, setAvFn = async () => {}, presRawFn = null, setStatusFn = async () => {};
+const SEARCH_HITS = new Map();
 let blockFn, presFn = null, toUserFn = () => {}, contactsChangedFn = () => {};
 module.exports = { presence: uid => presFn ? presFn(uid) : { online: false }, presenceRaw: uid => presRawFn ? presRawFn(uid) : { online: false }, http, sockets, userFromCookie, isOnline: n => isOnlineFn(n), isConnected: n => isConnectedFn(n), setSignInStatus: (uid, st) => setStatusFn(uid, st), toUser: (u, e, d) => toUserFn(u, e, d), contactsChanged: (...ids) => contactsChangedFn(...ids), blockAccount: (...args) => blockFn(...args), devConflict: null, setAvatar: (uid, av) => setAvFn(uid, av) };
 

@@ -188,6 +188,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
   });
   const features={run,fail,visiblePost,access,isBlocked,rooms:()=>botChat?.rooms?.()||[]};
   F.registerFeatures(router,db,features);
+  require('./profile-pictures').registerProfilePictures(router,db,{run,fail,isBlocked,accounts,io});
   const offline=createOfflineMessages({db,isOnline:name=>!!accounts.isOnline?.(name),toUser:(...args)=>accounts.toUser?.(...args)});
   registerOfflineRoutes(router,offline,run);
   router.get('/api/settings',run(async(req,res) => {
@@ -491,6 +492,9 @@ function registerApi(router, express, db, accounts, io, botChat) {
         on conflict do nothing returning owner`,[target.id,actor]);
       if (!added.length) fail('Request is no longer pending.',409);
       accounts.contactsChanged?.(actor,target.id);
+    } else if (action==='cancel') {
+      await db.q('delete from requests where from_id=$1 and to_id=$2',[actor,target.id]);
+      accounts.contactsChanged?.(actor,target.id);
     } else if (action==='decline') {
       await db.q('delete from requests where from_id=$1 and to_id=$2',[target.id,actor]);
       accounts.contactsChanged?.(actor);
@@ -516,10 +520,32 @@ function registerApi(router, express, db, accounts, io, botChat) {
           return res.json({ok:true,accepted:true});
         }
         await db.q('insert into requests(from_id,to_id) values($1,$2) on conflict do nothing',[actor,target.id]);
-        accounts.contactsChanged?.(target.id);
+        accounts.contactsChanged?.(target.id,actor); // the sender's Messenger shows it under Pending
       }
     } else fail('Unknown friend action.');
     res.json({ok:true,accepted:action==='request'&&!!target.bot});
+  }));
+  // "Familiar aliases. New connections." (Nov 13, 2026): people you aren't already connected to. Excludes yourself,
+  // contacts in either direction (Social friends and Messenger buddies share the contacts table), friend requests
+  // sent or received, and blocks either way. Matched by account id, so screen-name case never matters.
+  router.get('/api/suggestions',run(async(req,res) => {
+    const rows = await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
+      coalesce(s.value->>'portrait','') as portrait
+      from users u left join social_settings s on s.user_id=u.id
+      where u.id<>$1 and not u.banned and not coalesce(u.deactivated,false)
+      and not exists(select 1 from social_restrictions where user_id=u.id and service='social')
+      and not exists(select 1 from contacts c where (c.owner=$1 and c.contact=u.id) or (c.owner=u.id and c.contact=$1))
+      and not exists(select 1 from requests r where (r.from_id=$1 and r.to_id=u.id) or (r.from_id=u.id and r.to_id=$1))
+      and not ${isBlocked('u.id','$1')}
+      order by u.created desc limit 12`,[req.socialAccount.id]);
+    res.json(rows);
+  }));
+  // Requests I sent that are still waiting, so an added friend shows as "Request sent" instead of disappearing.
+  router.get('/api/sent-requests',run(async(req,res) => {
+    const rows=await db.q(`select u.name,coalesce(nullif(u.display_name,''),u.name) as display_name from requests r join users u on u.id=r.to_id
+      where r.from_id=$1 and not u.banned and not coalesce(u.deactivated,false)
+      and not exists(select 1 from contacts c where c.owner=$1 and c.contact=r.to_id) order by lower(u.name)`,[req.socialAccount.id]);
+    res.json(rows);
   }));
   router.get('/api/friends',run(async(req,res) => {
     const rows=await db.q(`select u.id,u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
