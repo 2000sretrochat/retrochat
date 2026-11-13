@@ -970,17 +970,19 @@ io.on('connection', s => {
   // kicks/mutes/bans are server actions and their notices say "a moderator", which ignore never hides.
   async function prefs() { const bl = await blockedNames().catch(() => []), ign = [...s.data.ign];
     return { ignored: ign, blocked: bl, hide: [...new Set([...ign, ...bl.map(n => n.toLowerCase())])], pmBuddies: !!s.data.pmb, account: !!s.data.acct }; }
-  const syncSibs = () => { if (s.data.acct) for (const x of io.sockets.sockets.values()) if (x !== s && x.data.acct?.id === s.data.acct.id) { x.data.ign = new Set(s.data.ign); x.data.blk = new Set(s.data.blk || []); x.data.pmb = s.data.pmb; } };
+  const sameSib = x => { if (x === s) return false; if (s.data.acct) return x.data.acct?.id === s.data.acct.id; return !!(!x.data.acct && s.data.name && x.data.name && x.data.name.toLowerCase() === s.data.name.toLowerCase()); };
+  const syncSibs = () => { for (const x of io.sockets.sockets.values()) if (sameSib(x)) { x.data.ign = new Set(s.data.ign); x.data.blk = new Set(s.data.blk || []); x.data.pmb = s.data.pmb; } };
+  const pushPrefs = async () => { syncSibs(); const payload = await prefs(); for (const x of io.sockets.sockets.values()) if (sameSib(x) && x.connected) x.emit('prefs:update', payload); };
   const P = fn => async (d, cb) => { if (typeof d === 'function') { cb = d; d = {}; } cb = typeof cb === 'function' ? cb : () => {}; try { if (s.data.acct && !s.data.prefsLoaded) { await loadPrefs(); s.data.prefsLoaded = true; } cb(await fn(d || {})); } catch (e) { cb({ error: e.maint ? 'Service under maintenance' : 'Something went wrong' }); } };
   s.on('prefs', P(async () => prefs()));
   s.on('ign:set', P(async ({ name, on }) => { const lc = String(name || '').trim().toLowerCase(); if (!/^[a-z][a-z0-9_. -]{2,19}$/.test(lc)) return { error: 'Bad name.' };
     if (s.data.name && lc === s.data.name.toLowerCase()) return { error: 'You cannot ignore yourself.' };
     if (on === false) { if (s.data.acct) await db.q('delete from ignores where owner=$1 and name_lc=$2', [s.data.acct.id, lc]); s.data.ign.delete(lc); }
     else { if (s.data.acct) await db.q('insert into ignores(owner,name_lc) values($1,$2) on conflict do nothing', [s.data.acct.id, lc]); s.data.ign.add(lc); }
-    syncSibs();
+    await pushPrefs();
     const affected = new Set(s.data.room ? [s.data.room] : []);
-    if (s.data.acct) for (const peer of io.sockets.sockets.values()) {
-      if (peer.data.acct?.id === s.data.acct.id && peer.data.room) affected.add(peer.data.room);
+    for (const peer of io.sockets.sockets.values()) {
+      if (sameSib(peer) && peer.data.room) affected.add(peer.data.room);
     }
     for (const room of affected) upd(room);
     return { ok: true, ...(await prefs()) }; }));
@@ -992,9 +994,9 @@ io.on('connection', s => {
       await db.q('delete from contacts where (owner=$1 and contact=$2) or (owner=$2 and contact=$1)', [uid, t.id]); await db.q('delete from requests where (from_id=$1 and to_id=$2) or (from_id=$2 and to_id=$1)', [uid, t.id]);
       acc.toUser && (acc.toUser(uid, 'm:gone', { name: t.name }), acc.toUser(t.id, 'm:gone', { name: s.data.acct.name }));
       for (const x of io.sockets.sockets.values()) if (x.data.acct?.id === t.id && !x.data.master) { for (const y of io.sockets.sockets.values()) if (y.data.acct?.id === uid && y.data.viewers?.delete(x.id)) { y.emit('unview', { id: x.id }); x.emit('cam-blocked', { id: y.id, name: y.data.name }); } } }
-    syncSibs(); if (s.data.room) upd(s.data.room); return { ok: true, name: t.name, ...(await prefs()) }; }));
+    await pushPrefs(); if (s.data.room) upd(s.data.room); return { ok: true, name: t.name, ...(await prefs()) }; }));
   s.on('priv:set', P(async ({ pmBuddies }) => { if (!s.data.acct) return { error: 'Sign in with a screen name to change privacy settings.' }; s.data.pmb = !!pmBuddies;
-    await db.q('update users set pm_buddies=$2 where id=$1', [s.data.acct.id, s.data.pmb]); syncSibs(); return { ok: true, ...(await prefs()) }; }));
+    await db.q('update users set pm_buddies=$2 where id=$1', [s.data.acct.id, s.data.pmb]); await pushPrefs(); return { ok: true, ...(await prefs()) }; }));
   let lastAv = 0;
   s.on('snap:token', cb => { if (typeof cb !== 'function') return; const a = s.data.acct; if (!a) return cb({ error: 'Sign in with a screen name to use a phone photo.' });
     for (const [k, v] of SNAP) if (v.uid === a.id) SNAP.delete(k); const t = require('crypto').randomBytes(18).toString('base64url'); SNAP.set(t, { uid: a.id, name: a.name, exp: Date.now() + 600e3 }); cb({ t }); });

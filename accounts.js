@@ -422,6 +422,8 @@ function sockets(io, hooks) {
       const t = await idOf(m.to);
       if (!t || t.id === uid || await blocked(t.id, uid) || await blocked(uid, t.id))
         return { error: 'This account cannot receive your private messages.' };
+      if ((await db.q('select 1 from ignores where owner=$1 and name_lc=$2', [t.id, me.toLowerCase()])).length)
+        return { error: 'This account cannot receive your private messages.' };
       const [recipient] = await db.q('select pm_buddies,banned,deactivated from users where id=$1', [t.id]);
       if (recipient?.banned || recipient?.deactivated)
         return { error: 'This account cannot receive your private messages.' };

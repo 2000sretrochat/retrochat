@@ -188,7 +188,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
  <div class=ft><button class="btn pri" id=brC><i data-i=plus data-s=18></i> Create Room</button><button class=btn id=brR><i data-i=refresh data-s=18></i> Refresh</button></div><template data-ad-placement="room-browser"></template></div>
 <div id="toasts"></div>
 <div id="modal"><div class="win"><div class="tbar"><span id="mdT"></span><span class="sp"></span><span class="wb x" id="mdX">X</span></div><div class="in" id="mdB"></div></div></div>
-<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/razzle-startup.js"></script><link rel="stylesheet" href="/razzle-reconnect.css"><script src="/razzle-reconnect.js"></script><script src="/messenger-controls.js?v=2"></script><script src="/socket.io/socket.io.js" onerror="RazzleStartup.recoverSocket()"></script><script src="/razzle-assets.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=7"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
+<script src="/device.js"></script><script src="/yd.js?v=6"></script><script src="/browse.js?v=6"></script><script src="/extras.js"></script><script src="/razzle-startup.js"></script><link rel="stylesheet" href="/razzle-reconnect.css"><script src="/razzle-reconnect.js"></script><script src="/messenger-controls.js?v=2"></script><script src="/socket.io/socket.io.js" onerror="RazzleStartup.recoverSocket()"></script><script src="/razzle-assets.js"></script><script src="/gif.js"></script><script src="/avatar.js"></script><script src="/settings.js?v=8"></script><script src="/contact-search.js"></script><link rel="stylesheet" href="/messenger-polish.css?v=7">
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',''];
@@ -354,6 +354,7 @@ S.on('m:offline-read',ids=>{
  S.on('m:imv',d=>{const w=ims[String(d.with).toLowerCase()];if(w){setImv(w,d.env);sys(w,escT(d.by)+(d.env=='none'?' turned off the IMVironment.':' changed the IMVironment to '+YAud.IMVS[d.env]+'.'))}});
  S.on('m:seen',({from})=>{const w=ims[from.toLowerCase()];if(!w)return;let e=w.querySelector('.yseen');if(!e){e=document.createElement('div');e.className='yseen';e.style.cssText='font:10px Tahoma;color:#888;text-align:right;padding:0 6px';w.querySelector('.typ').before(e)}e.textContent='Seen '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})});
  S.on("m:im",message=>{
+   if(window.YSet&&YSet.hidden(message.from))return;
    if(localStorage.ycPmPop==="off"&&!ims[message.from.toLowerCase()]){
      holdMessage(message);SND.im();
      try{window.YappDesktop?.notify("New PM",message.from+" sent you a PM")}catch{}

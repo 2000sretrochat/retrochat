@@ -29,13 +29,14 @@ test('desktop window titles name the room and the PM partner', () => {
   assert.match(read('public/index.html'), /name\+' - Private Message'/);
 });
 
-test('chat text size: two larger menu sizes and a bigger slider range', () => {
+test('chat text size uses the bottom slider (11-32px), not the View menu', () => {
   const rooms = read('public/rooms.html');
-  assert.match(rooms, /data-fs="xl">Extra Large Text/); assert.match(rooms, /data-fs="xxl">Huge Text/);
+  assert.doesNotMatch(rooms, /data-fs=/);
+  assert.doesNotMatch(rooms, /Small Text|Medium Text|Large Text|Extra Large Text|Huge Text/);
   assert.match(rooms, /#log\.fs-xl\{font-size:19px\}#log\.fs-xxl\{font-size:22px\}/);
   assert.match(rooms, /id="fsr" min="11" max="32"/);
   assert.match(rooms, /Math\.max\(11,Math\.min\(32,/);
-  assert.match(rooms, /\+\(\$\('log'\)\.classList\.contains\('fsz'\)\?' fsz':''\)/, 'View menu no longer drops the slider size');
+  assert.match(rooms, /\+\(\$\('log'\)\.classList\.contains\('fsz'\)\?' fsz':''\)/, 'slider size class is still kept on the log');
 });
 
 function loadTheme(store = {}) {
