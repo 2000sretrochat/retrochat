@@ -92,7 +92,7 @@ test('server wiring: pacing, typing pause, joins, awake hours, ignores/blocks/mu
   assert.match(s, /require\('\.\/bot-realism'\)/);
   assert.match(s, /function botSpeak\(room, b, text, to/);
   assert.match(s, /botPace\.ok\(room, b\.id, now\) \|\| !REAL\.speakersOk/);
-  assert.match(s, /io\.to\(room\)\.emit\('typing', \{ name: b\.name, bot: true \}\)/);
+  assert.doesNotMatch(s, /io\.to\(room\)\.emit\('typing'/);
   assert.match(s, /x\.data\.ign\?\.has\(lc\) && !\(id && x\.data\.blk\?\.has\(id\)\)/);
   assert.match(s, /mod\(room\)\.mt\.has\(whoLc\)/);
   assert.match(s, /if \(!s\.data\.inc && noticeOk\(\)\) botJoined\(room, s\.data\.name\);/);

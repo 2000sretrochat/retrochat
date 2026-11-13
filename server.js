@@ -330,14 +330,13 @@ const warmBotUids = () => { if (botUids.size || !db.status().ready) return;
 function botWelcomeBy(room, who, b) { const lc = b.name.toLowerCase(), id = botUids.get(lc), whoLc = String(who).toLowerCase();
   if (mod(room).mt.has(whoLc)) return false;
   return socks(room).filter(x => x.data.name === who).every(x => !x.data.ign?.has(lc) && !(id && x.data.blk?.has(id))); }
-// Schedules a bot line: rate cap, fewer chatting bots than people, a typing pause of 2–12 s, then checks everyone is still there.
+// Schedules a bot line: rate cap, fewer chatting bots than people, a 2–12 s pause, then checks everyone is still there.
 function botSpeak(room, b, text, to, { force = false } = {}) {
   const now = Date.now();
   if (!text || !botsIn(room).includes(b) || (to && !botWelcomeBy(room, to, b))) return false;
   if (!force && (!botPace.ok(room, b.id, now) || !REAL.speakersOk(botMem, room, b.name, humansIn(room), now))) return false;
   botPace.take(room, b.id, now);
   const line = REAL.style(b, botPers.get(b.id), text), wait = REAL.delay(line);
-  setTimeout(() => { if (botsIn(room).includes(b)) io.to(room).emit('typing', { name: b.name, bot: true }); }, Math.max(0, wait - 3500)).unref?.();
   setTimeout(() => {
     if (!botsIn(room).includes(b) || !humansIn(room) || (to && (!socks(room).some(x => x.data.name === to) || !botWelcomeBy(room, to, b)))) return;
     botSay(room, b, line);
