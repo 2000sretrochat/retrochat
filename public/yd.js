@@ -170,7 +170,10 @@ html.yd #pmBadge{top:8px!important;right:12px!important}
   const d=pw.document;d.open();d.write('<!doctype html><html class="yd ydpop"><head><meta charset=utf-8><base href="'+location.origin+'/"><title></title></head><body></body></html>');d.close();
   document.querySelectorAll('link[rel=stylesheet],style').forEach(n=>d.head.appendChild(n.cloneNode(true)));
   d.documentElement.className=document.documentElement.className+' ydpop';d.body.className=document.body.className;d.title=title||'Razzle';
-  d.body.appendChild(el);if(el.matches('.razzle-settings-dialog,.contact-directory,.contact-profile,.im'))try{pw.resizeTo(w,h)}catch{}popped.add(el);el._pw=pw;let done=false;const fin=()=>{if(done)return;done=true;el._pw=null;popped.delete(el);onClose&&onClose()};
+  d.body.appendChild(el);if(el.matches('.razzle-settings-dialog,.contact-directory,.contact-profile,.im'))try{pw.resizeTo(w,h)}catch{}
+  // Nov 13, 2026: dialogs (Add a contact, settings, profiles) open centered over the Messenger window, kept on screen.
+  if(el.matches('.razzle-settings-dialog,.contact-directory,.contact-profile'))try{const S=screen,al=S.availLeft||0,at=S.availTop||0,x=Math.round(screenX+(outerWidth-w)/2),y=Math.round(screenY+(outerHeight-h)/2);
+   pw.moveTo(Math.max(al,Math.min(x,al+S.availWidth-w)),Math.max(at,Math.min(y,at+S.availHeight-h)))}catch{}popped.add(el);el._pw=pw;let done=false;const fin=()=>{if(done)return;done=true;el._pw=null;popped.delete(el);onClose&&onClose()};
   pw.addEventListener('pagehide',fin);pw.addEventListener('beforeunload',fin);return pw};
 })();
 // v13.6: in-window dialogs (avatar, settings, profile) open as their own native windows in the desktop app.

@@ -71,31 +71,11 @@ module.exports = function (C) {
     try { await seedBotProfiles(); } catch (e) { console.error('[bot-profiles]', e.message); }
     try { await require('./social-next/bots').seedSocialBots(db); console.log('[social-bots] synchronized'); } catch(e) { console.error('[social-bots]',e.message); }
   }
-  // Seeds a profile for EVERY bot. Never overwrites master edits: inserts use ON CONFLICT and only fill a missing bot_id.
-  // Legacy "[bot]" rows (TriviaTime/GameNight/...) are renamed in place so their edits/avatars survive; only untouched legacy defaults are refreshed.
+  // Seeds a profile for EVERY bot (bot-profile-seed.js): idempotent, keeps master edits, survives bot renames,
+  // and one bad row is logged and skipped instead of aborting the rest.
   async function seedBotProfiles() {
     if (!ready()) return;
-    const BOTMOD = C.BOTMOD || require('./bots');
-    for (const d of BOTMOD.PROFILE_SEEDS) {
-      const lc = d.name.toLowerCase();
-      for (const old of d.legacy || []) {
-        const olc = old.toLowerCase(); if (olc === lc) continue;
-        const has = (await db.q('select 1 from bot_profiles where name_lc=$1', [lc])).length;
-        if (has) { await db.q('update bot_profiles set bot_id=null where name_lc=$1 and bot_id=$2', [olc, d.id]); continue; }
-        const r = await db.q('update bot_profiles set name_lc=$2, name=$3, bot_id=$4 where name_lc=$1 returning display_name,bio,room', [olc, lc, d.name, d.id]);
-        if (r.length) {
-          if (r[0].display_name === BOTMOD.LEGACY_DEFAULT_DISPLAY[d.id] || r[0].display_name === '') await db.q('update bot_profiles set display_name=$2 where name_lc=$1', [lc, d.display_name]);
-          if (r[0].bio === BOTMOD.LEGACY_DEFAULT_BIO[d.id] || r[0].bio === '') await db.q('update bot_profiles set bio=$2, interests=$3, location=$4 where name_lc=$1', [lc, d.bio, d.interests, d.location]);
-          if (BOTMOD.LEGACY_DEFAULT_ROOM[d.id] && r[0].room === BOTMOD.LEGACY_DEFAULT_ROOM[d.id]) await db.q('update bot_profiles set room=$2 where name_lc=$1', [lc, d.room]);
-          // old default "BOT"-badged SVG -> initials placeholder (a master-chosen different key or upload is kept)
-          await db.q("update bot_profiles set avatar='' where name_lc=$1 and avatar=$2", [lc, d.id]);
-          await audit('system', 'bot-rename', old, d.name);
-        }
-      }
-      await db.q(`insert into bot_profiles(name_lc,name,display_name,bio,location,interests,avatar,room,interactive,bot_id)
-        values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-        on conflict(name_lc) do update set bot_id=coalesce(bot_profiles.bot_id, excluded.bot_id)`, [lc, d.name, d.display_name, d.bio, d.location, d.interests, d.avatar_key || '', d.room || '', d.interactive, d.id]);
-    }
+    await require('./bot-profile-seed').seedBotProfiles(db, C.BOTMOD || require('./bots'), { audit });
     if (typeof C.applyBotProfiles === 'function') await C.applyBotProfiles();
   }
   const saveRating = (room, rating) => { q(rating ? 'insert into room_meta(room,rating) values($1,$2) on conflict(room) do update set rating=$2' : 'delete from room_meta where room=$1', rating ? [room, rating] : [room]).catch(() => {}); };

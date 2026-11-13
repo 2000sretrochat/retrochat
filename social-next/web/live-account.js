@@ -3,7 +3,7 @@
   const frame=$('#live-social-messenger'), peopleByName=new Map(), postsById=new Map();
   const alignFooter=()=>{const footer=document.querySelector('body > .social-footer');if(footer)document.querySelector('body > .app').appendChild(footer);};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',alignFooter,{once:true});else alignFooter();
-  let feed=[], friends=[], people=[], inbox={notifications:[],requests:[]}, loading=false, profileGeneration=0;
+  let feed=[], friends=[], people=[], sentRequests=[], suggested=null, inbox={notifications:[],requests:[]}, loading=false, profileGeneration=0;
   let settingsQueue=Promise.resolve();
 
   async function api(path,method='GET',body) {
@@ -201,7 +201,7 @@
   function privateNotice(actions=''){
     return '<section class="space-card private-notice"><h3>This profile is private</h3><p>Add this person as a friend to see their full profile, or send them a message.</p>'+actions+'</section>';
   }
-  function albumMarkup(record,owner=false){const photos=(record.gallery||[]).filter(p=>!publicPreview||p.mode==='public'||profileMode==='friend'&&p.mode==='friends');return '<section class="space-card messenger-photo-album"><h3>Messenger profile pictures</h3><p>Public Messenger photos. Your Social profile picture is separate.</p><div class="social-profile-gallery">'+photos.map((p,i)=>'<figure><img src="'+esc(p.image)+'" alt="Messenger profile picture '+(i+1)+'">'+(owner&&p.id===record.galleryDefault?'<figcaption>Messenger default</figcaption>':'')+'</figure>').join('')+'</div>'+(!photos.length?'<p>No Messenger profile pictures yet.</p>':'')+(owner&&!publicPreview?'<a class="text-action" href="/?chat=1" target="_blank" rel="noopener">Manage pictures in Messenger</a>':'')+'</section><section class="space-card timeline-photo-album"><h3>Timeline photos</h3><p>Photos with their original captions and audiences.</p><div class="timeline-photo-list" data-photo-owner="'+esc(record.name)+'"></div></section>';}
+  function albumMarkup(record,owner=false){const photos=(record.gallery||[]).filter(p=>!publicPreview||p.mode==='public'||profileMode==='friend'&&p.mode==='friends');return '<section class="space-card messenger-photo-album profile-pictures-album" data-pp-owner="'+esc(record.name)+'" data-pp-manage="'+(owner&&!publicPreview?'1':'')+'"><h3>Profile pictures</h3><p>Messenger profile pictures. Your Social profile picture is separate.</p><div class="pp-album" hidden></div><div class="social-profile-gallery">'+photos.map((p,i)=>'<figure><img src="'+esc(p.image)+'" alt="Messenger profile picture '+(i+1)+'">'+(owner&&p.id===record.galleryDefault?'<figcaption>Messenger default</figcaption>':'')+'</figure>').join('')+'</div>'+(!photos.length?'<p>No Messenger profile pictures yet.</p>':'')+(owner&&!publicPreview?'<a class="text-action" href="/?chat=1" target="_blank" rel="noopener">Manage pictures in Messenger</a>':'')+'</section><section class="space-card timeline-photo-album"><h3>Timeline photos</h3><p>Photos with their original captions and audiences.</p><div class="timeline-photo-list" data-photo-owner="'+esc(record.name)+'"></div></section>';}
   function renderTimelinePhotos(container,rows){
       rows.forEach(post=>container.insertAdjacentHTML('beforeend','<figure class="timeline-photo"><button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Timeline photo"></button><figcaption><p>'+esc(post.text||'')+'</p><small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></figcaption>'+(!publicPreview&&post.author_id===myId?'<button type="button" class="text-action" data-shared-edit="'+post.id+'">Edit caption or audience</button>':'')+'</figure>'));
   }
@@ -303,7 +303,7 @@
     if(stream&&spaceTab==='photos'){
       if(spaceTab==='photos')stream.querySelectorAll(':scope > :not(.space-tabs)').forEach(node=>node.remove());
       const albums=document.createElement('div');albums.className='profile-albums';stream.append(albums);
-      api('/profile/'+encodeURIComponent(me)).then(record=>{if(!albums.isConnected)return;albums.innerHTML=albumMarkup(record,true);const timeline=albums.querySelector('.timeline-photo-list');if(profileMode==='friend'){const photos=posts.filter(post=>post.image);renderTimelinePhotos(timeline,photos);if(!photos.length)timeline.textContent='No timeline photos to show.';}else{loadTimelinePhotos(timeline);}}).catch(error=>toast(error.message));
+      api('/profile/'+encodeURIComponent(me)).then(record=>{if(!albums.isConnected)return;albums.innerHTML=albumMarkup(record,true);albums.querySelectorAll('.profile-pictures-album').forEach(c=>window.SocialProfilePictures?.load(c,{api,toast}));const timeline=albums.querySelector('.timeline-photo-list');if(profileMode==='friend'){const photos=posts.filter(post=>post.image);renderTimelinePhotos(timeline,photos);if(!photos.length)timeline.textContent='No timeline photos to show.';}else{loadTimelinePhotos(timeline);}}).catch(error=>toast(error.message));
     }
     loadArticlePreviews();
   }
@@ -320,7 +320,7 @@
       remember(record);
       $('#content').classList.remove('custom-space');$('#content').removeAttribute('style');
       $('#heading').textContent=record.displayName;$('#subheading').textContent='@'+record.name.toLowerCase();
-      const wall=record.friend&&!record.private?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message" placeholder="Say something to '+esc(record.displayName)+'"></textarea><button class="primary">'+$('#quick-post .wall-note-icon').outerHTML+'Post</button></form></section>':'';
+      const wall=record.friend&&!record.private?'<section class="space-card profile-wall"><h3>Leave a thought</h3><form id="friend-wall-form" data-wall="'+esc(record.name)+'"><textarea name="thought" maxlength="1500" required aria-label="Wall message" placeholder="Say something to '+esc(record.displayName)+'"></textarea><button class="primary">'+$('#quick-post .wall-note-icon').outerHTML+'Post it!</button></form></section>':'';
       const gallery=messengerGallery(record.gallery);
       const message='<button type="button" class="secondary" data-live-message="'+esc(record.name)+'">Message</button>';
       const add=!record.friend && record.canRequest?'<button type="button" class="secondary" data-live-request="'+esc(record.name)+'"'+(record.requestPending?' disabled>Request sent':'>Add friend')+'</button>':'';
@@ -336,6 +336,7 @@
         '<button class="text-action" data-profile-report="'+esc(record.name)+'">Report</button></div></section>'+gallery+'</aside><section class="space-posts">'+
         (record.private?privateNotice('<div class="space-actions">'+actions+'</div>'):wall+posts+photos)+'</section></div>';
       document.querySelectorAll('.timeline-photo-list').forEach(container=>loadTimelinePhotos(container));
+      document.querySelectorAll('.profile-pictures-album').forEach(c=>window.SocialProfilePictures?.load(c,{api,toast}));
       upgradeFriendWall($('#friend-wall-form'));
       mountAudience($('#friend-wall-form'));
       loadArticlePreviews();
@@ -354,10 +355,12 @@
     if(loading)return;
     loading=true;
     try {
-      const [rows,mine,contacts]=await Promise.all([api('/posts'),api('/posts?wall='+encodeURIComponent(me)),api('/friends')]);
+      const [rows,mine,contacts,sent]=await Promise.all([api('/posts'),api('/posts?wall='+encodeURIComponent(me)),api('/friends'),api('/sent-requests').catch(()=>[])]);
+      sentRequests=Array.isArray(sent)?sent:[];
       feed=rows.map(normalize);own=mine.map(normalize);
       friends=contacts;contacts.forEach(remember);previewFriends.clear();contacts.forEach(person=>previewFriends.add(person.name));
       syncPreviewFriends();
+      loadSuggestions(); // friends are known now: recompute (fixes friends showing up when /people loaded first)
       if(current==='feed')render();
       else if(current==='following')relationshipPanel();
       else if(current==='profile' && window.profileName?.toLowerCase()===me.toLowerCase() && !$('#dialog').open)renderOwner();
@@ -393,10 +396,14 @@
     if(room){room.refreshRooms();return;}
     renderPeopleDirectory();
   };
+  // Suggestions come from /api/suggestions, which excludes you, contacts either way, requests either way and blocks
+  // by account id. The local filter below is a second guard using the same rules, compared case-insensitively.
+  let suggestTimer=0;
+  function loadSuggestions(){clearTimeout(suggestTimer);suggestTimer=setTimeout(async()=>{try{const rows=await api('/suggestions');if(Array.isArray(rows)){suggested=rows;rows.forEach(remember);suggestions();}}catch{}},50);}
   suggestions=function() {
     $('#follow-count').textContent=friends.length;
-    const excluded=new Set([me,...friends.map(person=>person.name),...inbox.requests.map(person=>person.name)].map(name=>name.toLowerCase()));
-    $('#suggestions').innerHTML=people.filter(person=>!excluded.has(person.name.toLowerCase())).slice(0,3).map(person=>
+    const excluded=new Set([me,...friends.map(person=>person.name),...inbox.requests.map(person=>person.name),...sentRequests.map(person=>person.name)].map(name=>String(name).toLowerCase()));
+    $('#suggestions').innerHTML=(suggested||[]).filter(person=>!excluded.has(person.name.toLowerCase())).slice(0,3).map(person=>
       '<div class="suggestion">'+profileAvatar(person.name)+profileUserLink(person.name)+'<button class="follow" data-live-request="'+esc(person.name)+'">Add friend</button></div>').join('') || '<p>No new suggestions right now.</p>';
   };
   const requestMarkup=person=>'<div class="notification-row">'+profileAvatar(person.name)+profileUserLink(person.name)+
@@ -407,7 +414,8 @@
     $('#content').classList.remove('custom-space');$('#content').removeAttribute('style');
     $('#content').innerHTML='<section class="directory"><h2>Friends</h2>'+friends.map(person=>
       '<div class="suggestion">'+profileAvatar(person.name)+profileUserLink(person.name)+'<button class="text-action" data-live-message="'+esc(person.name)+'">Message</button><button class="text-action" data-live-remove="'+esc(person.name)+'">Remove</button></div>').join('')+
-      '<h2>Incoming requests</h2>'+inbox.requests.map(requestMarkup).join('')+'</section>';
+      '<h2>Incoming requests</h2>'+inbox.requests.map(requestMarkup).join('')+
+      (sentRequests.length?'<h2>Sent requests</h2>'+sentRequests.map(person=>'<div class="suggestion">'+profileAvatar(person.name)+profileUserLink(person.name)+'<small class="pending-note">Waiting for them to accept</small><button class="text-action" data-live-cancel="'+esc(person.name)+'">Cancel request</button></div>').join(''):'')+'</section>';
   };
   async function refreshNotifications() {
     try {
@@ -567,7 +575,7 @@
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button');if(!button)return;
     const d=button.dataset;
-    if(!Object.keys(d).some(key=>['openAlbums','sharedPin','sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','profilePhoto','sharedAccept','sharedDecline','sharedNotification','sharedOffline','liveMessage','liveRequest','liveRemove'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
+    if(!Object.keys(d).some(key=>['openAlbums','sharedPin','sharedLike','sharedComment','sharedCommentRemove','sharedDelete','sharedEdit','sharedPhoto','profilePhoto','sharedAccept','sharedDecline','sharedNotification','sharedOffline','liveMessage','liveRequest','liveRemove','liveCancel'].includes(key)) && !d.editPost && !d.deletePost && !d.removePhoto)return;
     event.preventDefault();event.stopImmediatePropagation();
     try {
       if(d.sharedLike){like(d.sharedLike);return;}
@@ -601,6 +609,7 @@
         return;
       }
       else if(d.liveRemove){if(confirm('Remove this friend?'))await friendAction(d.liveRemove,'remove');return;}
+      else if(d.liveCancel){await friendAction(d.liveCancel,'cancel');return;}
       else if(d.sharedAccept){await friendAction(d.sharedAccept,'accept');openNotifications();return;}
       else if(d.sharedDecline){await friendAction(d.sharedDecline,'decline');openNotifications();return;}
       else if(d.sharedOffline){

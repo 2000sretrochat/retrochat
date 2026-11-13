@@ -83,11 +83,27 @@ html.yd.ydpop body .yprof.contact-profile {
 html body .yprof.contact-directory {
   width: min(560px, calc(100vw - 16px)) !important;
   max-width: calc(100vw - 16px) !important;
-  max-height: none !important;
-  top: 12px !important;
+  max-height: calc(100vh - 16px) !important;
+  overflow-y: auto !important;
+  top: 50% !important;
   left: 50% !important;
-  transform: translateX(-50%) !important;
+  transform: translate(-50%, -50%) !important;
 }
+/* Add a contact: friendlier layout with live suggestions (Nov 13, 2026) */
+.contact-directory .cd-intro { margin: 0 0 10px; color: var(--muted, #5b6f8c); line-height: 1.4; }
+.contact-directory .cd-field { display: block; margin: 0 0 8px; font-weight: 600; }
+.contact-directory .cd-field input { display: block; margin-top: 4px; padding: 8px 10px; border-radius: 6px; font-weight: 400; }
+.contact-directory .cd-status { min-height: 1.2em; margin: 2px 0 6px; color: var(--muted, #5b6f8c); }
+.contact-directory .directory-results { display: grid; gap: 4px; margin-bottom: 8px; }
+.contact-directory .directory-person { gap: 10px; padding: 6px 8px; border: 1px solid var(--line, #dbe5ee); border-radius: 8px; background: var(--card, #fff); }
+.contact-directory .cd-avw { flex: none; width: 32px; height: 32px; display: grid; place-items: center; overflow: hidden; border-radius: 7px; }
+.contact-directory .cd-avw :is(img, svg, .av) { width: 32px !important; height: 32px !important; border-radius: 7px; }
+.contact-directory .cd-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.contact-directory .cd-who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contact-directory .cd-who small { color: var(--muted, #5b6f8c); }
+.contact-directory .cd-link { all: unset; cursor: pointer; color: var(--blue, #004990); text-decoration: underline; font-size: 12px; }
+.contact-directory .cd-add { flex: none; min-width: 64px; }
+.contact-directory .cd-add:disabled { opacity: .7; cursor: default; }
 .contact-directory .pb { padding: 12px; }
 .contact-directory input { width: 100%; box-sizing: border-box; }
 .directory-person {

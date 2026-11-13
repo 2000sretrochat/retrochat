@@ -1293,12 +1293,15 @@ function mountOwnerWallComposer() {
   form.elements.thought.replaceWith(thought);
   const send = form.querySelector('.quick-submit');
   send.className = 'wall-send';
-  send.setAttribute('aria-label', 'Post');
-  send.title = 'Post';
+  send.setAttribute('aria-label', 'Post it!');
+  send.title = 'Post it!';
   form.querySelector('.post-attachments').open = false;
   form.querySelector('.post-attachments input[type=file]').value = '';
   form.elements.attachmentUrl.value = '';
-  send.replaceChildren(send.querySelector('.wall-note-icon'));
+  const label = document.createElement('span');
+  label.className = 'wall-send-label';
+  label.textContent = 'Post it!';
+  send.replaceChildren(send.querySelector('.wall-note-icon'), label);
   form.querySelector('.avatar').outerHTML = profileAvatar('Zainy');
   wall.replaceWith(form);
   mountPostDetails(form);
