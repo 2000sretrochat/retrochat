@@ -22,6 +22,7 @@ function setup(queryOverride = () => undefined) {
     if (name === 'bcryptjs') return { hashSync: () => 'dummy' };
     if (name === './flood') return { check: () => null };
     if (name === './messenger-sessions') return require('../messenger-sessions');
+    if (name === './room-status') return require('../room-status');
     return require(name);
   } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../accounts.js'), 'utf8'), sandbox);

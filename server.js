@@ -556,7 +556,9 @@ const AH = { botContact: name => {
       idle: false, device: null, avatar: 'bot:' + bot.id };
   }, roomExists: r => !!ROOMS[r], roomRating: r => rateOf(r), rawRoomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && ROOMS[x.data.room] ? x.data.room : null; },
   bannedFrom: (r, n) => { const e = MOD[r]?.kicked?.get?.(String(n).toLowerCase()); return !!e && e > Date.now(); },
-  toRoomUser: (n, ev, d) => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); x && x.emit(ev, d); }, roomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && !x.data.inc && !x.data.master && ROOMS[x.data.room] ? x.data.room : null; } };
+  toRoomUser: (n, ev, d) => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); x && x.emit(ev, d); }, roomOf: n => { const x = io.sockets.sockets.get(users.get(String(n).toLowerCase())); return x && x.data.room && !x.data.inc && !x.data.master && ROOMS[x.data.room] ? x.data.room : null; },
+  // Every room this name is in (up to 4 windows), minus incognito windows. Masters who are not incognito can advertise too.
+  roomsOf: n => require('./room-status').roomsFor(io.sockets.sockets.values(), n, r => !!ROOMS[r]) };
 function lists(room) { if (!room) return; setImmediate(() => { for (const x of socks(room)) if (x.data.acct) AH.roomChanged?.(x.data.name); }); const R = {}; for (const x of socks(room)) { const k = x.data.master ? 1 : 0; R[k] = R[k] || [roster(room, !!k), members(room, !!k)]; x.emit('roster', R[k][0]); x.emit('members', R[k][1]); } }
 // Music rooms: whoever has the mic can say what they're playing ("Artist - Song"); cleared when they let go of the mic.
 // Music sharing (Play from + Band/Artist/Song) is a per-room owner setting; music rooms default ON, every other room OFF.

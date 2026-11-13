@@ -65,6 +65,7 @@ alter table user_rooms add column if not exists icon text;
 alter table user_rooms add column if not exists last_used timestamptz;
 create table if not exists room_icons(room text primary key, mime text not null, data bytea not null, updated timestamptz not null default now());
 alter table users add column if not exists night_pref jsonb;
+alter table users add column if not exists ad_room text;
 create table if not exists room_history(id bigserial primary key, room text not null, msg jsonb not null, at timestamptz not null default now());
 create index if not exists room_history_r on room_history(room, id);
 create table if not exists favorites(owner text not null, room text not null, primary key(owner, room));
