@@ -192,7 +192,10 @@ setInterval(() => { const d = new Date().toISOString().slice(0, 10), n = onlineN
 const BOTMOD = require('./bots'), BOTS = BOTMOD.BOTS; let botsOn = true; const botOff = new Set(); // rooms with bots switched off
 let quietVisitor = null;
 const botPresence = new Map();
-const botAllowed = b => botsOn && !botOff.has(b.room) && botPresence.get(b.id) !== false;
+const REAL = require('./bot-realism'), botMem = new REAL.Memory(20), botPace = new REAL.Pace(), botGreeter = new REAL.Greeter();
+const BOT_SEED = new Map(BOTMOD.PROFILE_SEEDS.map(x => [x.id, x])), botPers = new Map(BOTS.map(b => [b.id, REAL.personality(b, BOT_SEED.get(b.id))]));
+const botAsleep = new Set(), botAwayUntil = new Map(); // regular chatters outside their MST hours or briefly away
+const botAllowed = b => botsOn && !botOff.has(b.room) && botPresence.get(b.id) !== false && (botPresence.get(b.id) === true || !botAsleep.has(b.id));
 const botsIn = room => botsOn && !botOff.has(room)
   ? (BOTMOD.byRoom[room] || []).filter(b => botAllowed(b) && (!b.silent || b === quietVisitor || botPresence.get(b.id) === true)) : [];
 const BOT_LEGACY = new Set(BOTS.flatMap(b => (b.legacy || []).map(x => x.toLowerCase())));
@@ -286,7 +289,7 @@ function interactiveBotReply(b, room, who, clean) {
  if (b.id === 'razzleguide') return 'I can help you find rooms, use Contacts, or start trivia. Mention me with help!';
  return null;
 }
-const botSay = (room, b, text) => botsIn(room).includes(b) && push(room, { name: b.name, av: b.av || '', role: '', text: esc(text), color: b.color || '#000080', b: false, i: false, u: false, f: b.font || 'Arial', t: Date.now() });
+const botSay = (room, b, text) => botsIn(room).includes(b) && (botMem.add(room, { name: b.name, text, bot: true }), true) && push(room, { name: b.name, av: b.av || '', role: '', text: esc(text), color: b.color || '#000080', b: false, i: false, u: false, f: b.font || 'Arial', t: Date.now() });
 const quietVisitors = BOTS.filter(b => b.silent);
 let nextQuietVisitor = Math.floor(Math.random() * quietVisitors.length);
 async function visitQuietly() {
@@ -318,25 +321,57 @@ setTimeout(()=>{
   postBotUpdate();
   setInterval(postBotUpdate,60*60e3).unref();
 },10*60e3).unref();
+// ---- Bot realism (bot-realism.js): human-like timing, pacing, memory, triggers, awake hours. No AI services. ----
+const humansIn = room => socks(room).filter(x => x.data.name && !x.data.inc).length;
+const botUids = new Map();
+const warmBotUids = () => { if (botUids.size || !db.status().ready) return;
+  Promise.resolve().then(() => db.q('select id, name_lc from users where name_lc = any($1)', [BOTS.map(b => b.name.toLowerCase())])).then(rows => rows.forEach(r => botUids.set(r.name_lc, r.id))).catch(() => {}); };
+// Never address someone who ignores or blocks the bot, or who is muted in the room.
+function botWelcomeBy(room, who, b) { const lc = b.name.toLowerCase(), id = botUids.get(lc), whoLc = String(who).toLowerCase();
+  if (mod(room).mt.has(whoLc)) return false;
+  return socks(room).filter(x => x.data.name === who).every(x => !x.data.ign?.has(lc) && !(id && x.data.blk?.has(id))); }
+// Schedules a bot line: rate cap, fewer chatting bots than people, a typing pause of 2–12 s, then checks everyone is still there.
+function botSpeak(room, b, text, to, { force = false } = {}) {
+  const now = Date.now();
+  if (!text || !botsIn(room).includes(b) || (to && !botWelcomeBy(room, to, b))) return false;
+  if (!force && (!botPace.ok(room, b.id, now) || !REAL.speakersOk(botMem, room, b.name, humansIn(room), now))) return false;
+  botPace.take(room, b.id, now);
+  const line = REAL.style(b, botPers.get(b.id), text), wait = REAL.delay(line);
+  setTimeout(() => { if (botsIn(room).includes(b)) io.to(room).emit('typing', { name: b.name, bot: true }); }, Math.max(0, wait - 3500)).unref?.();
+  setTimeout(() => {
+    if (!botsIn(room).includes(b) || !humansIn(room) || (to && (!socks(room).some(x => x.data.name === to) || !botWelcomeBy(room, to, b)))) return;
+    botSay(room, b, line);
+  }, wait).unref?.();
+  return true;
+}
+const chatters = room => botsIn(room).filter(b => !b.silent && !REAL.host(b) && !(TRIVIA_GAME.active(room) && b.trivia));
 function botTick(room) {
   const busy=socks(room).length>0;
   setTimeout(()=>botTick(room),(busy?120+Math.random()*240:420+Math.random()*360)*1000).unref?.();
-  if(!busy)return;
+  if(!busy){ botMem.clear(room); return; }
   const bs=botsIn(room).filter(b=>!b.silent&&!(TRIVIA_GAME.active(room)&&b.trivia));
-  if(!bs.length)return;
+  if(!bs.length||Math.random()<0.2)return; // sometimes nobody feels like talking
+  const now=Date.now(), last=botMem.lastHuman(room), talk=chatters(room);
+  // People are chatting: maybe one bot joins in on the same topic, by name.
+  if(last && now-last.t<180e3){
+    const topic=botMem.topic(room), b=talk.find(x=>x.lang==='en'&&x.name!==botMem.recent(room).at(-1)?.name);
+    if(b&&topic&&REAL.FOLLOW[topic]&&Math.random()<0.5){ const ask=REAL.FOLLOW[topic][Math.floor(Math.random()*REAL.FOLLOW[topic].length)].replace(/\{n\}/g,last.name); botSpeak(room,b,ask,last.name); }
+    return;
+  }
+  // Quiet room: a fresh line, sometimes a short two-bot exchange.
   const recent=recentBotLines.get(room)||[];
   const topics=(exchanges[room]||[]).filter(([line])=>!recent.includes(line));
   const exchange=topics[Math.floor(Math.random()*topics.length)];
   const b=bs[Math.floor(Math.random()*bs.length)];
   const line=exchange?.[0] || Array.from({length:12},()=>BOTMOD.line(b,room,recent.at(-1))).find(text=>!recent.includes(text));
-  if(!line)return;
-  rememberBotLine(room,line);botSay(room,b,line);
+  if(!line||!botSpeak(room,b,line))return;
+  rememberBotLine(room,line);
   const others=bs.filter(bot=>bot!==b);
   if(exchange && others.length && Math.random()<0.4){
     const other=others[Math.floor(Math.random()*others.length)];
     setTimeout(()=>{
       if(!socks(room).length||!botsIn(room).includes(other)||(recentBotLines.get(room)||[]).includes(exchange[1]))return;
-      rememberBotLine(room,exchange[1]);botSay(room,other,exchange[1]);
+      if(botSpeak(room,other,exchange[1]))rememberBotLine(room,exchange[1]);
     },10000+Math.random()*24000).unref?.();
   }
 }
@@ -353,25 +388,53 @@ function directedRoomReply(bot, text) {
   return null;
 }
 
-// Direct mentions can receive a short topic reply. Trivia still recognizes normal chat.
+// Direct mentions get a reply (after a human pause); simple questions to the room get a template answer.
 async function botHear(room, who, text) { const bs = botsIn(room).filter(b => !b.silent); if (!bs.length) return; const t = String(text).toLowerCase();
+  botMem.add(room, { name: who, text: t });
   const address = BOTMOD.roomAddress(bs, t, socks(room).map(socket => socket.data.name).filter(Boolean));
   const host = address?.bot, clean = address?.clean ?? t;
   if (TRIVIA_GAME.active(room) || (host && host.trivia)) { if (await TRIVIA_GAME.hear(room, who, text, host && host.trivia ? host : null)) return; }
   if (host && host.interactive) { const r = interactiveBotReply(host, room, who, clean); if (r) { botSay(room, host, r); return; } }
-  if (host) {
+  const named = host || REAL.mentioned(bs.filter(b => !REAL.host(b)), t);
+  if (named) {
     const now = Date.now();
-    if (now - (lastDirectedReply.get(host.id) || 0) < 18000) return;
-    lastDirectedReply.set(host.id, now);
-    const reply = host.lines ? BOTMOD.line(host) : directedRoomReply(host, clean) || BOTMOD.greet(host, who);
-    setTimeout(() => {
-      if (socks(room).some(socket => socket.data.name === who) && botsIn(room).includes(host)) botSay(room, host, reply);
-    }, 2000 + Math.random() * 4000).unref?.();
+    if (now - (lastDirectedReply.get(named.id) || 0) < 18000) return;
+    if (!host && Math.random() < 0.3) return; // a passing mention doesn't always get an answer
+    if (!REAL.host(named) && Math.random() < 0.08) return; // and now and then a bot just misses it
+    lastDirectedReply.set(named.id, now);
+    const ctx = { who, np: npList(room), topic: botMem.topic(room), from: BOT_SEED.get(named.id)?.location, directed: true };
+    const reply = named.lines ? BOTMOD.line(named) : (named.lang === 'en' && REAL.answer(clean, ctx)) || directedRoomReply(named, clean) || (host ? BOTMOD.greet(named, who) : BOTMOD.reply(named, who));
+    botSpeak(room, named, reply, who, { force: true });
     return;
   }
+  const talk = chatters(room), pool = talk.length ? talk : bs, b = pool[Math.floor(Math.random() * pool.length)];
+  if (b.lang === 'en' && !t.includes('@')) {
+    const a = REAL.answer(t, { who, np: npList(room), topic: botMem.topic(room), from: BOT_SEED.get(b.id)?.location });
+    if (a) { if (Math.random() < 0.75) botSpeak(room, b, a, who); return; }
+  }
   if (t.includes('@') || !/^(hi|hey|hello|hola|sup|yo|wassup|anyone)[.!?]*$/.test(t) || Math.random() >= 0.6) return;
-  const b = bs[Math.floor(Math.random() * bs.length)];
-  setTimeout(() => botsIn(room).includes(b) && botSay(room, b, BOTMOD.greet(b, who)), 3000 + Math.random() * 6000).unref?.(); }
+  botSpeak(room, b, BOTMOD.greet(b, who), who); }
+// Some people get a hello when they walk in (cooldowns in bot-realism.js).
+function botJoined(room, who) { const talk = chatters(room); if (!talk.length || !botGreeter.should(room, who)) return;
+  const b = talk[Math.floor(Math.random() * talk.length)]; botSpeak(room, b, BOTMOD.greet(b, who), who); }
+// Every 5 minutes: regular chatters follow their MST awake hours and sometimes step away for 10–30 minutes.
+function botRealismTick(now = Date.now()) { warmBotUids(); let changed = false;
+  for (const room of botRooms()) {
+    const regular = (BOTMOD.byRoom[room] || []).filter(b => !REAL.host(b)); if (!regular.length) continue;
+    const before = botsIn(room), off = new Set();
+    for (const b of regular) { const away = botAwayUntil.get(b.id) || 0; if (away && away <= now) botAwayUntil.delete(b.id);
+      if (!REAL.awake(b, botPers.get(b.id), now) || away > now) off.add(b.id); }
+    const up = regular.filter(b => !off.has(b.id));
+    if (up.length > 1 && Math.random() < 0.06) { const b = up[Math.floor(Math.random() * up.length)]; botAwayUntil.set(b.id, now + (10 + Math.random() * 20) * 60e3); off.add(b.id); }
+    if (regular.every(b => off.has(b.id))) off.delete(regular.reduce((a, b) => REAL.hash(a.id) < REAL.hash(b.id) ? a : b).id); // the room keeps one night owl
+    for (const b of regular) off.has(b.id) ? botAsleep.add(b.id) : botAsleep.delete(b.id);
+    const after = botsIn(room), moved = [...before.filter(b => !after.includes(b)).map(b => [b, 'left']), ...after.filter(b => !before.includes(b)).map(b => [b, 'entered'])];
+    if (!moved.length) continue; changed = true;
+    if (socks(room).length) for (const [b, w] of moved) push(room, { sys: true, who: b.name, text: `${esc(b.name)} has ${w} the room.` });
+    upd(room);
+  }
+  if (changed) refreshBotContacts(); }
+setTimeout(() => { botRealismTick(); setInterval(botRealismTick, 5 * 60e3).unref(); }, 3000).unref?.();
 botRooms().forEach((r, i) => setTimeout(() => botTick(r), 60e3 + i * 7000 + Math.random() * 120e3).unref?.());
 const onlineTotal = () => new Set([...io.sockets.sockets.values()].filter(x => (x.data.name || x.data.acct) && !x.data.inc).map(x => (x.data.acct?.name || x.data.name).toLowerCase())).size + botRooms().reduce((n, r) => n + botsIn(r).length, 0);
 // buddy list for the room Invite picker (signed-in only)
@@ -717,6 +780,7 @@ io.on('connection', s => {
     s.data.np = null; s.data.inc = !!(s.data.master && s.data.incPref); s.data.room = room; s.join(room); s.emit('history', { room, music: isMusicRoom(room), np: isMusicRoom(room) ? npList(room) : [], topic: TOPICS[room], msgs: history[room], owner: UROOMS.get(room)?.owner || null, icon: UROOMS.get(room)?.icon || '', rating: rateOf(room), mics: micsOf(room), ann: ANN[room] || '', rec: REC.isOn(room) });
     if (!graceSkip(room) && noticeOk()) push(room, { sys: true, who: s.data.name, text: `${esc(s.data.name)} has entered the room.` }); upd(room); s.emit('inc', { on: !!s.data.inc, announce: !!s.data.announce });
     if(opening && !s.data.inc)roomActivity('room',room,s);
+    if (!s.data.inc && noticeOk()) botJoined(room, s.data.name);
   }
   s.on('create-room', ({ name, topic, rating, mics, cat, icon }, cb) => {
     if (typeof cb !== 'function') return; if (!s.data.acct) return cb({ error: 'Guests cannot create rooms. Get a free screen name to create one.' });
