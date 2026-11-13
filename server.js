@@ -74,6 +74,23 @@ const readWelcomeFile = name => require('node:fs').readFileSync(require('node:pa
 const welcomePage = readWelcomeFile('index.html')
   .replace('<head>', '<head><base href="/welcome-assets/">')
   .replace('href="index.html" class="brand"', 'href="/" class="brand"')
+  .replace('</head>', `<style>
+  @media (min-width: 800px) {
+    .guest-home #social-sidebar { background: #003b7c; }
+  }
+  .guest-home #social-sidebar .menu .selected {
+    background: #4d90cd; color: #082b50;
+  }
+  .guest-home #social-sidebar .quiet {
+    display: flex; align-items: center; gap: 8px; margin: 18px 0 0;
+    padding: 14px 4px 0; border-top: 1px solid #ffffff35;
+    color: #e4f1fb; font-size: 12px; line-height: 1.5;
+  }
+  .guest-home #social-sidebar .quiet svg { flex: 0 0 auto; }
+  .welcome-hero .welcome-eyebrow { font-size: clamp(12px, 1.1vw, 16px); }
+  .welcome-hero .messenger-download { padding-block: 3px; }
+</style>` + '</head>')
+  .replace('</aside>', '<p class="quiet"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="9" cy="7" r="3"/><path d="M3 19v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2M16 4.5a3 3 0 0 1 0 5.7M17 12.5a5 5 0 0 1 4 4.9V19" stroke-linecap="round"/></svg><span>A place for your online self.<br>A way to keep your people.</span></p></aside>')
   .replace('href="https://retrochat-izzg.onrender.com/rooms.html"', 'href="rooms.html"')
   .replace('href="https://retrochat-izzg.onrender.com/"', 'href="/index.html"')
   .replace('<button class="notice" onclick="info()" aria-label="About this preview">◌</button>', '');
