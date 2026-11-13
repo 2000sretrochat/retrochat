@@ -441,7 +441,7 @@ function renderSignedOutHome() {
           <div class="welcome-panel-body">
             <div class="live-entry-links">
               <a class="primary home-cta" href="${liveMessenger}social/">Sign in to Razzle Social</a>
-              <a class="text-action" href="${liveMessenger}">Open Browser Messenger</a>
+              <a class="text-action" href="${liveMessenger}index.html">Open Browser Messenger</a>
               <a class="text-action" href="${liveMessenger}reset.html">Reset your password</a>
             </div>
           </div>
@@ -543,7 +543,7 @@ function showSocialHome() {
     <div class="home-actions">
       <section><span class="home-card-icon" aria-hidden="true">☷</span><h2>Your feed</h2><p>Catch up on photos, links, and thoughts from people you follow.</p><button class="text-action" onclick="show('feed')">Open your feed →</button></section>
       <section><span class="home-card-icon" aria-hidden="true">◈</span><h2>Your space</h2><p>Make your profile yours and share something with your circle.</p><button class="text-action" onclick="profile('Zainy')">Open your space →</button></section>
-      <section><span class="home-card-icon" aria-hidden="true"><img src="bubbles.svg" alt=""></span><h2>Messenger</h2><p>Keep the conversation going with familiar screen names.</p><a class="text-action" href="${liveMessenger}">Open Browser Messenger →</a><button type="button" class="messenger-download" onclick="showMessengerDownload()">Download Messenger</button></section>
+      <section><span class="home-card-icon" aria-hidden="true"><img src="bubbles.svg" alt=""></span><h2>Messenger</h2><p>Keep the conversation going with familiar screen names.</p><a class="text-action" href="${liveMessenger}index.html">Open Browser Messenger →</a><button type="button" class="messenger-download" onclick="showMessengerDownload()">Download Messenger</button></section>
     </div>
     
   </div>`;
