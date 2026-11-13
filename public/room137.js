@@ -14,7 +14,9 @@
     d.write('<!doctype html><html class="'+document.documentElement.className+' ydpop"><head><meta charset=utf-8><title>Smileys</title></head><body style="margin:0"></body></html>');d.close();
     document.querySelectorAll('link[rel=stylesheet],style').forEach(n=>d.head.appendChild(n.cloneNode(true)));
     const st=d.createElement('style');st.textContent='html,body{height:100%;overflow:hidden;background:var(--card,#fff)}#ep{box-sizing:border-box;height:100vh;overflow:auto;padding:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:2px;align-content:start;justify-items:center}#ep span{cursor:pointer;padding:3px;border-radius:6px}#ep span:hover{background:var(--hover,#eaf3fd)}';d.head.appendChild(st);
-    document.querySelectorAll('body>svg').forEach(n=>{if(n.querySelector('defs'))d.body.appendChild(n.cloneNode(true))});const box=d.createElement('div');box.id='ep';box.innerHTML=smp.innerHTML;d.body.appendChild(box);
+    document.querySelectorAll('body>svg').forEach(n=>{if(n.querySelector('defs'))d.body.appendChild(n.cloneNode(true))});const box=d.createElement('div');box.id='ep';d.body.appendChild(box);
+    // The picker is filled on demand: fill it, then copy the smileys (and their art styles) into this window.
+    RazzleAssets.fillSmileys(smp,d).then(()=>{if(!ew.closed)box.innerHTML=smp.innerHTML}).catch(()=>{box.textContent='Could not load smileys. Close this window and try again.'});
     box.onclick=e=>{const s=e.target.closest('span[data-k]');if(!s)return;const t=document.createElement('textarea');t.innerHTML=s.dataset.k;msg.value+=' '+t.value+' ';msg.dispatchEvent(new Event('input',{bubbles:true}));if(!e.shiftKey)ew.close();window.focus();msg.focus()};
     ew.addEventListener('keydown',e=>{if(e.key=='Escape')ew.close()});return true};
    ['bSm','smb'].forEach(id=>{const b=$(id);if(b)b.onclick=e=>{e.stopPropagation();if(openEmoji()===false)smp.classList.toggle('open')}});

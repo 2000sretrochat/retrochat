@@ -148,7 +148,7 @@ html.yd #pmBadge{top:8px!important;right:12px!important}
    const g=document.getElementById('chat-guest-entry');
    if(g){
     g.textContent='Continue as guest';
-    g.onclick=ev=>{if(window.YD){ev.preventDefault();window.open('/rooms.html','yapprooms')}};
+    g.onclick=ev=>{if(window.YD){ev.preventDefault();(window.openRoomWindow?openRoomWindow('/rooms.html'):window.open('/rooms.html','yapprooms'))}};
    }
   }
   // Forgot password → /reset.html (Master Console / moderator path when email reset is off)

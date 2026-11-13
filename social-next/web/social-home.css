@@ -534,6 +534,14 @@ main > .intro #subheading { font-size: clamp(16px, 1.45vw, 20px); line-height: 1
 #wall-post-composer > .wall-send:hover { background: #e7f0f9; }
 #wall-post-composer > .photo-button { grid-column: 2 / -1; justify-self: start; }
 #wall-post-composer > .post-details { grid-column: 2 / -1; }
+/* Emoji + font row on every post box (Nov 13, 2026) */
+.post-style { grid-column: 2 / -1; flex: 0 0 100%; position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: #173b60; }
+.post-style .post-emoji-button { padding: 4px 10px; font-size: 13px; }
+.post-style label { display: inline-flex; align-items: center; gap: 6px; }
+.post-style select { font: inherit; max-width: 170px; }
+.post-emoji-pop { position: absolute; z-index: 30; left: 0; top: calc(100% + 4px); width: min(300px, calc(100vw - 32px)); display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 6px; background: #fff; border: 1px solid #c6d5e7; border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 32, 91, .14); }
+.post-emoji-pop button { font-size: 20px; line-height: 1; padding: 4px; border-radius: 6px; background: transparent; border: 0; cursor: pointer; }
+.post-emoji-pop button:hover, .post-emoji-pop button:focus-visible { background: #e7f0f9; }
 .post-attachments { grid-column: 2 / -1; width: 100%; font-size: 13px; }
 .post-attachments > summary { cursor: pointer; color: #004990; font-weight: 650; }
 .post-attachments > label { display: grid; gap: 4px; margin-top: 8px; }
@@ -622,6 +630,7 @@ button.primary,a.primary,.home-hero button,.welcome-hero .welcome-join,.room-inv
 .visitor-profile #friend-wall-form { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .visitor-profile #friend-wall-form textarea { flex:1 0 100%; width:100%; min-height:68px; box-sizing:border-box; padding:8px; font:inherit; resize:vertical; }
 .visitor-profile #friend-wall-form > .primary { margin:0; }
+.visitor-profile #friend-wall-form > .post-attachments, .visitor-profile #friend-wall-form > .post-details, .visitor-profile #friend-wall-form > .post-style { flex: 1 0 100%; }
 .visitor-profile .visitor-empty p { margin-bottom:0; }
 
 .tape-card { margin:12px 0; padding:10px 12px; border:1px solid #92b0cc; background:#edf5fd; color:#153653; }

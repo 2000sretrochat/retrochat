@@ -16,7 +16,7 @@
   const b=document.createElement('button');b.type='button';b.className='ydict';b.title='Dictate (speech to text)';b.innerHTML=ICON;b.tabIndex=-1;
   b.addEventListener('mousedown',e=>e.preventDefault());b.onclick=e=>{e.stopPropagation();start(ta,b)};ta.style.paddingRight=Math.max(parseInt(getComputedStyle(ta).paddingRight)||0,24)+'px';p.appendChild(b);
   ta.addEventListener('keydown',e=>{if(e.key=='Enter'&&cur===ta)stop()})}
- const scan=()=>document.querySelectorAll('textarea[placeholder^="Type a message"]').forEach(attach);
+ const scan=()=>document.querySelectorAll('textarea[placeholder^="Type a message"],textarea#msg').forEach(attach);
  new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});addEventListener('DOMContentLoaded',scan);scan();
  window.YDict={lang,setLang:l=>l?localStorage.setItem(LK,l):localStorage.removeItem(LK),supported:true,stop};
 })();

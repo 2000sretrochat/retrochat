@@ -42,11 +42,51 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
       toggle.innerHTML=(mine?ICON.off:ICON.on)+'<span>'+(mine?'Turn off webcam':'Turn on webcam')+'</span>';
       toggle.disabled=!!call?.camBusy||call?.phase!=='connected';
     }
+    micButton(window,panel,live);
     const status=el('.cstatus');
     if(status){
       const kind=stage&&!stage.hidden?'Video call':'Voice call';
       status.innerHTML=call&&call.phase==='connected'?'<b>'+kind+'</b> <span class=ctime>'+clock(Date.now()-(call.connectedAt||Date.now()))+'</span>':'';
     }
+  }
+  // PM calls get the same mic adjustments as rooms (shared settings in av.js): mic volume 0-200%, auto-gain (off by
+  // default, so the level never changes on its own), and input device. Changes apply to the live call right away.
+  function micButton(window,panel,live) {
+    const bar=panel.querySelector('.cbtns');
+    if(!bar||typeof bar.insertBefore!=='function'||!bar.ownerDocument?.createElement)return;
+    let button=bar.querySelector('.micset');
+    if(!button){
+      const doc=bar.ownerDocument;button=doc.createElement('button');button.type='button';button.className='rzb micset';
+      button.textContent='Mic settings';button.title='Mic volume, auto-gain and input device';
+      button.onclick=event=>{event.stopPropagation();void micPanel(window,button);};
+      bar.insertBefore(button,bar.querySelector('.hang')||null);
+    }
+    button.hidden=!live;
+    if(!live)bar.ownerDocument.querySelector?.('.rz-micpanel')?.remove();
+  }
+  async function micPanel(window,button) {
+    const doc=button.ownerDocument,old=doc.querySelector('.rz-micpanel');
+    if(old){old._stop?.();old.remove();return;}
+    const yav=await ensureYav();if(!yav)return notice(window,'Mic settings could not load. Try again.');
+    const c=yav.cfg(),devs=await yav.devices(),esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const box=doc.createElement('div');box.className='rz-micpanel';box.setAttribute('role','dialog');box.setAttribute('aria-label','Mic settings');
+    box.style.cssText='position:fixed;z-index:9999;width:260px;max-width:calc(100vw - 16px);box-sizing:border-box;background:var(--card,#fff);color:var(--ink,#132849);border:1px solid var(--line,#C6D5E7);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.18);padding:10px 12px;font:12px Tahoma,"Segoe UI",sans-serif';
+    box.innerHTML='<b>Mic settings</b>'
+      +'<label style="display:block;margin:8px 0 2px">Mic volume <span class=mv>'+c.boost+'%</span><input type=range class=mb min=0 max=200 step=5 value="'+c.boost+'" style="width:100%"></label>'
+      +'<div class=meter style="height:6px;background:#e3ebf5;border-radius:3px;overflow:hidden"><i class=mm style="display:block;height:100%;width:0;background:#2fa84f"></i></div>'
+      +'<label style="display:block;margin:8px 0 2px"><input type=checkbox class=ma '+(c.agc?'checked':'')+' style="width:auto;display:inline"> Auto-gain</label><small>Off by default so your mic level never changes on its own.</small>'
+      +'<label style="display:block;margin:8px 0 2px">Input device<select class=md style="width:100%"><option value="">Default microphone</option>'+devs.map((d,i)=>'<option value="'+esc(d.deviceId)+'"'+(d.deviceId===c.dev?' selected':'')+'>'+esc(d.label||('Input '+(i+1)))+'</option>').join('')+'</select></label>'
+      +'<div style="text-align:right;margin-top:8px"><button type=button class=mx>Close</button></div>';
+    doc.body.appendChild(box);
+    const r=button.getBoundingClientRect(),view=doc.defaultView;
+    box.style.left=Math.max(8,Math.min(r.left,view.innerWidth-box.offsetWidth-8))+'px';
+    box.style.top=Math.max(8,r.top-box.offsetHeight-6)+'px';
+    let stop=yav.attachMeter(box.querySelector('.mm'));box._stop=()=>stop&&stop();
+    box.querySelector('.mb').oninput=e=>{const v=yav.setBoost(+e.target.value);box.querySelector('.mv').textContent=v+'%';};
+    const rebuild=async()=>{await yav.recapture();box._stop();stop=yav.attachMeter(box.querySelector('.mm'));};
+    box.querySelector('.ma').onchange=e=>{yav.set('agc',e.target.checked);void rebuild();};
+    box.querySelector('.md').onchange=e=>{yav.set('dev',e.target.value);void rebuild();};
+    box.querySelector('.mx').onclick=()=>{box._stop();box.remove();};
   }
   function show(window,message,buttons=false) {
     const panel=window.querySelector('.call'), label=panel.querySelector('.cs');
@@ -77,6 +117,7 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
     clearTimeout(call.recovery);
     if(notify)void send(call,'m:hang',{reason});
     call.unwatchMic?.();
+    window.ownerDocument?.querySelector?.('.rz-micpanel')?.remove();
     call.pc?.close();
     call.stream?.getTracks().forEach(track=>track.stop());
     (call.stream?._parts||[]).forEach(part=>part.getTracks&&part.getTracks().forEach(track=>track.stop()));
@@ -132,8 +173,10 @@ window.createMessengerCalls = function ({ socket, contact, openIm, findIm, notic
     });
   }
   function watchMic(window,call) {
-    if(!window.YAV||!window.YAV.onRebuild)return;
-    call.unwatchMic=window.YAV.onRebuild(async stream=>{
+    // `window` here is the PM window element, so read the shared audio settings from the real global.
+    const yav=globalThis.YAV;
+    if(!yav||!yav.onRebuild)return;
+    call.unwatchMic=yav.onRebuild(async stream=>{
       if(!active(window,call)||!stream)return;
       const audio=stream.getAudioTracks()[0];
       const video=(call.stream&&call.stream.getVideoTracks())||[];

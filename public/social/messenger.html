@@ -136,9 +136,9 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 .rrow .uc{display:flex;align-items:center;gap:6px;color:var(--muted);width:60px;font-size:13px}
 #brw .ft{display:flex;gap:10px;padding:14px 16px}
 @media (max-width:760px){#brw{left:0!important;top:0!important;width:100%;max-width:none}.im{width:100%!important}}
-</style><link rel="stylesheet" href="/social/embed.css?v=3"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><link rel="stylesheet" href="/messenger-device.css"><script src="/messenger-device.js"></script><script src="/master-console-layout.js"></script><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css?v=7"></head><body>
+</style><link rel="stylesheet" href="/social/embed.css?v=3"><link rel="stylesheet" href="/messenger-inbox.css?v=3"><link rel="stylesheet" href="/messenger-device.css"><style>.web-tag{margin-left:6px;padding:0 6px;border:1px solid currentColor;border-radius:999px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.65;vertical-align:1px}</style><script src="/room-windows.js"></script><script src="/messenger-parked.js"></script><script src="/messenger-device.js"></script><script src="/master-console-layout.js"></script><script src="/messenger-master.js"></script><script src="/offline-panel.js"></script><script src="/messenger-inbox.js"></script><script src="/site-links.js?v=2"></script><script src="/room-invite-popup.js"></script><script src="/messenger-calls.js"></script><script src="/messenger-delivery.js"></script><link rel="stylesheet" href="/design-nov10.css?v=2"><script src="/messenger-contact-menu.js"></script><link rel="stylesheet" href="/razzle-mobile.css?v=2"><script defer src="/razzle-mobile.js"></script><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/messenger-layout.css?v=7"></head><body>
 <div id="mwin" class="win">
- <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger</span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
+ <div class="tbar"><span class=lgs></span><span><span class="brandname appname"></span> Messenger<small class="web-tag" data-web-only hidden>Web</small></span><span class="sp"></span><span class="wb"><i data-i=min data-s=16></i></span><span class="wb"><i data-i=max data-s=14></i></span><span class="wb x" id="wx" title="Sign out"><i data-i=close data-s=16></i></span></div>
  <div id="menu" class="signed-out" aria-disabled="true" inert>
   <div>Messenger<div class="dd"><div id="mAvatar">Change My Avatar...</div><div id="mSound">Sounds: On</div><div id="mShowRoom"><label><input id="mShowRoomCheck" type="checkbox" aria-label="Display Room I’m In"> Display Room I’m In</label></div><div id="mSet">Settings / Privacy...</div><hr><div id="mOut">Sign Out</div></div></div>
   <div>Contacts<div class="dd"><div id="mAdd">Add a Contact...</div><div id="mMyProf">Edit My Profile...</div><div id="mGroup" style="display:none"></div><div id="mMove" style="display:none"></div><hr><div id="mBlocked">Blocked List...</div></div></div>
@@ -166,7 +166,7 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
    <button class="pri" id="bUp">Create My Screen Name</button><div class="err" id="eUp"></div>
    <div><a id="toIn">&laquo; Back to Sign In</a></div>
   </div>
-  <div style="margin-top:auto;text-align:center">or <a href="/rooms.html" onclick="if(window.YD){event.preventDefault();window.open('/rooms.html','yapprooms')}">Sign in as Guest</a> to visit the Chat Rooms<div class="privacy" style="font-size:11px;color:var(--muted,#667);margin-top:8px">We log IP address and approximate location for safety and moderation.</div></div>
+  <div style="margin-top:auto;text-align:center">or <a href="/rooms.html" onclick="if(window.YD){event.preventDefault();(window.openRoomWindow?openRoomWindow('/rooms.html'):window.open('/rooms.html','yapprooms'))}">Sign in as Guest</a> to visit the Chat Rooms<div class="privacy" style="font-size:11px;color:var(--muted,#667);margin-top:8px">We log IP address and approximate location for safety and moderation.</div></div>
  </div>
  <div id="main">
   <div id="me"><div class="av" id="myav" title="Change display image"></div><div class="info"><div class="nm" id="myname"></div>
@@ -192,10 +192,11 @@ html.dark .msg .bb{background:var(--soft)!important;border-color:var(--line)!imp
 <script>
 // ===== App name: change here to rename the whole app (two-tone: first part blue, second navy) =====
 const APP_NAME=['Razzle',''];
+const IS_DESKTOP_APP=!!(window.YappDesktop&&window.YappDesktop.isDesktop),WEB_TAG=IS_DESKTOP_APP?'':' · Web';if(!IS_DESKTOP_APP)document.querySelectorAll('[data-web-only]').forEach(e=>e.hidden=false);
 const razzleMark=w=>`<img class=razzle-mark src=/icon-192.png width=${w} height=${w} alt="" style=display:block>`;
 document.querySelectorAll('.appname').forEach(e=>e.innerHTML=`<span class=a>${APP_NAME[0]}</span><span class=b>${APP_NAME[1]}</span>`);
 document.querySelectorAll('.lgs').forEach(e=>e.innerHTML=razzleMark(26));document.querySelectorAll('.lgs2').forEach(e=>e.innerHTML=razzleMark(22));document.querySelectorAll('.lgbig').forEach(e=>e.innerHTML=razzleMark(70));
-document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('')+' Messenger';
+document.querySelectorAll('.appname-plain').forEach(e=>e.textContent=APP_NAME.join(''));document.title=APP_NAME.join('')+' Messenger'+WEB_TAG;
 const $=id=>document.getElementById(id)||window.ydFind(id);
 const escT=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 const avHtml=(a,cls='',name)=>YAv.html(name||'x',a,cls);
@@ -294,7 +295,7 @@ async function refreshContacts(){
   for(const contact of result.contacts)if(!groups.includes(contact.group))groups.push(contact.group);
   messengerInbox.reset(result.requests);render();
 }
-function start(){if(S||typeof io!=='function')return;$('signin').style.display='none';$('main').style.display='flex';menuSignedIn(true);window.RazzlePasswordToggle?.hide();S=io({auth:RazzleDevice.auth('social'),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));
+function start(){if(S||typeof io!=='function')return;$('signin').style.display='none';$('main').style.display='flex';menuSignedIn(true);window.RazzlePasswordToggle?.hide();S=io({auth:RazzleDevice.auth('social'),reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000,reconnectionDelayMax:15000,randomizationFactor:.5});YSet.init(S, room=>openBrowseDestination('/rooms.html?room='+encodeURIComponent(room)));window.RazzleParked?.bind(S);
  const reconnect = RazzleReconnect.indicator($('mwin'), {
   exit: () => { reconnect.clear(); void exitMessenger(); }
  });
@@ -370,7 +371,7 @@ S.on('m:offline-read',ids=>{
  S.on('m:invite',({id,from,room,rating,ttl})=>{SND.im();invPopup(from,room,rating,()=>emit('m:invite-decline',{id}),id,ttl)});S.on('m:invite-gone',({id})=>window.RazzleInvite&&RazzleInvite.close(id));
  S.on('m:call',onCall);S.on('m:callans',onCallAns);S.on('m:sig',onSig);S.on('m:hang',onHang);S.on('disconnect',disconnectCalls);
 }
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=APP_NAME.join('')+' Messenger'});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title=APP_NAME.join('')+' Messenger'+WEB_TAG});
 const dec=s=>{const t=document.createElement('textarea');t.innerHTML=s||'';return t.value};
 // ---------- status / avatar / idle ----------
 const myStatus = RazzleMessengerControls.bindStatus({
@@ -397,7 +398,7 @@ function render(){const q=$('q').value.trim().toLowerCase(),cs=[...Object.values
     if(ME&&e.dataset.n.toLowerCase()===ME.name.toLowerCase())return toast('This is your own contact entry. Right-click to view your profile.');
     openIm(e.dataset.n).querySelector('textarea')?.focus();
   };
-  e.querySelectorAll('[data-jr]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();window.open('/rooms.html?room='+encodeURIComponent(a.dataset.jr),'yapprooms')});
+  e.querySelectorAll('[data-jr]').forEach(a=>a.onclick=ev=>{ev.preventDefault();ev.stopPropagation();(window.openRoomWindow?openRoomWindow('/rooms.html?room='+encodeURIComponent(a.dataset.jr)):window.open('/rooms.html?room='+encodeURIComponent(a.dataset.jr),'yapprooms'))});
   e.tabIndex=0;
   e.oncontextmenu=ev=>openContactMenu(ev,e);
   e.onkeydown=ev=>{if(ev.key==='ContextMenu'||(ev.shiftKey&&ev.key==='F10'))openContactMenu(ev,e);};
@@ -425,7 +426,7 @@ $('mGroup').onclick=()=>modal('Add a Group','Group name:<input type=text id=gn m
 $('mMove').onclick=()=>{const n=need();if(!n)return;modal('Move '+n,`Move to group:<select id=gm>${groups.map(g=>`<option>${escT(g)}</option>`).join('')}</select>`,async()=>{const r=await emit('m:group',{name:n,group:$('gm').value});if(r.group){contacts[n.toLowerCase()].group=r.group;render()}return r})};
 const mobileBrowse=()=>!YD && matchMedia('(max-width: 760px)').matches;
 function openBrowseDestination(path){
- if(!mobileBrowse()){window.open(path,'yapprooms');return;}
+ if(!mobileBrowse()){(window.openRoomWindow?openRoomWindow(path):window.open(path,'yapprooms'));return;}
  try{window.top.location.assign(path);}catch{location.assign(path);}
 }
 $('bRooms').onclick=()=>{const b=$('brw')||brEl;
@@ -462,7 +463,7 @@ async function invite(n){if(!invOk(n))return toast(escT(n)+" isn't available for
  if(r&&r.error&&/Join a chat room first/.test(r.error)){const rs=await fetch('/api/rooms').then(r=>r.json());return modal('Invite '+n+' to a Chat Room',`You're not in a room right now. Pick one:<br>Room:<select id=ir>${rs.map(r=>`<option value="${escT(r.name)}">${escT(r.name)} (${r.count})</option>`).join('')}</select>`,async()=>{const r=await emit('m:invite',{to:n,room:$('ir').value});if(!r.error){const w=openIm(n);sys(w,'You invited '+n+' to '+r.room+'.')}return r},'Invite')}
  if(r&&r.error)return toast(escT(r.error));if(r&&r.ok){const w=openIm(n);sys(w,'You invited '+n+' to '+r.room+'.')}}
 function invPopup(from,room,rating,onDecline,id,ttl){if(!id||!window.RazzleInvite)return;RazzleInvite.show({id,from,room,rating,ttl},{onReject:()=>onDecline&&onDecline(),
- onAccept:async()=>{const r=await emit('m:invite-accept',{id});if(!r||!r.ok)return toast(escT((r&&r.error)||'This invitation has expired.'));window.open('/rooms.html?room='+encodeURIComponent(room),'yapprooms')}})}
+ onAccept:async()=>{const r=await emit('m:invite-accept',{id});if(!r||!r.ok)return toast(escT((r&&r.error)||'This invitation has expired.'));(window.openRoomWindow?openRoomWindow('/rooms.html?room='+encodeURIComponent(room)):window.open('/rooms.html?room='+encodeURIComponent(room),'yapprooms'))}})}
 // ---------- IM windows ----------
 const ims={};const COLORS=['#000000','#ff0000','#0000ff','#008000','#800080','#ff6600','#008080','#990033','#8b5cf6'];
 const ts=t=>`<span class=ts>[${new Date(t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}]</span>`;
@@ -495,7 +496,7 @@ function applyImTimestamps(w){
 }
 addEventListener('storage',e=>{if(e.key==='ycImTimestamps')Object.values(ims).forEach(applyImTimestamps);if(e.key==='ycImFormatting')Object.values(ims).forEach(applyImFormatting);});
 function peerInfo(w,n){const c=contacts[n.toLowerCase()],st=c?(c.online?(c.idle?'idle':c.status):'offline'):'offline';
- const ih=w.querySelector('.ihead');if(ih){ih.querySelector('.pav').innerHTML=avHtml(c?c.avatar:'','',c?c.name:n);ih.querySelector('.st').innerHTML=`<span class="sdot ${st}"></span>${STL[st]}${c&&c.msg&&!(c.showRoom&&c.room)?' &middot; '+RazzleAssets.renderSmileys(c.msg, w.ownerDocument):''}${c&&c.online&&c.room?` &middot; <a href="/rooms.html?room=${encodeURIComponent(c.room)}" class=imjr title="Join ${escT(c.room)}">${escT(c.room)}</a>`:''}`;const j=ih.querySelector('.imjr');if(j)j.onclick=ev=>{ev.preventDefault();window.open('/rooms.html?room='+encodeURIComponent(c.room),'yapprooms')}}
+ const ih=w.querySelector('.ihead');if(ih){ih.querySelector('.pav').innerHTML=avHtml(c?c.avatar:'','',c?c.name:n);ih.querySelector('.st').innerHTML=`<span class="sdot ${st}"></span>${STL[st]}${c&&c.msg&&!(c.showRoom&&c.room)?' &middot; '+RazzleAssets.renderSmileys(c.msg, w.ownerDocument):''}${c&&c.online&&c.room?` &middot; <a href="/rooms.html?room=${encodeURIComponent(c.room)}" class=imjr title="Join ${escT(c.room)}">${escT(c.room)}</a>`:''}`;const j=ih.querySelector('.imjr');if(j)j.onclick=ev=>{ev.preventDefault();(window.openRoomWindow?openRoomWindow('/rooms.html?room='+encodeURIComponent(c.room)):window.open('/rooms.html?room='+encodeURIComponent(c.room),'yapprooms'))}}
  w.querySelector('.peer').innerHTML=avHtml(c?c.avatar:'','sm ring r-'+st,c?c.name:n)+`<span class="dot d-${st}"></span><b>${escT(c?c.name:n)}</b> &mdash; ${STL[st]}${c&&c.msg?' &middot; '+RazzleAssets.renderSmileys(c.msg, w.ownerDocument):''}`}
 let zTop=20;
 function setImv(w,env){[...w.classList].filter(c=>c.startsWith('imv-')).forEach(c=>w.classList.remove(c));if(env&&env!='none')w.classList.add('imv-'+env)}

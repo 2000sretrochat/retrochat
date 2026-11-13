@@ -51,9 +51,14 @@ function wire(wc) {
       return;
     }
     track(w, popupOpts(url, frameName).key);
+    // Taskbar entries name the room ("Music Lobby - Razzle") or the PM partner ("Bob - Private Message").
     if (kindOf(url, frameName) === 'room') w.on('page-title-updated', (e, t) => {
       e.preventDefault();
       w.setTitle(/Razzle/.test(t) ? t : 'Razzle Chat - Chat Room');
+    });
+    if (kindOf(url, frameName) === 'im') w.on('page-title-updated', (e, t) => {
+      e.preventDefault();
+      w.setTitle(String(t || '').trim() || 'Razzle Messenger');
     });
   });
 }

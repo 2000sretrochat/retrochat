@@ -4,6 +4,8 @@ const bots = require('../bots');
 const {createOfflineMessages,registerOfflineRoutes} = require('../offline-messages');
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const postFonts = new Set(['','Arial','Verdana','Tahoma','Georgia','Trebuchet MS','Comic Sans MS','Times New Roman','Courier New']);
+const postFont = (value, fallback = '') => value === undefined ? fallback : postFonts.has(value) ? value : '';
 const feelings = new Set(['','Happy','Excited','Grateful','Relaxed','Hopeful','Loved','Proud','Curious','Tired','Bored','Sad','Worried','Frustrated','Lonely']);
 const text = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 function photo(value, maximum = 700000) {
@@ -137,7 +139,7 @@ function registerApi(router, express, db, accounts, io, botChat) {
     return {ip, location:await geo.lookup(ip)};
   }
   const postFields = master => `p.id,p.author_id,p.wall_id,p.pinned,p.body,p.link,p.tape,case when ${imageAccess('p','$1',master)} then p.image else '' end as image,
-    case when p.author_id=$1 then p.audience else '{}'::jsonb end as audience,p.feeling,p.place,p.created,p.updated,p.event_room,p.event_at,
+    case when p.author_id=$1 then p.audience else '{}'::jsonb end as audience,p.feeling,p.font,p.place,p.created,p.updated,p.event_room,p.event_at,
     (select count(*)::int from social_event_rsvps r where r.post_id=p.id) as attendees,
     exists(select 1 from social_event_rsvps r where r.post_id=p.id and r.user_id=$1) as attending,
     u.name,coalesce(nullif(u.display_name,''),u.name) as display_name,
@@ -349,11 +351,11 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const policy = {post:audience(b.audience?.post || {mode:'profile'}),photo:audience(b.audience?.photo,true)};
     const info=await originInfo(req);
     await db.q(`with added as (
-      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at,audience,tape)
-      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) on conflict(id) do nothing returning id,wall_id
+      insert into social_posts(id,author_id,wall_id,body,link,image,feeling,place,ip,approximate_location,event_room,event_at,audience,tape,font)
+      values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) on conflict(id) do nothing returning id,wall_id
     ) insert into social_notifications(recipient_id,actor_id,kind,post_id,reference_id)
       select wall_id,$2,'post',id,id::text from added where wall_id<>$2 on conflict do nothing`,
-      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt,JSON.stringify(policy),tape && JSON.stringify(tape)]);
+      [id,req.socialAccount.id,wall.id,body,url,image,feelings.has(b.feeling)?b.feeling:'',text(b.location,120),info.ip,info.location,eventRoom,eventAt,JSON.stringify(policy),tape && JSON.stringify(tape),postFont(b.font)]);
     res.status(201).json({id});
   }));
   router.post('/api/tapes/:id/tracks',run(async(req,res) => {
@@ -388,8 +390,8 @@ function registerApi(router, express, db, accounts, io, botChat) {
     const body=b.body===undefined?post.body:text(b.body,3000), url=b.link===undefined?post.link:link(b.link), image=b.removeImage ? '' : post.image;
     const policy = b.audience ? {post:audience(b.audience.post),photo:audience(b.audience.photo,true)} : null;
     if (!body && !url && !image) fail('Keep a thought, link, or photo.');
-    await db.q('update social_posts set body=$2,link=$3,image=$4,feeling=$5,place=$6,audience=coalesce($7::jsonb,audience),updated=now() where id=$1',
-      [post.id,body,url,image,b.feeling===undefined?post.feeling:feelings.has(b.feeling)?b.feeling:'',b.location===undefined?post.place:text(b.location,120),policy && JSON.stringify(policy)]);
+    await db.q('update social_posts set body=$2,link=$3,image=$4,feeling=$5,place=$6,audience=coalesce($7::jsonb,audience),font=$8,updated=now() where id=$1',
+      [post.id,body,url,image,b.feeling===undefined?post.feeling:feelings.has(b.feeling)?b.feeling:'',b.location===undefined?post.place:text(b.location,120),policy && JSON.stringify(policy),postFont(b.font,post.font || '')]);
     res.json({ok:true});
   }));
   router.delete('/api/posts/:id',run(async(req,res) => {

@@ -130,7 +130,7 @@ function http(app, express, hooks = {}) { H = hooks;
 
 // ---------- Messenger sockets ----------
 function sockets(io, hooks) {
-  const { clientKind, deviceKind, presenceDevice, replacedSessions, CallRoutes } = require('./messenger-sessions');
+  const { clientKind, deviceKind, presenceDevice, replacedSessions, syncParked, PARKED_TEXT, CallRoutes } = require('./messenger-sessions');
   const callRoutes = new CallRoutes();
   const sentMessages = new Map(); // Share retries across Messenger reconnections.
   const online = new Map(); // uid -> Set(socket)
@@ -258,7 +258,7 @@ function sockets(io, hooks) {
       if (clearStatusOnStart && u.status_msg) {
         await db.q("update users set status_msg='' where id=$1", [uid]);
       }
-      const first = !online.has(uid), wasIdle = idleNow(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; s.data.messClient = clientKind(s); s.data.messIdle = false; ready = true;
+      const first = !online.has(uid), wasIdle = idleNow(uid); if (!online.has(uid)) online.set(uid, new Set()); online.get(uid).add(s); s.data.mess = true; s.data.messClient = clientKind(s); s.data.messIdle = false; ready = true; syncParked(online.get(uid));
       if (state.has(uid)) state.get(uid).name = me; else state.set(uid, { name: me, status: u.status === 'brb' ? 'away' : STATUSES.includes(u.status) ? u.status : 'available', msg: u.status_msg === ROOM_TAG ? '' : u.status_msg, avatar: u.avatar });
       const ownState = state.get(uid);
       ownState.showRoom = u.show_room !== false;
@@ -438,6 +438,7 @@ function sockets(io, hooks) {
       if (d.callId !== undefined && (typeof d.callId !== 'string' || !/^[a-f0-9-]{36}$/i.test(d.callId))) return { error:'Invalid call ID.' };
       let destination;
       if (ev === 'm:call') {
+        if (s.data.parked) return { error: PARKED_TEXT + '. Use the app to call.' };
         const route = callRoutes.start(s, uid, t.id, online.get(t.id) || [], d.callId);
         if (route.error) return { error: route.error }; destination = route.target;
       } else destination = callRoutes.relay(s, uid, t.id, ev, !!d.accept, d.callId);
@@ -445,7 +446,7 @@ function sockets(io, hooks) {
       destination.emit(ev, { from: me, kind: d.kind === 'video' ? 'video' : 'audio', accept: !!d.accept, data: d.data,
         callId:d.callId, ...(ev==='m:hang'&&d.reason==='no-answer'?{reason:d.reason}:{}) }); }));
     s.on('disconnect', async () => { callRoutes.disconnect(s); const set = online.get(uid); if (!set) return;
-      const wasIdle = idleNow(uid); set.delete(s); if (!set.size) { online.delete(uid); state.delete(uid); lastRoom.delete(uid); }
+      const wasIdle = idleNow(uid); set.delete(s); if (!set.size) { online.delete(uid); state.delete(uid); lastRoom.delete(uid); } else syncParked(set);
       try { await broadcast(uid, me); } catch {} });
   });
 }

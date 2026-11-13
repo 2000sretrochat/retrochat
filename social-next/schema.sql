@@ -86,3 +86,6 @@ where s.user_id=p.user_id;
 alter table social_posts add column if not exists pinned boolean not null default false;
 
 alter table social_posts add column if not exists tape jsonb;
+
+-- Nov 13, 2026: optional post font (allow-listed in social-next/api.js)
+alter table social_posts add column if not exists font text not null default '';

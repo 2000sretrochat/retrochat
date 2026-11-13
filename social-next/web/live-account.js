@@ -205,13 +205,20 @@
       if(rows.length===40){const last=rows[rows.length-1],b=document.createElement('button');b.type='button';b.dataset.photoNext='';b.className='secondary';b.textContent='More photos';b.onclick=()=>{b.disabled=true;loadTimelinePhotos(container,last.created,last.id);};container.append(b);}
     }catch(error){const b=container.querySelector('[data-photo-next]');if(b)b.disabled=false;toast(error.message);}
   }
+  // A YouTube link typed into the post text (not only the Link attachment) shows as a playable video, like Facebook.
+  // youtubeId() only accepts an 11-character video ID, and playback uses the youtube-nocookie embed.
+  function textVideo(post) {
+    if (post.url && youtubeId(post.url)) return '';
+    const found=String(post.text || '').match(/https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?[^\s<>"']*|shorts\/[\w-]{11}|embed\/[\w-]{11}|live\/[\w-]{11})|youtu\.be\/[\w-]{11})[^\s<>"']*/i);
+    return found && youtubeId(found[0]) ? '<div class="link-preview">'+postLinkMedia(found[0])+'</div>' : '';
+  }
   function sharedCard(post) {
     const owner=!publicPreview && post.author_id===myId, moderator=!publicPreview && (session.master || owner || post.wall_id===myId);
     const comments=(post.comments || []).map(comment=>'<div class="shared-comment">'+author(comment.name)+
       '<small>'+esc(new Date(comment.created).toLocaleString())+'</small><p>'+esc(comment.body)+'</p>'+
       ((comment.author_id===myId || post.wall_id===myId || session.master)?'<button type="button" class="text-action" data-shared-comment-remove="'+comment.id+'">Delete comment</button>':'')+'</div>').join('');
     return '<article class="post" data-post-id="'+post.id+'"><div class="post-top">'+author(post.name)+
-      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+(post.pinned&&current==='profile'?'<span class=post-pin-marker>📌 Pinned</span>':'')+postDetailsMarkup(post)+'<p>'+esc(post.text)+'</p>'+eventCard(post)+tapeCard(post)+
+      '<small>'+esc(new Date(post.createdAt).toLocaleString())+'</small></div>'+(post.pinned&&current==='profile'?'<span class=post-pin-marker>📌 Pinned</span>':'')+postDetailsMarkup(post)+'<p'+postFontStyle(post.font)+'>'+esc(post.text)+'</p>'+textVideo(post)+eventCard(post)+tapeCard(post)+
       (post.image?'<button type="button" class="profile-photo-open" data-shared-photo="'+post.id+'"><img src="'+esc(post.image)+'" alt="Shared photo"></button>':'')+
       (post.url?'<div class="link-preview">'+postLinkMedia(post.url)+'<a href="'+esc(post.url)+'" target="_blank" rel="noopener noreferrer">'+esc(new URL(post.url).hostname)+'</a></div>':'')+
       '<div class="post-actions"><button type="button" data-shared-like="'+post.id+'" aria-pressed="'+post.liked+'">'+(post.liked?'♥ Liked':'♡ Like')+' '+post.likes+'</button>'+
@@ -312,10 +319,19 @@
         '<button class="text-action" data-profile-report="'+esc(record.name)+'">Report</button></div></section>'+gallery+'</aside><section class="space-posts">'+
         (record.private?privateNotice('<div class="space-actions">'+actions+'</div>'):wall+posts+photos)+'</section></div>';
       document.querySelectorAll('.timeline-photo-list').forEach(container=>loadTimelinePhotos(container));
+      upgradeFriendWall($('#friend-wall-form'));
       mountAudience($('#friend-wall-form'));
       loadArticlePreviews();
     }).catch(error=>{if(generation===profileGeneration)$('#content').innerHTML='<section class="empty">'+esc(error.message)+'</section>';});
   };
+  // Posting on a friend's timeline gets the same tools as your own: attachments (link or photo), feeling/location,
+  // emoji and font. The submit handler already sends attachmentUrl, the photo and readPostDetails() for this form.
+  function upgradeFriendWall(form) {
+    if(!form || form.dataset.upgraded)return;form.dataset.upgraded='1';
+    const source=$('#quick-post .post-attachments');
+    if(source){const attachments=source.cloneNode(true);attachments.open=false;attachments.querySelectorAll('input').forEach(input=>{input.value='';});form.append(attachments);}
+    mountPostDetails(form);
+  }
   async function refreshView() {
     if(loading)return;
     loading=true;
