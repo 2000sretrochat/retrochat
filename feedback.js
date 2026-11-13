@@ -1,6 +1,6 @@
 'use strict';
 // Help > Feedback (Nov 13, 2026): POST /api/feedback stores the note in Postgres (backup) and emails it through mail.js
-// (Gmail SMTP) to GMAIL_USER, or razzlesocialbeta@gmail.com when unset. Signed-in: 5 an hour per account and per IP.
+// (Gmail SMTP) to razzlesocialbeta@gmail.com. Signed-in: 5 an hour per account and per IP.
 // Guests: 2 an hour per IP. Never logs addresses, message text, or credentials.
 const crypto = require('node:crypto');
 
@@ -59,14 +59,20 @@ function register(app, express, { db, userFromReq, clientIp, mail = require('./m
           [user ? user.id : null, name, f.category, f.message, f.page, f.app, ipKey, when]))[0].id; } catch (e) { log.error('[feedback] store failed', e.code || 'error'); }
       }
       const msg = compose({ name, ...f, when });
-      const to = String(process.env.GMAIL_USER || '').trim() || FALLBACK_TO;
+      // Force destination to the fallback address so messages always go to razzlesocialbeta@gmail.com
+      const to = FALLBACK_TO;
       if (!mail.enabled()) {
         if (!id) return res.status(503).json({ error: 'Feedback is temporarily unavailable. Please try again later.' });
-        log.log('[feedback] stored #' + id + ', email not configured'); return res.json({ ok: true });
+        log.log('[feedback] stored #' + id + ', email not configured (mail.enabled() = false)');
+        return res.json({ ok: true });
       }
-      mail.sendMail({ to, subject: msg.subject, text: msg.text })
-        .then(() => { log.log('[feedback] stored #' + id + ', emailed'); if (id) db.q('update feedback set emailed=true where id=$1', [id]).catch(() => {}); })
-        .catch(e => log.error('[feedback] stored #' + id + ', email failed', String(e.message || '').split(' ').slice(0, 3).join(' ').replace(/[^\w :]/g, '')));
+      try {
+        await mail.sendMail({ to, subject: msg.subject, text: msg.text });
+        log.log('[feedback] stored #' + id + ', emailed to ' + to);
+        if (id) db.q('update feedback set emailed=true where id=$1', [id]).catch(() => {});
+      } catch (e) {
+        log.error('[feedback] stored #' + id + ', email failed:', String(e.message || e).slice(0, 200));
+      }
       res.json({ ok: true });
     } catch (e) { log.error('[feedback]', e.code || 'error'); res.status(500).json({ error: 'Could not send your feedback. Please try again.' }); }
   });
